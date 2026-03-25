@@ -4,9 +4,6 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'Almmatix — We build the infrastructure.',
   description: 'Elite deep-tech infrastructure for voice, automation, AI, and web — engineered to scale.',
-  icons: {
-    icon: '/icon.png',
-  },
 };
 
 export default function RootLayout({

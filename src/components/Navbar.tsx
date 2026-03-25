@@ -2,12 +2,14 @@
 
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
+import { motion, AnimatePresence } from "framer-motion";
 import LeadModal from "./LeadModal";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [isModalOpen, setModalOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const onScroll = () => {
@@ -28,6 +30,17 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Close mobile menu on scroll
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      const close = () => setMobileMenuOpen(false);
+      window.addEventListener("scroll", close, { passive: true });
+      return () => window.removeEventListener("scroll", close);
+    }
+  }, [mobileMenuOpen]);
+
+  const navLinks = ["Services", "Work", "Contact"];
+
   return (
     <>
       <nav
@@ -41,12 +54,13 @@ export default function Navbar() {
       >
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12 flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
-          <a href="#" className="flex items-center gap-2.5 group">
+          <a href="/" className="flex items-center gap-2.5 group">
             <Image
               src="/almmatix_logo.png"
               alt="Almmatix"
               width={42}
               height={42}
+              style={{ width: 42, height: "auto" }}
               className="transition-transform duration-300 group-hover:scale-110"
             />
             <span
@@ -58,9 +72,9 @@ export default function Navbar() {
             </span>
           </a>
 
-          {/* Nav Links - Desktop */}
+          {/* Desktop Nav Links */}
           <div className="hidden md:flex items-center gap-10">
-            {["Services", "Work", "Contact"].map((item) => (
+            {navLinks.map((item) => (
               <a
                 key={item}
                 href={`#${item.toLowerCase()}`}
@@ -76,19 +90,91 @@ export default function Navbar() {
             ))}
           </div>
 
-          {/* CTA */}
-          <button
-            onClick={() => setModalOpen(true)}
-            className={`cursor-pointer px-6 py-2.5 text-label transition-all duration-300 magnetic-hover border-none ${
-              isDark
-                ? "bg-[#E6DFD5] text-[#0D0D0D] hover:bg-[#FF5A1F] hover:text-[#E6DFD5]"
-                : "bg-[#0D0D0D] text-[#E6DFD5] hover:bg-[#FF5A1F]"
-            }`}
-          >
-            Start a project
-          </button>
+          <div className="flex items-center gap-4">
+            {/* Desktop CTA */}
+            <button
+              onClick={() => setModalOpen(true)}
+              className={`hidden md:inline-flex cursor-pointer px-6 py-2.5 text-label transition-all duration-300 magnetic-hover border-none ${
+                isDark
+                  ? "bg-[#E6DFD5] text-[#0D0D0D] hover:bg-[#FF5A1F] hover:text-[#E6DFD5]"
+                  : "bg-[#0D0D0D] text-[#E6DFD5] hover:bg-[#FF5A1F]"
+              }`}
+            >
+              Start a project
+            </button>
+
+            {/* Hamburger - Mobile only */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className={`md:hidden flex flex-col justify-center items-center w-10 h-10 gap-1.5 cursor-pointer border-none bg-transparent relative z-[60]`}
+              aria-label="Toggle menu"
+            >
+              <motion.span
+                className={`block w-6 h-[2px] transition-colors duration-300 ${
+                  mobileMenuOpen ? "bg-[#E6DFD5]" : isDark ? "bg-[#E6DFD5]" : "bg-[#0D0D0D]"
+                }`}
+                animate={mobileMenuOpen ? { rotate: 45, y: 5.5 } : { rotate: 0, y: 0 }}
+                transition={{ duration: 0.25 }}
+              />
+              <motion.span
+                className={`block w-6 h-[2px] transition-colors duration-300 ${
+                  mobileMenuOpen ? "bg-[#E6DFD5]" : isDark ? "bg-[#E6DFD5]" : "bg-[#0D0D0D]"
+                }`}
+                animate={mobileMenuOpen ? { opacity: 0 } : { opacity: 1 }}
+                transition={{ duration: 0.15 }}
+              />
+              <motion.span
+                className={`block w-6 h-[2px] transition-colors duration-300 ${
+                  mobileMenuOpen ? "bg-[#E6DFD5]" : isDark ? "bg-[#E6DFD5]" : "bg-[#0D0D0D]"
+                }`}
+                animate={mobileMenuOpen ? { rotate: -45, y: -5.5 } : { rotate: 0, y: 0 }}
+                transition={{ duration: 0.25 }}
+              />
+            </button>
+          </div>
         </div>
       </nav>
+
+      {/* Mobile Menu Overlay */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            className="fixed inset-0 z-40 bg-[#0D0D0D] flex flex-col items-center justify-center gap-8"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {navLinks.map((item, i) => (
+              <motion.a
+                key={item}
+                href={`#${item.toLowerCase()}`}
+                className="font-display text-4xl font-bold tracking-tight text-[#E6DFD5] hover:text-[#FF5A1F] transition-colors duration-300"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ delay: i * 0.08, duration: 0.4 }}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {item}
+              </motion.a>
+            ))}
+            <motion.button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                setModalOpen(true);
+              }}
+              className="mt-4 px-8 py-4 bg-gradient-to-r from-[#FF5A1F] to-[#FF7A47] text-[#E6DFD5] font-medium text-sm tracking-wide cursor-pointer border-none"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ delay: 0.25, duration: 0.4 }}
+            >
+              Start a project
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <LeadModal isOpen={isModalOpen} onClose={() => setModalOpen(false)} />
     </>

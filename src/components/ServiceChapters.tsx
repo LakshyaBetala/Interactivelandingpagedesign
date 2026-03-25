@@ -560,6 +560,7 @@ function ServiceChapterItem({
       className={`section-dark-bg relative w-full min-h-screen flex items-center ${
         dark ? "bg-[#0D0D0D] text-[#E6DFD5]" : "bg-[#E6DFD5] text-[#0D0D0D]"
       }`}
+      style={{ position: "relative" }}
     >
       {/* Giant background number with parallax */}
       <motion.span
@@ -579,8 +580,8 @@ function ServiceChapterItem({
         transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
       />
 
-      <div ref={contentRef} className="max-w-[1400px] mx-auto w-full px-6 lg:px-12 py-24 lg:py-0">
-        <div className={`grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center ${
+      <div ref={contentRef} className="max-w-[1400px] mx-auto w-full px-6 lg:px-12 py-16 md:py-24 lg:py-0">
+        <div className={`grid grid-cols-1 lg:grid-cols-2 gap-10 md:gap-16 lg:gap-24 items-center ${
           isEven ? "" : "lg:[direction:rtl]"
         }`}>
           {/* Text Side */}
@@ -602,7 +603,7 @@ function ServiceChapterItem({
 
             {/* Title with pop effect */}
             <motion.h2
-              className="font-display text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[0.93] mb-8"
+              className="font-display text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[0.93] mb-6 md:mb-8"
               initial={{ opacity: 0, y: 30, scale: 0.95 }}
               animate={isInView ? { opacity: 1, y: 0, scale: 1 } : {}}
               transition={{
@@ -616,7 +617,7 @@ function ServiceChapterItem({
 
             {/* Description */}
             <motion.p
-              className={`font-sans text-lg lg:text-xl leading-relaxed max-w-lg ${
+              className={`font-sans text-base md:text-lg lg:text-xl leading-relaxed max-w-lg ${
                 dark ? "text-[#A49D93]" : "text-[#878074]"
               }`}
               initial={{ opacity: 0, y: 20 }}
@@ -629,7 +630,7 @@ function ServiceChapterItem({
             {/* Interactive Button */}
             <motion.button
               onClick={onOpenDrawer}
-              className={`mt-10 inline-flex items-center gap-4 px-8 py-3.5 border transition-all duration-300 group w-max rounded-sm ${
+              className={`mt-8 md:mt-10 inline-flex items-center justify-center gap-4 px-6 md:px-8 py-3 md:py-3.5 border transition-all duration-300 group w-full sm:w-max rounded-sm ${
                 dark 
                   ? "border-[#3A3632] text-[#E6DFD5] hover:border-[#FF5A1F] hover:bg-[#FF5A1F]/10" 
                   : "border-[#C4B8A8] text-[#0D0D0D] hover:border-[#FF5A1F] hover:bg-[#FF5A1F]/5"
@@ -654,7 +655,7 @@ function ServiceChapterItem({
 
           {/* Visual Side — with dramatic scale-up pop */}
           <motion.div
-            className="relative w-full aspect-square lg:aspect-[4/3] lg:[direction:ltr]"
+            className="relative w-full aspect-[4/3] sm:aspect-square lg:aspect-[4/3] lg:[direction:ltr]"
             style={{ scale: visualScale, opacity: visualOpacity }}
           >
             {/* Background glow for visual container */}

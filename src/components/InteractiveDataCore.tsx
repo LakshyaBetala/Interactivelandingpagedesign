@@ -17,7 +17,7 @@ export default function InteractiveDataCore() {
     canvas.height = height;
 
     // Density and spring configuration
-    const SPACING = 30; // Closer grid for higher resolution mesh
+    const SPACING = 25; // Even tighter grid for "high-def" mesh
     const cols = Math.floor(width / SPACING) + 2;
     const rows = Math.floor(height / SPACING) + 2;
 
@@ -49,13 +49,13 @@ export default function InteractiveDataCore() {
           const x = i * SPACING;
           const y = j * SPACING;
           // Random slight mass variance for organic fluid feel
-          const mass = 0.8 + Math.random() * 0.4;
+          const mass = 0.5 + Math.random() * 0.5;
           points.push({ x, y, bx: x, by: y, vx: 0, vy: 0, mass });
         }
       }
     }
 
-    const mouse = { x: -1000, y: -1000, vx: 0, vy: 0, px: -1000, py: -1000, radius: 200, isDown: false };
+    const mouse = { x: -1000, y: -1000, vx: 0, vy: 0, px: -1000, py: -1000, radius: 240, isDown: false };
 
     function animate() {
       if (!ctx || !canvas) return;
@@ -70,9 +70,9 @@ export default function InteractiveDataCore() {
       // Update ripples
       for (let i = ripples.length - 1; i >= 0; i--) {
         const r = ripples[i];
-        r.radius += 10 + r.radius * 0.05; // Expanding shockwave
-        r.life -= 0.03;
-        r.force *= 0.95;
+        r.radius += 12 + r.radius * 0.06; // Faster shockwave
+        r.life -= 0.025;
+        r.force *= 0.94;
         if (r.life <= 0) ripples.splice(i, 1);
       }
 
@@ -87,14 +87,16 @@ export default function InteractiveDataCore() {
 
         if (distance < mouse.radius) {
           const force = (mouse.radius - distance) / mouse.radius;
-          // Mouse velocity drag -> pulls grid along with fast cursor movements
-          p.vx += mouse.vx * force * 0.08 / p.mass;
-          p.vy += mouse.vy * force * 0.08 / p.mass;
+          const distForce = Math.pow(force, 2); // Squared falloff for sharper feel
 
-          // Repulsion
-          const pushStrength = mouse.isDown ? 12 : 3;
-          p.vx -= (dx / distance) * force * pushStrength / p.mass;
-          p.vy -= (dy / distance) * force * pushStrength / p.mass;
+          // Mouse velocity drag -> pulls grid along
+          p.vx += mouse.vx * distForce * 0.12 / p.mass;
+          p.vy += mouse.vy * distForce * 0.12 / p.mass;
+
+          // Repulsion/Interaction
+          const pushStrength = mouse.isDown ? 18 : 4;
+          p.vx -= (dx / distance) * distForce * pushStrength / p.mass;
+          p.vy -= (dy / distance) * distForce * pushStrength / p.mass;
         }
 
         // 2. Shockwave Ripples
@@ -104,28 +106,27 @@ export default function InteractiveDataCore() {
           const rDist = Math.sqrt(rdx * rdx + rdy * rdy);
           const distFromRing = Math.abs(rDist - r.radius);
 
-          if (distFromRing < 40) {
-            const rForce = r.force * (1 - distFromRing / 40);
+          if (distFromRing < 60) {
+            const rForce = r.force * (1 - distFromRing / 60) * r.life;
             p.vx -= (rdx / rDist) * rForce / p.mass;
             p.vy -= (rdy / rDist) * rForce / p.mass;
           }
         }
 
-        // 3. Spring constraints
-        p.vx += (p.bx - p.x) * 0.04;
-        p.vy += (p.by - p.y) * 0.04;
+        // 3. Spring constraints (Finer tension)
+        p.vx += (p.bx - p.x) * 0.035;
+        p.vy += (p.by - p.y) * 0.035;
 
         // 4. Damping & Integration
-        p.vx *= 0.82;
-        p.vy *= 0.82;
+        p.vx *= 0.84;
+        p.vy *= 0.84;
         p.x += p.vx;
         p.y += p.vy;
       }
 
       // Draw structural mesh
-      ctx.lineWidth = 0.5;
+      ctx.lineWidth = 0.6;
       
-      // We loop over all cells, using path commands to minimize overhead
       ctx.beginPath();
       for (let i = 0; i < cols - 1; i++) {
         for (let j = 0; j < rows - 1; j++) {
@@ -133,29 +134,26 @@ export default function InteractiveDataCore() {
           const right = points[(i + 1) * rows + j];
           const bottom = points[i * rows + (j + 1)];
 
-          // Distances from base position (tension)
-          const stretchRight = Math.abs(p.x - right.x) + Math.abs(p.y - right.y);
-          const stretchBottom = Math.abs(p.x - bottom.x) + Math.abs(p.y - bottom.y);
+          const stretchRight = Math.sqrt(Math.pow(p.x - right.x, 2) + Math.pow(p.y - right.y, 2));
+          const stretchBottom = Math.sqrt(Math.pow(p.x - bottom.x, 2) + Math.pow(p.y - bottom.y, 2));
 
-          // We only draw lines if they aren't severely overstretched (prevent snapping looks)
-          if (stretchRight < SPACING * 2.5) {
+          if (stretchRight < SPACING * 3) {
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(right.x, right.y);
           }
-          if (stretchBottom < SPACING * 2.5) {
+          if (stretchBottom < SPACING * 3) {
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(bottom.x, bottom.y);
           }
         }
       }
-      ctx.strokeStyle = "rgba(135, 128, 116, 0.2)";
+      ctx.strokeStyle = "rgba(135, 128, 116, 0.15)";
       ctx.stroke();
 
-      // Dynamic Lighting / Glow on Nodes (Ambient Cursor Glow)
+      // Dynamic Node Lighting
       for (let i = 0; i < points.length; i++) {
         const p = points[i];
         
-        // Node tension determines color (blueish for relaxed, orange for stretched)
         const dx = p.x - p.bx;
         const dy = p.y - p.by;
         const displacement = Math.sqrt(dx * dx + dy * dy);
@@ -164,26 +162,34 @@ export default function InteractiveDataCore() {
         const mdy = mouse.y - p.y;
         const mDist = Math.sqrt(mdx * mdx + mdy * mdy);
 
-        // Core points and tension points light up
-        if (mDist < mouse.radius * 0.8 || displacement > 5) {
-          const alphaCursor = Math.max(0, 1 - mDist / (mouse.radius * 0.8));
-          const alphaStress = Math.min(1, displacement / 20);
-          const finalAlpha = Math.max(alphaCursor * 0.7, alphaStress * 0.5);
+        if (mDist < mouse.radius || displacement > 4) {
+          const alphaCursor = Math.max(0, 1 - mDist / mouse.radius);
+          const alphaStress = Math.min(1, displacement / 25);
+          const finalAlpha = Math.max(alphaCursor * 0.8, alphaStress * 0.7);
           
-          ctx.beginPath();
-          // Mix colors: near cursor = orange (#FF5A1F), high stress = darker orange/red
-          ctx.fillStyle = `rgba(255, 90, 31, ${finalAlpha})`; 
-          ctx.arc(p.x, p.y, 1.5 + finalAlpha * 1.5, 0, Math.PI * 2);
-          ctx.fill();
+          if (finalAlpha > 0.05) {
+            ctx.beginPath();
+            ctx.fillStyle = `rgba(255, 90, 31, ${finalAlpha})`; 
+            ctx.arc(p.x, p.y, 1.2 + finalAlpha * 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Add a subtle bloom for high tension points
+            if (finalAlpha > 0.6) {
+              ctx.shadowBlur = 10 * finalAlpha;
+              ctx.shadowColor = "#FF5A1F";
+              ctx.stroke();
+              ctx.shadowBlur = 0;
+            }
+          }
         }
       }
 
-      // Draw active ripples
+      // Draw active ripples (Subtle glow rings)
       for (const r of ripples) {
         ctx.beginPath();
         ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(255, 90, 31, ${r.life * 0.3})`;
-        ctx.lineWidth = 2 * r.life;
+        ctx.strokeStyle = `rgba(255, 90, 31, ${r.life * 0.25})`;
+        ctx.lineWidth = 1.5 * r.life;
         ctx.stroke();
       }
 

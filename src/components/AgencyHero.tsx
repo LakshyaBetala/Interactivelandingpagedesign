@@ -37,15 +37,16 @@ export default function AgencyHero() {
           animate={{ y: [0, -15, 0], rotate: [0, 1, 0, -1, 0] }}
           transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
         >
-          <Image
-            src="/almmatix_logo.png"
-            alt=""
-            width={500}
-            height={500}
-            className="w-[40vw] max-w-[500px]"
-            style={{ width: '40vw', maxWidth: '500px', height: 'auto' }}
-            priority
-          />
+          <div className="relative w-[40vw] max-w-[500px] aspect-square">
+            <Image
+              src="/almmatix_logo.png"
+              alt="Almmatix Logo"
+              fill
+              sizes="40vw"
+              className="object-contain"
+              priority
+            />
+          </div>
         </motion.div>
       </motion.div>
 

@@ -27,6 +27,7 @@ export default function CaseStudy() {
       id="work"
       ref={ref}
       className="section-dark-bg relative w-full bg-[#0D0D0D] text-[#E6DFD5] py-32 lg:py-48 overflow-hidden"
+      style={{ position: "relative" }}
     >
       {/* Background glow */}
       <motion.div

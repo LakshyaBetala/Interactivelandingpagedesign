@@ -14,94 +14,114 @@ export default function Footer() {
     <>
       <footer
         id="contact"
-        className="w-full bg-[#E6DFD5] text-[#0D0D0D] py-32 lg:py-48 px-6 lg:px-12 relative overflow-hidden"
+        className="w-full bg-[#0D0D0D] text-[#E6DFD5] px-6 lg:px-12 pt-16 lg:pt-20 pb-6 relative overflow-hidden"
       >
-        <div ref={ref} className="max-w-[1400px] mx-auto flex flex-col relative z-10">
-          {/* Headline with Almmatix logo */}
+        <div ref={ref} className="max-w-[1400px] mx-auto relative z-10">
+          {/* Row 1: Logo + CTA side by side */}
           <motion.div
-            className="flex items-end gap-6"
-            initial={{ opacity: 0, y: 40 }}
-            animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <h2 className="font-display text-5xl md:text-8xl lg:text-[9rem] font-bold tracking-tighter leading-[0.85]">
-              Let&apos;s build.
-            </h2>
-            <motion.div
-              className="hidden lg:block mb-4"
-              animate={{ y: [0, -8, 0] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-            >
-              <Image
-                src="/almmatix_logo.png"
-                alt="Almmatix"
-                width={100}
-                height={100}
-                className="opacity-20"
-              />
-            </motion.div>
-          </motion.div>
-
-          {/* CTA + Contact */}
-          <motion.div
-            className="mt-16 lg:mt-24 flex flex-col lg:flex-row justify-between gap-16 border-t border-[#C4B8A8] pt-16"
+            className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 pb-12 border-b border-[#3A3632]"
             initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.8, delay: 0.3 }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           >
-            {/* Left: CTA */}
-            <div className="flex flex-col gap-6">
-              <p className="text-[#878074] text-lg max-w-md leading-relaxed">
-                Got a project? A wild idea? An operations nightmare?
-                We want to hear it.
-              </p>
-              <button
-                onClick={() => setModalOpen(true)}
-                className="inline-flex items-center gap-4 px-10 py-5 bg-gradient-to-r from-[#FF5A1F] to-[#FF7A47] text-[#E6DFD5] text-label hover:from-[#E04A12] hover:to-[#FF5A1F] transition-all duration-300 w-max group magnetic-hover cursor-pointer border-none"
-              >
-                Start a conversation
-                <span className="inline-block w-0 group-hover:w-6 h-[1px] bg-[#E6DFD5] transition-all duration-300" />
-              </button>
+            {/* Left: Logo + Tagline */}
+            <div className="flex items-center gap-4">
+              <Image
+                src="/almmatix_logo.png"
+                alt="Almmatix"
+                width={48}
+                height={48}
+                style={{ width: 48, height: "auto" }}
+              />
+              <div>
+                <span className="font-display text-2xl font-bold tracking-tight block">
+                  Almmatix
+                </span>
+                <span className="text-[11px] font-mono tracking-[0.15em] uppercase text-[#878074]">
+                  Deep-Tech Infrastructure
+                </span>
+              </div>
             </div>
 
-            {/* Right: Contact Info */}
-            <div className="flex flex-col md:flex-row gap-16 text-sm">
-              <div>
-                <span className="text-label text-[#A49D93] block mb-3">Email</span>
-                <a
-                  href="mailto:almmatix@gmail.com"
-                  className="text-[#0D0D0D] font-medium hover:text-[#FF5A1F] transition-colors duration-300"
-                >
-                  almmatix@gmail.com
-                </a>
+            {/* Right: CTA */}
+            <button
+              onClick={() => setModalOpen(true)}
+              className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-[#FF5A1F] to-[#FF7A47] text-[#E6DFD5] font-medium text-sm tracking-wide hover:from-[#E04A12] hover:to-[#FF5A1F] transition-all duration-300 group magnetic-hover cursor-pointer border-none"
+            >
+              Start a conversation
+              <span className="inline-block w-0 group-hover:w-5 h-[1px] bg-[#E6DFD5] transition-all duration-300" />
+            </button>
+          </motion.div>
+
+          {/* Row 2: Contact columns + Status */}
+          <motion.div
+            className="grid grid-cols-2 md:grid-cols-4 gap-8 py-10 border-b border-[#3A3632]"
+            initial={{ opacity: 0, y: 15 }}
+            animate={isInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.7, delay: 0.15 }}
+          >
+            <div>
+              <span className="text-[10px] font-mono tracking-[0.2em] uppercase text-[#878074] block mb-2">Email</span>
+              <a
+                href="mailto:almmatix@gmail.com"
+                className="text-sm font-medium hover:text-[#FF5A1F] transition-colors duration-300"
+              >
+                almmatix@gmail.com
+              </a>
+            </div>
+            <div>
+              <span className="text-[10px] font-mono tracking-[0.2em] uppercase text-[#878074] block mb-2">Phone</span>
+              <span className="text-sm font-medium">+91 9344110272</span>
+            </div>
+            <div>
+              <span className="text-[10px] font-mono tracking-[0.2em] uppercase text-[#878074] block mb-2">Socials</span>
+              <div className="flex gap-4">
+                {['LinkedIn', 'Twitter', 'GitHub'].map((social) => (
+                  <a
+                    key={social}
+                    href="#"
+                    className="text-sm font-medium hover:text-[#FF5A1F] transition-colors duration-300"
+                  >
+                    {social}
+                  </a>
+                ))}
               </div>
-              <div>
-                <span className="text-label text-[#A49D93] block mb-3">Phone</span>
-                <span className="text-[#0D0D0D] font-medium">+91 9344110272</span>
-              </div>
-              <div>
-                <span className="text-label text-[#A49D93] block mb-3">Location</span>
-                <span className="text-[#0D0D0D] font-medium">India</span>
+            </div>
+            <div>
+              <span className="text-[10px] font-mono tracking-[0.2em] uppercase text-[#878074] block mb-2">Status</span>
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse" />
+                <span className="text-sm font-medium">Available</span>
               </div>
             </div>
           </motion.div>
 
-          {/* Footer bottom */}
-          <div className="mt-24 lg:mt-32 flex flex-col lg:flex-row justify-between items-center gap-4 border-t border-[#C4B8A8] pt-8">
-            <div className="flex items-center gap-3">
-              <Image
-                src="/almmatix_logo.png"
-                alt="Almmatix"
-                width={28}
-                height={28}
-                className="opacity-50"
-              />
-              <span className="text-label text-[#A49D93]">
-                © 2025 Almmatix. All rights reserved.
-              </span>
-            </div>
-            <span className="text-label text-[#A49D93]">
-              Engineered with precision.
+          {/* Row 3: Marquee */}
+          <div className="py-5 border-b border-[#3A3632] overflow-hidden">
+            <motion.div
+              className="flex gap-12 whitespace-nowrap"
+              animate={{ x: ["0%", "-50%"] }}
+              transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+            >
+              {[1, 2].map((i) => (
+                <div key={i} className="flex gap-12 items-center">
+                  {['VOICE AI', 'WHATSAPP MODS', 'RAG INFRA', 'EDGE APPS', 'CUSTOM CRM', 'API ENGINEERING', 'DATA PIPELINES'].map((tag) => (
+                    <span key={tag} className="text-[9px] font-mono tracking-[0.3em] text-[#878074]/50">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              ))}
+            </motion.div>
+          </div>
+
+          {/* Row 4: Copyright bar */}
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-5">
+            <span className="text-[10px] tracking-widest uppercase text-[#878074]/60 font-mono">
+              © 2025 Almmatix. All rights reserved.
+            </span>
+            <span className="text-[10px] tracking-widest uppercase text-[#878074]/60 font-mono">
+              Engineered with precision
             </span>
           </div>
         </div>
