@@ -68,14 +68,10 @@ export default function AgencyHero() {
         </div>
 
         <div className="stagger-children pointer-events-auto w-max">
-          <h1 className="font-display text-massive text-[#0D0D0D]">
-            We build the
-          </h1>
-          <h1 className="font-display text-massive text-[#0D0D0D]">
-            infrastructure.
-          </h1>
-          <h1 className="font-display text-massive text-[#FF5A1F]">
-            You scale.
+          <h1 className="font-display text-massive">
+            <span className="block text-[#0D0D0D]">We build the</span>
+            <span className="block text-[#0D0D0D]">infrastructure.</span>
+            <span className="block text-[#FF5A1F]">You scale.</span>
           </h1>
         </div>
 

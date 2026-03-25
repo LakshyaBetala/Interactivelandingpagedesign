@@ -1,5 +1,3 @@
-"use client";
-
 import Navbar from "@/components/Navbar";
 import AgencyHero from "@/components/AgencyHero";
 import ServiceChapters from "@/components/ServiceChapters";

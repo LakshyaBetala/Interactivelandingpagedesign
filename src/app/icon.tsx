@@ -1,16 +1,14 @@
 import { ImageResponse } from 'next/og';
+import { readFile } from 'fs/promises';
+import { join } from 'path';
 
-// Route segment config
-export const runtime = 'edge';
-
-// Image metadata
 export const size = {
   width: 32,
   height: 32,
 };
 export const contentType = 'image/png';
 
-export default function Icon() {
+export default async function Icon() {
   return new ImageResponse(
     (
       <div
@@ -20,18 +18,16 @@ export default function Icon() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: '#FF5A1F',
-          borderRadius: '8px',
-          border: '2px solid #0D0D0D',
+          backgroundColor: 'transparent',
         }}
       >
-        <div
-          style={{
-            width: '16px',
-            height: '16px',
-            backgroundColor: '#0D0D0D',
-            borderRadius: '2px',
-          }}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`data:image/png;base64,${(await readFile(join(process.cwd(), 'public', 'almmatix_logo.png'))).toString('base64')}`}
+          alt=""
+          width="32"
+          height="32"
+          style={{ objectFit: 'contain' }}
         />
       </div>
     ),

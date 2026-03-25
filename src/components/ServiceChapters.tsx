@@ -173,7 +173,7 @@ function FlowchartVisual() {
   ];
 
   return (
-    <div ref={ref} className="w-full h-full relative">
+    <div ref={ref} className="w-full h-full relative px-4 sm:px-0">
       {/* Animated connection lines */}
       <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
         {connections.map((conn, i) => (
@@ -227,7 +227,7 @@ function FlowchartVisual() {
           className={`absolute flex flex-col items-center gap-1.5 ${
             node.highlight ? "z-10" : ""
           }`}
-          style={{ left: `${node.x}%`, top: `${node.y}%`, transform: "translate(-50%, -50%)" }}
+          style={{ left: `${node.x}%`, top: `${node.y}%`, transform: "translate(-50%, -50%)", maxWidth: "calc(100% - 16px)" }}
           initial={{ opacity: 0, scale: 0, y: 20 }}
           animate={isInView ? { opacity: 1, scale: 1, y: 0 } : {}}
           transition={{

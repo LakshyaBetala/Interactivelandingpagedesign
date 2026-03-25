@@ -47,18 +47,18 @@ export default function CaseStudy() {
         </motion.p>
 
         {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24">
           {/* Left — Editorial with DoItForMe logo */}
           <div>
             {/* DoItForMe Logo + Title */}
             <motion.div
-              className="flex items-center gap-5 mb-8"
+              className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5 mb-8"
               initial={{ opacity: 0, y: 30, scale: 0.97 }}
               animate={isInView ? { opacity: 1, y: 0, scale: 1 } : {}}
               transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
             >
               <motion.div
-                className="w-20 h-20 lg:w-24 lg:h-24 rounded-2xl overflow-hidden flex-shrink-0 shadow-2xl shadow-[#FF5A1F]/10"
+                className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-2xl overflow-hidden flex-shrink-0 shadow-2xl shadow-[#FF5A1F]/10"
                 whileHover={{ scale: 1.05, rotate: 2 }}
                 transition={{ type: "spring", stiffness: 300 }}
               >
@@ -71,7 +71,7 @@ export default function CaseStudy() {
                 />
               </motion.div>
               <div>
-                <h2 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[0.93]">
+                <h2 className="font-display text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[0.93]">
                   DoItForMe.in
                 </h2>
                 <p className="text-label text-[#878074] mt-2">Student Gig Marketplace</p>
@@ -79,7 +79,7 @@ export default function CaseStudy() {
             </motion.div>
 
             <motion.p
-              className="text-[#A49D93] text-lg lg:text-xl leading-relaxed max-w-lg mb-12"
+              className="text-[#A49D93] text-base sm:text-lg lg:text-xl leading-relaxed max-w-lg mb-10 sm:mb-12"
               initial={{ opacity: 0, y: 20 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
