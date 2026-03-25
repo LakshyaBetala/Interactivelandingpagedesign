@@ -1,0 +1,129 @@
+@import "tailwindcss";
+
+@theme {
+  /* Refined Palette — Smoky Sand + Charcoal + Ember */
+  --color-sand: #E6DFD5;
+  --color-sand-light: #EDE8E0;
+  --color-sand-warm: #D9CFC2;
+  --color-sand-deep: #C4B8A8;
+  --color-charcoal: #0D0D0D;
+  --color-charcoal-soft: #1A1A1A;
+  --color-charcoal-mid: #252525;
+  --color-ember: #FF5A1F;
+  --color-ember-dark: #E04A12;
+  --color-ember-glow: #FF7A47;
+  --color-taupe: #878074;
+  --color-taupe-light: #A49D93;
+  --color-warm-dark: #3A3632;
+
+  --font-sans: 'Satoshi', sans-serif;
+  --font-display: 'Clash Display', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+/* ===== BASE ===== */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-sand);
+  color: var(--color-charcoal);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background-color: var(--color-ember);
+  color: var(--color-sand);
+}
+
+/* ===== EDITORIAL TYPOGRAPHY ===== */
+.text-massive {
+  font-size: clamp(3rem, 9vw, 11rem);
+  line-height: 0.88;
+  letter-spacing: -0.045em;
+  font-weight: 700;
+}
+
+.text-chapter-number {
+  font-size: clamp(4rem, 12vw, 16rem);
+  line-height: 0.8;
+  letter-spacing: -0.06em;
+  font-weight: 700;
+  opacity: 0.04;
+}
+
+.text-label {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-weight: 400;
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes line-expand {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@keyframes float-gentle {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  33% { transform: translateY(-8px) rotate(0.5deg); }
+  66% { transform: translateY(4px) rotate(-0.3deg); }
+}
+
+@keyframes orbit {
+  from { transform: rotate(0deg) translateX(120px) rotate(0deg); }
+  to { transform: rotate(360deg) translateX(120px) rotate(-360deg); }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 0.15; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(1.05); }
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-line-expand {
+  animation: line-expand 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Staggered children */
+.stagger-children > * {
+  opacity: 0;
+  animation: fade-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0.15s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.3s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.45s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.6s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.75s; }
+
+/* ===== CUSTOM SCROLLBAR ===== */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--color-sand); }
+::-webkit-scrollbar-thumb { background: var(--color-taupe); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-ember); }
+
+/* ===== MAGNETIC CURSOR EFFECT ===== */
+.magnetic-hover {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.magnetic-hover:hover {
+  transform: scale(1.02);
+}
