@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { motion, useScroll, useTransform, useInView } from "framer-motion";
+import ServiceDrawer from "@/components/ServiceDrawer";
 
 /* ============================================================
    DRAMATIC VISUAL MODULES — Cinematic, animated service graphics
@@ -460,6 +461,9 @@ const services = [
       "24/7 human-like voice agents for inbound routing, outbound sales, and customer support. No hold music. No scripts. Just conversations that convert.",
     visual: WaveformVisual,
     dark: false,
+    details: ["Inbound query resolution", "Outbound lead qualification", "Sentiment & intent tracking", "Multi-lingual capabilities"],
+    techStack: ["Vapi / Retell AI", "OpenAI / Anthropic", "ElevenLabs Voice", "Twilio SIP"],
+    deliverables: ["Custom Voice Model", "CRM Integration", "Call Transcripts", "Performance Dashboard"]
   },
   {
     number: "02",
@@ -469,6 +473,9 @@ const services = [
       "Automated lead qualification and omnichannel support across India, LatAm, and Europe. Every conversation tracked, every lead scored.",
     visual: MessageStackVisual,
     dark: true,
+    details: ["Instant lead response", "Automated appointment booking", "Drip campaigns & broadcasting", "Human handoff logic"],
+    techStack: ["Meta Node API", "LangChain / Flowise", "Webhooks", "PostgreSQL"],
+    deliverables: ["Verified WA Business", "Conversational Flow Map", "Escalation Triggers", "Agent Workspace"]
   },
   {
     number: "03",
@@ -478,6 +485,9 @@ const services = [
       "Connect CRMs and ERPs with intelligent logic. Eliminate manual data entry. Your team focuses on decisions, not spreadsheets.",
     visual: FlowchartVisual,
     dark: false,
+    details: ["Data pipeline automation", "Cross-platform syncing", "Automatic report generation", "Smart alerts & notifications"],
+    techStack: ["Make.com / n8n", "Python Airflow", "AWS Lambda", "REST/GraphQL APIs"],
+    deliverables: ["System Architecture Docs", "Workflow Schematics", "API Endpoints", "Error Handling Logs"]
   },
   {
     number: "04",
@@ -487,6 +497,9 @@ const services = [
       "Secure, hallucination-free AI assistants trained exclusively on your data. Your knowledge base, instantly searchable by anyone on your team.",
     visual: NeuralNetVisual,
     dark: true,
+    details: ["Semantic document search", "Secure data enclosures", "Citation-backed answers", "Access-level permissions"],
+    techStack: ["Pinecone / Weaviate", "LlamaIndex", "Next.js Edge", "Supabase"],
+    deliverables: ["Vector Database Setup", "Data Ingestion Pipeline", "Chat Interface", "Accuracy Reports"]
   },
   {
     number: "05",
@@ -496,6 +509,9 @@ const services = [
       "High-converting digital platforms with AI built in. Not templates — custom-engineered storefronts and dashboards that actually work.",
     visual: BrowserBuildVisual,
     dark: false,
+    details: ["High-performance landing pages", "Complex SaaS dashboards", "Interactive 3D/WebGL experiences", "Global Edge deployment"],
+    techStack: ["Next.js App Router", "Tailwind CSS v4", "Framer Motion", "Vercel Edge"],
+    deliverables: ["Figma UI/UX Design", "Production Codebase", "Headless CMS Setup", "Lighthouse Audit 90+"]
   },
 ];
 
@@ -510,6 +526,7 @@ interface ServiceChapterProps {
   visual: React.ComponentType;
   dark: boolean;
   index: number;
+  onOpenDrawer: () => void;
 }
 
 function ServiceChapterItem({
@@ -520,6 +537,7 @@ function ServiceChapterItem({
   visual: Visual,
   dark,
   index,
+  onOpenDrawer,
 }: ServiceChapterProps) {
   const ref = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -608,6 +626,22 @@ function ServiceChapterItem({
               {description}
             </motion.p>
 
+            {/* Interactive Button */}
+            <motion.button
+              onClick={onOpenDrawer}
+              className={`mt-10 inline-flex items-center gap-4 px-8 py-3.5 border transition-all duration-300 group w-max rounded-sm ${
+                dark 
+                  ? "border-[#3A3632] text-[#E6DFD5] hover:border-[#FF5A1F] hover:bg-[#FF5A1F]/10" 
+                  : "border-[#C4B8A8] text-[#0D0D0D] hover:border-[#FF5A1F] hover:bg-[#FF5A1F]/5"
+              }`}
+              initial={{ opacity: 0, y: 15 }}
+              animate={isInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.5, delay: 0.4 }}
+            >
+              <span className="font-medium text-sm tracking-wide">Learn Details</span>
+              <span className="text-[#FF5A1F] transition-transform duration-300 group-hover:translate-x-1">→</span>
+            </motion.button>
+
             {/* Architectural line with animation */}
             <motion.div
               className={`mt-12 w-full h-[1px] ${dark ? "bg-[#3A3632]" : "bg-[#C4B8A8]"}`}
@@ -662,8 +696,15 @@ function SectionTransition({ fromDark, toDark }: { fromDark: boolean; toDark: bo
    EXPORT — renders all 5 chapters with smooth transitions
    ============================================================ */
 export default function ServiceChapters() {
+  const [selectedService, setSelectedService] = useState<typeof services[0] | null>(null);
+
   return (
     <div id="services">
+      <ServiceDrawer 
+        isOpen={!!selectedService} 
+        onClose={() => setSelectedService(null)} 
+        service={selectedService} 
+      />
       {services.map((service, index) => (
         <React.Fragment key={service.number}>
           {/* Gradient transition between sections */}
@@ -673,7 +714,11 @@ export default function ServiceChapters() {
               toDark={service.dark}
             />
           )}
-          <ServiceChapterItem {...service} index={index} />
+          <ServiceChapterItem 
+            {...service} 
+            index={index} 
+            onOpenDrawer={() => setSelectedService(service)}
+          />
         </React.Fragment>
       ))}
     </div>
