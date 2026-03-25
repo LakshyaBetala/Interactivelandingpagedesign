@@ -26,7 +26,7 @@ export default function CaseStudy() {
     <section
       id="work"
       ref={ref}
-      className="section-dark-bg relative w-full bg-[#0D0D0D] text-[#E6DFD5] py-32 lg:py-48 overflow-hidden"
+      className="section-dark-bg relative w-full bg-[#0D0D0D] text-[#E6DFD5] py-20 sm:py-32 lg:py-48 overflow-hidden"
       style={{ position: "relative" }}
     >
       {/* Background glow */}
@@ -38,7 +38,7 @@ export default function CaseStudy() {
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12 relative z-10">
         {/* Section Label */}
         <motion.p
-          className="text-label text-[#FF5A1F] mb-16"
+          className="text-label text-[#FF5A1F] mb-8 sm:mb-16"
           initial={{ opacity: 0, y: 10 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
@@ -94,7 +94,7 @@ export default function CaseStudy() {
               href="https://doitforme.in"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-4 px-8 py-4 bg-gradient-to-r from-[#FF5A1F] to-[#FF7A47] text-[#E6DFD5] text-label hover:from-[#E04A12] hover:to-[#FF5A1F] transition-all duration-300 group magnetic-hover"
+              className="inline-flex items-center justify-center sm:justify-start gap-4 px-6 sm:px-8 py-3.5 sm:py-4 w-full sm:w-auto bg-gradient-to-r from-[#FF5A1F] to-[#FF7A47] text-[#E6DFD5] text-label hover:from-[#E04A12] hover:to-[#FF5A1F] transition-all duration-300 group magnetic-hover"
               initial={{ opacity: 0, y: 10 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.5, delay: 0.4 }}
@@ -107,7 +107,7 @@ export default function CaseStudy() {
           </div>
 
           {/* Right — Metrics */}
-          <div className="grid grid-cols-2 gap-8 lg:gap-12 content-center">
+          <div className="grid grid-cols-2 gap-6 sm:gap-8 lg:gap-12 content-center">
             {metrics.map((metric, i) => (
               <motion.div
                 key={i}
@@ -122,7 +122,7 @@ export default function CaseStudy() {
                   damping: 15,
                 }}
               >
-                <p className="font-display text-4xl lg:text-5xl font-bold tracking-tight text-[#E6DFD5]">
+                <p className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[#E6DFD5]">
                   {metric.value}
                 </p>
                 <p className="text-label text-[#878074] mt-2">
@@ -135,12 +135,12 @@ export default function CaseStudy() {
 
         {/* Testimonial strip */}
         <motion.div
-          className="mt-24 lg:mt-32 border-t border-[#3A3632] pt-12 flex flex-col lg:flex-row lg:items-start gap-8"
+          className="mt-16 sm:mt-24 lg:mt-32 border-t border-[#3A3632] pt-8 sm:pt-12 flex flex-col lg:flex-row lg:items-start gap-6 sm:gap-8"
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.8, delay: 0.7 }}
         >
-          <p className="font-sans text-xl lg:text-2xl text-[#D9CFC2] italic leading-relaxed max-w-2xl">
+          <p className="font-sans text-lg sm:text-xl lg:text-2xl text-[#D9CFC2] italic leading-relaxed max-w-2xl">
             {"\u201C"}They didn{"\u2019"}t just build a website — they engineered an
             entire operations layer for our marketplace. The difference
             is night and day.{"\u201D"}

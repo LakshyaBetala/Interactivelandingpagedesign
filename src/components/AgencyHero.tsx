@@ -22,13 +22,13 @@ export default function AgencyHero() {
   return (
     <section
       ref={containerRef}
-      className="relative w-full min-h-[100svh] flex flex-col justify-end bg-[#E6DFD5] overflow-hidden pb-16 lg:pb-24 pt-24"
+      className="relative w-full min-h-[100svh] flex flex-col justify-center lg:justify-end bg-[#E6DFD5] overflow-hidden pb-10 sm:pb-16 lg:pb-24 pt-20 sm:pt-24"
       style={{ position: 'relative' }}
     >
       {/* Elastic Fluid Canvas Mesh */}
       <InteractiveDataCore />
 
-      {/* Background: Floating Almmatix logo mark — the "wow" element */}
+      {/* Background: Floating Almmatix logo mark */}
       <motion.div
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[55%] pointer-events-none select-none"
         style={{ scale: logoScale, opacity: logoOpacity }}
@@ -37,12 +37,12 @@ export default function AgencyHero() {
           animate={{ y: [0, -15, 0], rotate: [0, 1, 0, -1, 0] }}
           transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
         >
-          <div className="relative w-[40vw] max-w-[500px] aspect-square">
+          <div className="relative w-[50vw] sm:w-[40vw] max-w-[500px] aspect-square">
             <Image
               src="/almmatix_logo.png"
               alt="Almmatix Logo"
               fill
-              sizes="40vw"
+              sizes="(max-width: 640px) 50vw, 40vw"
               className="object-contain"
               priority
             />
@@ -52,22 +52,22 @@ export default function AgencyHero() {
 
       {/* Ember accent line */}
       <motion.div
-        style={{ width: lineWidth }}  
+        style={{ width: lineWidth }}
         className="absolute top-1/2 left-0 h-[2px] bg-gradient-to-r from-[#FF5A1F] to-[#FF7A47]"
       />
 
       {/* Content */}
       <motion.div
         style={{ y: headingY, opacity: headingOpacity }}
-        className="relative z-10 max-w-[1400px] mx-auto w-full px-6 lg:px-12 pointer-events-none"
+        className="relative z-10 max-w-[1400px] mx-auto w-full px-5 sm:px-6 lg:px-12 pointer-events-none"
       >
-        <div className="stagger-children mb-12 pointer-events-auto w-max">
+        <div className="stagger-children mb-5 sm:mb-12 pointer-events-auto w-max">
           <p className="text-label text-[#878074]">
             Deep-Tech Infrastructure Studio
           </p>
         </div>
 
-        <div className="stagger-children pointer-events-auto w-max">
+        <div className="stagger-children pointer-events-auto">
           <h1 className="font-display text-massive">
             <span className="block text-[#0D0D0D]">We build the</span>
             <span className="block text-[#0D0D0D]">infrastructure.</span>
@@ -75,9 +75,9 @@ export default function AgencyHero() {
           </h1>
         </div>
 
-        <div className="mt-12 lg:mt-16 flex flex-col lg:flex-row lg:items-end justify-between gap-8 pointer-events-auto">
+        <div className="mt-6 sm:mt-12 lg:mt-16 flex flex-col lg:flex-row lg:items-end justify-between gap-5 sm:gap-8 pointer-events-auto">
           <p
-            className="font-sans text-[#878074] text-lg lg:text-xl max-w-lg leading-relaxed animate-fade-up pointer-events-auto"
+            className="font-sans text-[#878074] text-sm sm:text-lg lg:text-xl max-w-lg leading-relaxed animate-fade-up pointer-events-auto"
             style={{ animationDelay: "0.7s", animationFillMode: "both" }}
           >
             Voice agents. WhatsApp automation. AI systems. Web platforms.
@@ -97,19 +97,19 @@ export default function AgencyHero() {
       {/* Bottom line */}
       <div className="absolute bottom-0 left-0 w-full h-[1px] bg-[#0D0D0D]/8" />
 
-      {/* Scrolling Marquee Strip — the "wow" detail */}
-      <div className="absolute bottom-0 left-0 w-full overflow-hidden py-3 border-t border-[#0D0D0D]/5">
+      {/* Scrolling Marquee Strip */}
+      <div className="absolute bottom-0 left-0 w-full overflow-hidden py-2 sm:py-3 border-t border-[#0D0D0D]/5">
         <motion.div
-          className="flex whitespace-nowrap gap-16 w-max items-center"
+          className="flex whitespace-nowrap gap-10 sm:gap-16 w-max items-center"
           animate={{ x: ["0%", "-50%"] }}
           transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
         >
           {Array.from({ length: 2 }).map((_, setIdx) => (
-            <div key={setIdx} className="flex gap-16 flex-shrink-0 items-center">
+            <div key={setIdx} className="flex gap-10 sm:gap-16 flex-shrink-0 items-center">
               {["Voice AI", "WhatsApp Bots", "RAG Systems", "Web Platforms", "Data Pipelines", "CRM Integration", "Custom Dashboards", "API Engineering"].map((item, i) => (
                 <span
                   key={`${setIdx}-${i}`}
-                  className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#C4B8A8]"
+                  className="font-mono text-[9px] sm:text-[10px] tracking-[0.2em] uppercase text-[#C4B8A8]"
                 >
                   {item}
                 </span>

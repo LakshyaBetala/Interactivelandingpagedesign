@@ -14,12 +14,12 @@ export default function Footer() {
     <>
       <footer
         id="contact"
-        className="w-full bg-[#0D0D0D] text-[#E6DFD5] px-6 lg:px-12 pt-16 lg:pt-20 pb-6 relative overflow-hidden"
+        className="w-full bg-[#0D0D0D] text-[#E6DFD5] px-5 sm:px-6 lg:px-12 pt-12 sm:pt-16 lg:pt-20 pb-6 relative overflow-hidden"
       >
         <div ref={ref} className="max-w-[1400px] mx-auto relative z-10">
           {/* Row 1: Logo + CTA side by side */}
           <motion.div
-            className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 pb-12 border-b border-[#3A3632]"
+            className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 sm:gap-8 pb-8 sm:pb-12 border-b border-[#3A3632]"
             initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
@@ -46,7 +46,7 @@ export default function Footer() {
             {/* Right: CTA */}
             <button
               onClick={() => setModalOpen(true)}
-              className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-[#FF5A1F] to-[#FF7A47] text-[#E6DFD5] font-medium text-sm tracking-wide hover:from-[#E04A12] hover:to-[#FF5A1F] transition-all duration-300 group magnetic-hover cursor-pointer border-none"
+              className="inline-flex items-center justify-center gap-3 px-6 sm:px-8 py-3.5 sm:py-4 w-full sm:w-auto bg-gradient-to-r from-[#FF5A1F] to-[#FF7A47] text-[#E6DFD5] font-medium text-sm tracking-wide hover:from-[#E04A12] hover:to-[#FF5A1F] transition-all duration-300 group magnetic-hover cursor-pointer border-none"
             >
               Start a conversation
               <span className="inline-block w-0 group-hover:w-5 h-[1px] bg-[#E6DFD5] transition-all duration-300" />
@@ -55,7 +55,7 @@ export default function Footer() {
 
           {/* Row 2: Contact columns + Status */}
           <motion.div
-            className="grid grid-cols-2 md:grid-cols-4 gap-8 py-10 border-b border-[#3A3632]"
+            className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 py-8 sm:py-10 border-b border-[#3A3632]"
             initial={{ opacity: 0, y: 15 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.7, delay: 0.15 }}
