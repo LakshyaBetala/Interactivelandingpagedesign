@@ -75,6 +75,8 @@ export default function RootLayout({
         <WebSiteSchema />
         <ServicesSchema />
         {children}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
