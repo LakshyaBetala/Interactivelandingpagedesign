@@ -11,7 +11,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://almmatix.com'),
+  metadataBase: new URL('https://www.almmatix.in'),
   title: 'Almmatix — AI Voice Agents, WhatsApp Automation & Web Development',
   description:
     'Almmatix builds AI voice agents, WhatsApp automation bots, RAG systems, and custom web platforms for enterprises. Engineered to scale. Start your project today.',
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_IN',
-    url: 'https://almmatix.com',
+    url: 'https://www.almmatix.in',
     siteName: 'Almmatix',
     title: 'Almmatix — AI Voice Agents, WhatsApp Automation & Web Development',
     description:

@@ -5,8 +5,8 @@ export function OrganizationSchema() {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: 'Almmatix',
-    url: 'https://almmatix.com',
-    logo: 'https://almmatix.com/almmatix_logo.png',
+    url: 'https://www.almmatix.in',
+    logo: 'https://www.almmatix.in/almmatix_logo.png',
     email: 'almmatix@gmail.com',
     telephone: '+919344110272',
     address: {
@@ -31,7 +31,7 @@ export function WebSiteSchema() {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: 'Almmatix',
-    url: 'https://almmatix.com',
+    url: 'https://www.almmatix.in',
   };
 
   return (
