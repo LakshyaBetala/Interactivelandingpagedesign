@@ -592,56 +592,40 @@ function ServiceChapterItem({
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           >
             {/* Subtitle label */}
-            <motion.span
-              className="text-label text-[#FF5A1F] mb-3"
-              initial={{ opacity: 0, y: 10 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.5, delay: 0.1 }}
+            <span
+              className="text-label text-[#FF5A1F] mb-3 block"
             >
               {number} — {subtitle}
-            </motion.span>
+            </span>
 
             {/* Title with pop effect */}
-            <motion.h2
+            <h2
               className="font-display text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[0.93] mb-6 md:mb-8"
-              initial={{ opacity: 0, y: 30, scale: 0.95 }}
-              animate={isInView ? { opacity: 1, y: 0, scale: 1 } : {}}
-              transition={{
-                duration: 0.8,
-                delay: 0.15,
-                ease: [0.16, 1, 0.3, 1],
-              }}
             >
               {title}
-            </motion.h2>
+            </h2>
 
             {/* Description */}
-            <motion.p
-              className={`font-sans text-base md:text-lg lg:text-xl leading-relaxed max-w-lg ${
+            <p
+              className={`font-sans text-base md:text-lg lg:text-xl leading-relaxed max-w-lg mb-8 ${
                 dark ? "text-[#A49D93]" : "text-[#878074]"
               }`}
-              initial={{ opacity: 0, y: 20 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.7, delay: 0.3 }}
             >
               {description}
-            </motion.p>
+            </p>
 
             {/* Interactive Button */}
-            <motion.button
+            <button
               onClick={onOpenDrawer}
-              className={`mt-8 md:mt-10 inline-flex items-center justify-center gap-4 px-6 md:px-8 py-3 md:py-3.5 border transition-all duration-300 group w-full sm:w-max rounded-sm ${
+              className={`mt-2 md:mt-4 inline-flex items-center justify-center gap-4 px-6 md:px-8 py-3 md:py-3.5 border transition-all duration-300 group w-full sm:w-max rounded-sm ${
                 dark 
                   ? "border-[#3A3632] text-[#E6DFD5] hover:border-[#FF5A1F] hover:bg-[#FF5A1F]/10" 
                   : "border-[#C4B8A8] text-[#0D0D0D] hover:border-[#FF5A1F] hover:bg-[#FF5A1F]/5"
               }`}
-              initial={{ opacity: 0, y: 15 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.5, delay: 0.4 }}
             >
               <span className="font-medium text-sm tracking-wide">Learn Details</span>
               <span className="text-[#FF5A1F] transition-transform duration-300 group-hover:translate-x-1">→</span>
-            </motion.button>
+            </button>
 
             {/* Architectural line with animation */}
             <motion.div

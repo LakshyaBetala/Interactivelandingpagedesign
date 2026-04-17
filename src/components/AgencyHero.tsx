@@ -1,73 +1,21 @@
-"use client";
-
-import React, { useRef } from "react";
-import { motion, useScroll, useTransform } from "framer-motion";
-import Image from "next/image";
-import InteractiveDataCore from "@/components/InteractiveDataCore";
+import React from "react";
+import AgencyHeroClient from "@/components/AgencyHeroClient";
 
 export default function AgencyHero() {
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start start", "end start"],
-  });
-
-  const lineWidth = useTransform(scrollYProgress, [0, 0.3], ["0%", "100%"]);
-  const headingY = useTransform(scrollYProgress, [0, 0.5], ["0%", "-20%"]);
-  const headingOpacity = useTransform(scrollYProgress, [0.3, 0.6], [1, 0]);
-  const logoScale = useTransform(scrollYProgress, [0, 0.5], [1, 0.6]);
-  const logoOpacity = useTransform(scrollYProgress, [0.3, 0.5], [0.07, 0]);
-
   return (
-    <section
-      ref={containerRef}
-      className="relative w-full min-h-[100svh] flex flex-col justify-center lg:justify-end bg-[#E6DFD5] overflow-hidden pb-10 sm:pb-16 lg:pb-24 pt-20 sm:pt-24"
-      style={{ position: 'relative' }}
-    >
-      {/* Elastic Fluid Canvas Mesh */}
-      <InteractiveDataCore />
+    <section className="relative w-full min-h-[100svh] flex flex-col justify-center lg:justify-end bg-[#E6DFD5] overflow-hidden pb-10 sm:pb-16 lg:pb-24 pt-20 sm:pt-24">
+      {/* Interactive Background Elements (Client) */}
+      <AgencyHeroClient />
 
-      {/* Background: Floating Almmatix logo mark */}
-      <motion.div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[55%] pointer-events-none select-none"
-        style={{ scale: logoScale, opacity: logoOpacity }}
-      >
-        <motion.div
-          animate={{ y: [0, -15, 0], rotate: [0, 1, 0, -1, 0] }}
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        >
-          <div className="relative w-[50vw] sm:w-[40vw] max-w-[500px] aspect-square">
-            <Image
-              src="/almmatix_logo.png"
-              alt="Almmatix Logo"
-              fill
-              sizes="(max-width: 640px) 50vw, 40vw"
-              className="object-contain"
-              priority
-            />
-          </div>
-        </motion.div>
-      </motion.div>
-
-      {/* Ember accent line */}
-      <motion.div
-        style={{ width: lineWidth }}
-        className="absolute top-1/2 left-0 h-[2px] bg-gradient-to-r from-[#FF5A1F] to-[#FF7A47]"
-      />
-
-      {/* Content */}
-      <motion.div
-        style={{ y: headingY, opacity: headingOpacity }}
-        className="relative z-10 max-w-[1400px] mx-auto w-full px-5 sm:px-6 lg:px-12 pointer-events-none"
-      >
-        <div className="stagger-children mb-5 sm:mb-12 pointer-events-auto w-max">
+      {/* Static Core Content (Server) */}
+      <div className="relative z-10 max-w-[1400px] mx-auto w-full px-5 sm:px-6 lg:px-12 pointer-events-none">
+        <div className="mb-5 sm:mb-12 pointer-events-auto w-max">
           <p className="text-label text-[#878074]">
             Deep-Tech Infrastructure Studio
           </p>
         </div>
 
-        <div className="stagger-children pointer-events-auto">
+        <div className="pointer-events-auto">
           <h1 className="font-display text-massive">
             <span className="block text-[#0D0D0D]">We build the</span>
             <span className="block text-[#0D0D0D]">infrastructure.</span>
@@ -76,47 +24,18 @@ export default function AgencyHero() {
         </div>
 
         <div className="mt-6 sm:mt-12 lg:mt-16 flex flex-col lg:flex-row lg:items-end justify-between gap-5 sm:gap-8 pointer-events-auto">
-          <p
-            className="font-sans text-[#878074] text-sm sm:text-lg lg:text-xl max-w-lg leading-relaxed animate-fade-up pointer-events-auto"
-            style={{ animationDelay: "0.7s", animationFillMode: "both" }}
-          >
+          <p className="font-sans text-[#878074] text-sm sm:text-lg lg:text-xl max-w-lg leading-relaxed pointer-events-auto">
             Voice agents. WhatsApp automation. AI systems. Web platforms.
             Engineered for enterprises that refuse to stay manual.
           </p>
           <a
             href="#services"
-            className="inline-flex items-center gap-3 text-label text-[#0D0D0D] group animate-fade-up pointer-events-auto"
-            style={{ animationDelay: "0.9s", animationFillMode: "both" }}
+            className="inline-flex items-center gap-3 text-label text-[#0D0D0D] group pointer-events-auto"
           >
             <span>Explore services</span>
             <span className="inline-block w-8 h-[1px] bg-[#0D0D0D] group-hover:w-16 transition-all duration-500" />
           </a>
         </div>
-      </motion.div>
-
-      {/* Bottom line */}
-      <div className="absolute bottom-0 left-0 w-full h-[1px] bg-[#0D0D0D]/8" />
-
-      {/* Scrolling Marquee Strip */}
-      <div className="absolute bottom-0 left-0 w-full overflow-hidden py-2 sm:py-3 border-t border-[#0D0D0D]/5">
-        <motion.div
-          className="flex whitespace-nowrap gap-10 sm:gap-16 w-max items-center"
-          animate={{ x: ["0%", "-50%"] }}
-          transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-        >
-          {Array.from({ length: 2 }).map((_, setIdx) => (
-            <div key={setIdx} className="flex gap-10 sm:gap-16 flex-shrink-0 items-center">
-              {["Voice AI", "WhatsApp Bots", "RAG Systems", "Web Platforms", "Data Pipelines", "CRM Integration", "Custom Dashboards", "API Engineering"].map((item, i) => (
-                <span
-                  key={`${setIdx}-${i}`}
-                  className="font-mono text-[9px] sm:text-[10px] tracking-[0.2em] uppercase text-[#C4B8A8]"
-                >
-                  {item}
-                </span>
-              ))}
-            </div>
-          ))}
-        </motion.div>
       </div>
     </section>
   );

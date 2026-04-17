@@ -20,8 +20,8 @@ export default function Footer() {
           {/* Row 1: Logo + CTA side by side */}
           <motion.div
             className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 sm:gap-8 pb-8 sm:pb-12 border-b border-[#3A3632]"
-            initial={{ opacity: 0, y: 20 }}
-            animate={isInView ? { opacity: 1, y: 0 } : {}}
+            initial={{ y: 20 }}
+            animate={isInView ? { y: 0 } : {}}
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           >
             {/* Left: Logo + Tagline */}
@@ -56,8 +56,8 @@ export default function Footer() {
           {/* Row 2: Contact columns + Status */}
           <motion.div
             className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 py-8 sm:py-10 border-b border-[#3A3632]"
-            initial={{ opacity: 0, y: 15 }}
-            animate={isInView ? { opacity: 1, y: 0 } : {}}
+            initial={{ y: 15 }}
+            animate={isInView ? { y: 0 } : {}}
             transition={{ duration: 0.7, delay: 0.15 }}
           >
             <div>

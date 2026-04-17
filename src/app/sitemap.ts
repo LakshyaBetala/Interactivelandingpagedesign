@@ -1,4 +1,4 @@
-import type { MetadataRoute } from 'next';
+import { MetadataRoute } from 'next';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
@@ -7,6 +7,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: new Date(),
       changeFrequency: 'weekly',
       priority: 1,
+    },
+    {
+      url: 'https://almmatix.com/debug-html',
+      lastModified: new Date(),
+      changeFrequency: 'never',
+      priority: 0.1,
     },
   ];
 }
