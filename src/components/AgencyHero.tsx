@@ -24,10 +24,15 @@ export default function AgencyHero() {
         </div>
 
         <div className="mt-6 sm:mt-12 lg:mt-16 flex flex-col lg:flex-row lg:items-end justify-between gap-5 sm:gap-8 pointer-events-auto">
-          <p className="font-sans text-[#878074] text-sm sm:text-lg lg:text-xl max-w-lg leading-relaxed pointer-events-auto">
-            Voice agents. WhatsApp automation. AI systems. Web platforms.
-            Engineered for enterprises that refuse to stay manual.
-          </p>
+          <div className="max-w-xl">
+            <p className="font-sans text-[#878074] text-sm sm:text-lg lg:text-xl leading-relaxed pointer-events-auto mb-4">
+              Voice agents. WhatsApp automation. AI systems. Web platforms.
+              Engineered for enterprises that refuse to stay manual.
+            </p>
+            <p className="font-sans text-[#878074] text-sm sm:text-base leading-relaxed pointer-events-auto">
+              Almmatix is an engineering studio dedicated to end-to-end <strong>software development</strong>, scalable <strong>web development</strong>, and integrating autonomous <strong>AI solutions</strong>. We transform operational bottlenecks into intelligent, automated pathways.
+            </p>
+          </div>
           <a
             href="#services"
             className="inline-flex items-center gap-3 text-label text-[#0D0D0D] group pointer-events-auto"
