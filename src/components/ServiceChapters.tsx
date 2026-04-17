@@ -581,12 +581,12 @@ function ServiceChapterItem({
       />
 
       <div ref={contentRef} className="max-w-[1400px] mx-auto w-full px-6 lg:px-12 py-16 md:py-24 lg:py-0">
-        <div className={`grid grid-cols-1 lg:grid-cols-2 gap-10 md:gap-16 lg:gap-24 items-center ${
+        <div className={`flex flex-col-reverse lg:grid lg:grid-cols-2 gap-10 md:gap-16 lg:gap-24 items-center ${
           isEven ? "" : "lg:[direction:rtl]"
         }`}>
           {/* Text Side */}
           <motion.div
-            className="flex flex-col lg:[direction:ltr]"
+            className="flex flex-col lg:[direction:ltr] w-full"
             initial={{ opacity: 0, x: isEven ? -40 : 40 }}
             animate={isInView ? { opacity: 1, x: 0 } : {}}
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}

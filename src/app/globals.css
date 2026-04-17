@@ -41,8 +41,8 @@ body {
 
 /* ===== EDITORIAL TYPOGRAPHY ===== */
 .text-massive {
-  font-size: clamp(3rem, 9vw, 11rem);
-  line-height: 0.88;
+  font-size: clamp(2.25rem, 9vw, 11rem);
+  line-height: 0.9;
   letter-spacing: -0.045em;
   font-weight: 700;
 }

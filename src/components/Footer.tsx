@@ -114,6 +114,13 @@ export default function Footer() {
               ))}
             </motion.div>
           </div>
+          
+          {/* SEO Paragraph */}
+          <div className="py-8 border-b border-[#3A3632]">
+            <p className="text-xs sm:text-sm text-[#878074] max-w-4xl leading-relaxed">
+              Almmatix is an engineering studio dedicated to end-to-end <strong>software development</strong>, scalable <strong>web development</strong>, and integrating autonomous <strong>AI solutions</strong>. We transform operational bottlenecks into intelligent, automated pathways for modern enterprises.
+            </p>
+          </div>
 
           {/* Row 4: Copyright bar */}
           <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-5">
