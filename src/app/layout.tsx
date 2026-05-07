@@ -1,49 +1,53 @@
-import type { Metadata, Viewport } from 'next';
-import './globals.css';
-import { Analytics } from "@vercel/analytics/next"
-import { SpeedInsights } from "@vercel/speed-insights/next"
+import type { Metadata, Viewport } from "next";
+import "./globals.css";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const viewport: Viewport = {
-  width: 'device-width',
+  width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  themeColor: '#0D0D0D',
+  themeColor: "#0D0D0D",
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://www.almmatix.in'),
-  title: 'Almmatix — AI Voice Agents, WhatsApp Automation & Web Development',
+  metadataBase: new URL("https://www.almmatix.in"),
+  title: "Almmatix — AI Voice Agents, WhatsApp Automation & Web Development",
   description:
-    'Almmatix builds AI voice agents, WhatsApp automation bots, RAG systems, and custom web platforms for enterprises. Engineered to scale. Start your project today.',
+    "Almmatix builds AI voice agents, WhatsApp automation bots, RAG systems, and custom web platforms for enterprises. Engineered to scale. Start your project today.",
+  icons: {
+    icon: "/images/favicon.ico",
+    apple: "/images/apple-touch-icon.png"
+  },
   keywords: [
-    'AI voice agents',
-    'WhatsApp automation',
-    'RAG systems',
-    'web development agency',
-    'AI automation India',
-    'enterprise automation',
-    'custom CRM',
-    'Almmatix',
+    "AI voice agents",
+    "WhatsApp automation",
+    "RAG systems",
+    "web development agency",
+    "AI automation India",
+    "enterprise automation",
+    "custom CRM",
+    "Almmatix",
   ],
-  authors: [{ name: 'Almmatix' }],
-  creator: 'Almmatix',
+  authors: [{ name: "Almmatix" }],
+  creator: "Almmatix",
   openGraph: {
-    type: 'website',
-    locale: 'en_IN',
-    url: 'https://www.almmatix.in',
-    siteName: 'Almmatix',
-    title: 'Almmatix — AI Voice Agents, WhatsApp Automation & Web Development',
+    type: "website",
+    locale: "en_IN",
+    url: "https://www.almmatix.in",
+    siteName: "Almmatix",
+    title: "Almmatix — AI Voice Agents, WhatsApp Automation & Web Development",
     description:
-      'We build AI voice agents, WhatsApp bots, RAG systems & web platforms for enterprises that refuse to stay manual.',
+      "We build AI voice agents, WhatsApp bots, RAG systems & web platforms for enterprises that refuse to stay manual.",
   },
   twitter: {
-    card: 'summary_large_image',
-    title: 'Almmatix — Deep-Tech Infrastructure Studio',
+    card: "summary_large_image",
+    title: "Almmatix — Deep-Tech Infrastructure Studio",
     description:
-      'AI voice agents, WhatsApp automation, RAG systems & web platforms — engineered to scale.',
+      "AI voice agents, WhatsApp automation, RAG systems & web platforms — engineered to scale.",
   },
   alternates: {
-    canonical: '/',
+    canonical: "/",
   },
   robots: {
     index: true,
@@ -51,14 +55,18 @@ export const metadata: Metadata = {
     googleBot: {
       index: true,
       follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
     },
   },
 };
 
-import { OrganizationSchema, WebSiteSchema, ServicesSchema } from '@/components/SchemaMarkup';
+import {
+  OrganizationSchema,
+  WebSiteSchema,
+  ServicesSchema,
+} from "@/components/SchemaMarkup";
 
 export default function RootLayout({
   children,
@@ -77,7 +85,10 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="antialiased font-sans">
+      
+      <body
+      suppressHydrationWarning 
+      className="antialiased font-sans">
         <OrganizationSchema />
         <WebSiteSchema />
         <ServicesSchema />
