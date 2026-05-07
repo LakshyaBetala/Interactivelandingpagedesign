@@ -23,7 +23,7 @@ export default async function Icon() {
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={`data:image/png;base64,${(await readFile(join(process.cwd(), 'public', 'almmatix_logo.png'))).toString('base64')}`}
+          src={`data:image/png;base64,${(await readFile(join(process.cwd(), 'public', 'images', 'almmatix_logo.png'))).toString('base64')}`}
           alt=""
           width="32"
           height="32"
