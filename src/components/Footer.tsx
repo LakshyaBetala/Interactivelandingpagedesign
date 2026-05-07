@@ -27,7 +27,7 @@ export default function Footer() {
             {/* Left: Logo + Tagline */}
             <div className="flex items-center gap-4">
               <Image
-                src="/almmatix_logo.png"
+                src="/images/almmatix_logo.png"
                 alt="Almmatix"
                 width={48}
                 height={48}
