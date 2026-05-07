@@ -56,7 +56,7 @@ export default function Navbar() {
           {/* Logo */}
           <a href="/" className="flex items-center gap-2.5 group">
             <Image
-              src="/almmatix_logo.png"
+              src="/images/almmatix_logo.png"
               alt="Almmatix"
               width={42}
               height={42}

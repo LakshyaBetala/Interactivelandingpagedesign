@@ -21,7 +21,7 @@ export default function AgencyHeroClient() {
         >
           <div className="relative w-[50vw] sm:w-[40vw] max-w-[500px] aspect-square opacity-5">
             <Image
-              src="/almmatix_logo.png"
+              src="/images/almmatix_logo.png"
               alt="Almmatix Logo"
               fill
               sizes="(max-width: 640px) 50vw, 40vw"

@@ -63,7 +63,7 @@ export default function CaseStudy() {
                 transition={{ type: "spring", stiffness: 300 }}
               >
                 <Image
-                  src="/doitforme_logo.png"
+                  src="/images/doitforme_logo.png"
                   alt="DoItForMe"
                   width={96}
                   height={96}

@@ -6,7 +6,7 @@ export function OrganizationSchema() {
     '@type': 'Organization',
     name: 'Almmatix',
     url: 'https://www.almmatix.in',
-    logo: 'https://www.almmatix.in/almmatix_logo.png',
+    logo: 'https://www.almmatix.in/images/almmatix_logo.png',
     email: 'almmatix@gmail.com',
     telephone: '+919344110272',
     address: {
