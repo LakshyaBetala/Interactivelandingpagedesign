@@ -12,46 +12,33 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.almmatix.in"),
-  title: "Almmatix — AI Voice Agents, WhatsApp Automation & Web Development",
+
+  title: {
+    default: "Almmatix",
+    template: "%s | Almmatix",
+  },
+
   description:
     "Almmatix builds AI voice agents, WhatsApp automation bots, RAG systems, and custom web platforms for enterprises. Engineered to scale. Start your project today.",
-  icons: {
-    icon: "/images/favicon.ico",
-    apple: "/images/apple-touch-icon.png"
-  },
-  keywords: [
-    "AI voice agents",
-    "WhatsApp automation",
-    "RAG systems",
-    "web development agency",
-    "AI automation India",
-    "enterprise automation",
-    "custom CRM",
-    "Almmatix",
-  ],
+
+
   authors: [{ name: "Almmatix" }],
   creator: "Almmatix",
-  openGraph: {
-    type: "website",
-    locale: "en_IN",
-    url: "https://www.almmatix.in",
-    siteName: "Almmatix",
-    title: "Almmatix — AI Voice Agents, WhatsApp Automation & Web Development",
-    description:
-      "We build AI voice agents, WhatsApp bots, RAG systems & web platforms for enterprises that refuse to stay manual.",
+  publisher: "Almmatix",
+
+  icons: {
+    icon: "/images/favicon.ico",
+    apple: "/images/apple-touch-icon.png",
   },
-  twitter: {
-    card: "summary_large_image",
-    title: "Almmatix — Deep-Tech Infrastructure Studio",
-    description:
-      "AI voice agents, WhatsApp automation, RAG systems & web platforms — engineered to scale.",
-  },
+
   alternates: {
-    canonical: "/",
+    canonical: "https://www.almmatix.in",
   },
+
   robots: {
     index: true,
     follow: true,
+
     googleBot: {
       index: true,
       follow: true,
@@ -59,6 +46,40 @@ export const metadata: Metadata = {
       "max-image-preview": "large",
       "max-snippet": -1,
     },
+  },
+
+  openGraph: {
+    type: "website",
+    locale: "en_IN",
+    url: "https://www.almmatix.in",
+
+    siteName: "Almmatix",
+
+    title:
+      "Almmatix — AI Voice Agents, WhatsApp Automation & Web Development",
+
+    description:
+      "We build AI voice agents, WhatsApp bots, RAG systems & web platforms for enterprises that refuse to stay manual.",
+
+    images: [
+      {
+        url: "/images/og_logo.png",
+        width: 1200,
+        height: 630,
+        alt: "Almmatix",
+      },
+    ],
+  },
+
+  twitter: {
+    card: "summary_large_image",
+
+    title: "Almmatix — Deep-Tech Infrastructure Studio",
+
+    description:
+      "AI voice agents, WhatsApp automation, RAG systems & web platforms — engineered to scale.",
+
+    images: ["/images/og_logo.png"],
   },
 };
 
@@ -85,10 +106,10 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      
+
       <body
-      suppressHydrationWarning 
-      className="antialiased font-sans">
+        suppressHydrationWarning
+        className="antialiased font-sans">
         <OrganizationSchema />
         <WebSiteSchema />
         <ServicesSchema />
