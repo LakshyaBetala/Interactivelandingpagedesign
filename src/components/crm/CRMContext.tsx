@@ -1,6 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
+import { supabase } from "@/lib/supabaseClient";
 
 // --- Types ---
 
@@ -133,7 +134,20 @@ export interface ChangelogRelease {
   releaseNotes?: string; // High-level admin signoff summary
 }
 
-// --- Initial Mock Data ---
+// --- Supabase DB Types ---
+export interface UserProfile {
+  id: string;
+  name: string;
+  role: string;
+  category: "admin" | "client";
+  avatar: string;
+  colorVar: string;
+  primaryFocus: string;
+  responsibilities: string[];
+  activeTasks: string[];
+}
+
+// --- Initial Mock Datasets (Fallback-Safe) ---
 
 const INITIAL_TEAM: TeamMember[] = [
   { id: "a1", name: "Lakshya", role: "PM & Client Delivery Lead", avatar: "LB", colorVar: "var(--color-admin-lakshya)", responsibilities: ["Client Communication", "Product Strategy", "QA / Delivery Gate"], activeTasks: ["Review Supreme Petro Release", "Rafter.so Onboarding"], primaryFocus: "Client Delivery" },
@@ -230,6 +244,106 @@ const INITIAL_INTERNAL_TASKS: InternalTask[] = [
   { id: "t3", productId: "p1", title: "Automate outbound lead email sync", assignedAdminId: "a3", status: "Todo", internalNotes: ["Integrate Resend API key config.", "Draft cold sequences for Muskan to review."], createdAt: "Just now" }
 ];
 
+// --- Mappers: DB format to/from Application UI camelCase types ---
+
+const mapClientToTS = (db: any): CRMClient => ({
+  id: db.id,
+  name: db.name,
+  project: db.project,
+  location: db.location || "",
+  category: db.category,
+  stage: db.stage,
+  health: db.health ?? 100,
+  revenue: Number(db.revenue || 0),
+  lastActivity: db.last_activity || "",
+  avatar: db.avatar || "",
+  assignedAdminId: db.assigned_admin_id || undefined,
+});
+
+const mapTeamMemberToTS = (db: any): TeamMember => ({
+  id: db.id,
+  name: db.name,
+  role: db.role || "",
+  avatar: db.avatar || "",
+  colorVar: db.color_var || "var(--color-neutral)",
+  responsibilities: db.responsibilities || [],
+  activeTasks: db.active_tasks || [],
+  primaryFocus: (db.primary_focus as any) || "Client Delivery",
+});
+
+const mapProductToTS = (db: any): InternalProduct => ({
+  id: db.id,
+  name: db.name,
+  stage: db.stage,
+  progress: db.progress ?? 0,
+  description: db.description || "",
+  leadId: db.lead_id || "",
+  repoLink: db.repo_link || undefined,
+  sandboxLink: db.sandbox_link || undefined,
+  metrics: db.metrics || undefined,
+});
+
+const mapCommentToTS = (db: any): Comment => ({
+  id: db.id.toString(),
+  author: db.author,
+  role: db.role,
+  text: db.text,
+  timestamp: db.timestamp || "",
+  timeElapsed: db.time_elapsed || "",
+  clientId: db.client_id,
+});
+
+const mapLeadToTS = (db: any): OutreachLead => ({
+  id: db.id,
+  companyName: db.company_name,
+  projectDescription: db.project_description || "",
+  source: db.source,
+  status: db.status,
+  estimatedValue: Number(db.estimated_value || 0),
+  assignedAdminId: db.assigned_admin_id || "",
+  callsMade: db.calls_made ?? 0,
+  notes: db.notes || [],
+  lastContacted: db.last_contacted || "",
+  sourcedById: db.sourced_by_id || "",
+  engagementScore: db.engagement_score ?? 0,
+});
+
+const mapFlagToTS = (db: any): ProjectFlag => ({
+  id: db.id,
+  clientId: db.client_id,
+  title: db.title,
+  description: db.description || "",
+  severity: db.severity,
+  status: db.status,
+  createdAt: db.created_at || "",
+  assignedAdminId: db.assigned_admin_id || undefined,
+  sprintLogs: db.sprint_logs || [],
+});
+
+const mapTaskToTS = (db: any): InternalTask => ({
+  id: db.id,
+  clientId: db.client_id || undefined,
+  productId: db.product_id || undefined,
+  title: db.title,
+  assignedAdminId: db.assigned_admin_id,
+  status: db.status,
+  originCommentId: db.origin_comment_id || undefined,
+  internalNotes: db.internal_notes || [],
+  createdAt: db.created_at || "",
+});
+
+const mapReleaseToTS = (db: any): ChangelogRelease => ({
+  id: db.id,
+  clientId: db.client_id,
+  version: db.version,
+  title: db.title,
+  whatWasImproved: db.what_was_improved || [],
+  publishedAt: db.published_at || "",
+  status: db.status,
+  approvedAt: db.approved_at || undefined,
+  releaseNotes: db.release_notes || undefined,
+});
+
 // --- Context Definition ---
 
 interface CRMContextProps {
@@ -243,7 +357,7 @@ interface CRMContextProps {
   releases: ChangelogRelease[];
   internalTasks: InternalTask[];
   currentAdminId: string;
-  selectedClientId: number; // Track simulated client view
+  selectedClientId: number;
   setSelectedClientId: (id: number) => void;
   addComment: (comment: Omit<Comment, "id">) => void;
   deleteComment: (id: string) => void;
@@ -271,67 +385,322 @@ interface CRMContextProps {
   addInternalTask: (task: Omit<InternalTask, "id" | "createdAt" | "status" | "internalNotes">) => void;
   updateInternalTaskStatus: (taskId: string, status: TaskStatus) => void;
   addInternalTaskNote: (taskId: string, note: string) => void;
+
+  // Real auth properties
+  userProfile: UserProfile | null;
+  loading: boolean;
+  isSupabaseConfigured: boolean;
+  signOut: () => Promise<void>;
 }
 
 const CRMContext = createContext<CRMContextProps | undefined>(undefined);
 
 export function CRMProvider({ children }: { children: ReactNode }) {
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [isSupabaseConfigured, setIsSupabaseConfigured] = useState<boolean>(false);
+
+  // Database application states
   const [clients, setClients] = useState<CRMClient[]>(INITIAL_CLIENTS);
-  const [team] = useState<TeamMember[]>(INITIAL_TEAM);
-  const [products] = useState<InternalProduct[]>(INITIAL_PRODUCTS);
+  const [team, setTeam] = useState<TeamMember[]>(INITIAL_TEAM);
+  const [products, setProducts] = useState<InternalProduct[]>(INITIAL_PRODUCTS);
   const [comments, setComments] = useState<Comment[]>(INITIAL_COMMENTS);
   const [activities, setActivities] = useState<Activity[]>(INITIAL_ACTIVITY);
-
-  // Expanded State
   const [leads, setLeads] = useState<OutreachLead[]>(INITIAL_LEADS);
   const [flags, setFlags] = useState<ProjectFlag[]>(INITIAL_FLAGS);
   const [releases, setReleases] = useState<ChangelogRelease[]>(INITIAL_RELEASES);
   const [internalTasks, setInternalTasks] = useState<InternalTask[]>(INITIAL_INTERNAL_TASKS);
   const [selectedClientId, setSelectedClientId] = useState<number>(1); // Default to Supreme Petro
 
-  // Mock logged-in admin (Lakshya by default)
-  const currentAdminId = "a1";
+  // If Supabase is unconfigured, fall back to "a1" (Lakshya) for admin operations.
+  const currentAdminId = userProfile?.id || "a1";
 
-  const addComment = useCallback((newComment: Omit<Comment, "id">) => {
-    setComments((prev) => [...prev, { ...newComment, id: Date.now().toString() }]);
+  // Check if Supabase keys are fully defined
+  const checkSupabaseStatus = useCallback(() => {
+    const isConfigured =
+      process.env.NEXT_PUBLIC_SUPABASE_URL !== undefined &&
+      process.env.NEXT_PUBLIC_SUPABASE_URL !== "https://placeholder-project.supabase.co" &&
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY !== undefined &&
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY !== "placeholder-key-for-build";
+    setIsSupabaseConfigured(isConfigured);
+    return isConfigured;
   }, []);
 
-  const deleteComment = useCallback((id: string) => {
-    setComments((prev) => prev.filter(c => c.id !== id));
-  }, []);
+  // Fetch complete operational schema or client isolated records
+  const fetchOperationalData = useCallback(async (profile: UserProfile) => {
+    try {
+      if (profile.category === "admin") {
+        // Partners fetch all telemetry metrics
+        const [
+          { data: dbProfiles },
+          { data: dbClients },
+          { data: dbProducts },
+          { data: dbComments },
+          { data: dbLeads },
+          { data: dbFlags },
+          { data: dbReleases },
+          { data: dbTasks },
+        ] = await Promise.all([
+          supabase.from("profiles").select("*"),
+          supabase.from("clients").select("*"),
+          supabase.from("internal_products").select("*"),
+          supabase.from("comments").select("*").order("created_at", { ascending: false }),
+          supabase.from("outreach_leads").select("*"),
+          supabase.from("project_flags").select("*"),
+          supabase.from("releases").select("*"),
+          supabase.from("internal_tasks").select("*"),
+        ]);
 
-  const updateClientStage = useCallback((clientId: number, newStage: ClientStage) => {
-    setClients((prev) =>
-      prev.map((c) => {
-        if (c.id === clientId) {
-          const category = newStage === "Lead" || newStage === "Proposal" ? "Potential" : "Ongoing";
-          return { ...c, stage: newStage, category };
+        if (dbProfiles) setTeam(dbProfiles.map(mapTeamMemberToTS));
+        if (dbClients) setClients(dbClients.map(mapClientToTS));
+        if (dbProducts) setProducts(dbProducts.map(mapProductToTS));
+        if (dbComments) setComments(dbComments.map(mapCommentToTS));
+        if (dbLeads) setLeads(dbLeads.map(mapLeadToTS));
+        if (dbFlags) setFlags(dbFlags.map(mapFlagToTS));
+        if (dbReleases) setReleases(dbReleases.map(mapReleaseToTS));
+        if (dbTasks) setInternalTasks(dbTasks.map(mapTaskToTS));
+      } else {
+        // Client sandboxing - fetch ONLY their record
+        const { data: dbClients } = await supabase
+          .from("clients")
+          .select("*")
+          .eq("profile_id", profile.id);
+
+        if (dbClients && dbClients.length > 0) {
+          const clientData = mapClientToTS(dbClients[0]);
+          setClients([clientData]);
+          setSelectedClientId(clientData.id);
+
+          // Isolated subqueries
+          const [
+            { data: dbComments },
+            { data: dbFlags },
+            { data: dbReleases },
+          ] = await Promise.all([
+            supabase.from("comments").select("*").eq("client_id", clientData.id),
+            supabase.from("project_flags").select("*").eq("client_id", clientData.id),
+            supabase.from("releases").select("*").eq("client_id", clientData.id),
+          ]);
+
+          if (dbComments) setComments(dbComments.map(mapCommentToTS));
+          if (dbFlags) setFlags(dbFlags.map(mapFlagToTS));
+          if (dbReleases) setReleases(dbReleases.map(mapReleaseToTS));
         }
-        return c;
-      })
-    );
+      }
+    } catch (err) {
+      console.error("Error loading operational telemetry from Supabase:", err);
+    }
   }, []);
 
-  const updateClientAdmin = useCallback((clientId: number, adminId: string) => {
+  // Monitor auth status
+  useEffect(() => {
+    const configured = checkSupabaseStatus();
+    if (!configured) {
+      setLoading(false);
+      return;
+    }
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        // Retrieve profile details
+        const { data: dbProfile, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", session.user.id)
+          .single();
+
+        if (dbProfile) {
+          const profile: UserProfile = {
+            id: dbProfile.id,
+            name: dbProfile.name,
+            role: dbProfile.role || "Consultant",
+            category: dbProfile.category as "admin" | "client",
+            avatar: dbProfile.avatar || "AL",
+            colorVar: dbProfile.color_var || "var(--color-neutral)",
+            primaryFocus: dbProfile.primary_focus || "Client Delivery",
+            responsibilities: dbProfile.responsibilities || [],
+            activeTasks: dbProfile.active_tasks || [],
+          };
+          setUserProfile(profile);
+          await fetchOperationalData(profile);
+        }
+      } else {
+        setUserProfile(null);
+      }
+      setLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [checkSupabaseStatus, fetchOperationalData]);
+
+  // Sign out helper
+  const signOut = async () => {
+    if (isSupabaseConfigured) {
+      await supabase.auth.signOut();
+      setUserProfile(null);
+      window.location.reload();
+    }
+  };
+
+  // --- MUTATOR WRAPPERS WITH RESILIENT LOCAL FALLBACKS ---
+
+  const addComment = useCallback(async (newComment: Omit<Comment, "id">) => {
+    if (isSupabaseConfigured && userProfile) {
+      const { data, error } = await supabase.from("comments").insert({
+        author: newComment.author,
+        role: newComment.role,
+        text: newComment.text,
+        timestamp: newComment.timestamp,
+        time_elapsed: newComment.timeElapsed,
+        client_id: newComment.clientId,
+      }).select();
+
+      if (error) console.error("Database insert comment error:", error);
+      else if (data && data.length > 0) {
+        setComments((prev) => [mapCommentToTS(data[0]), ...prev]);
+        return;
+      }
+    }
+    // Safe Local Fallback
+    setComments((prev) => [{ ...newComment, id: Date.now().toString() }, ...prev]);
+  }, [isSupabaseConfigured, userProfile]);
+
+  const deleteComment = useCallback(async (id: string) => {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.from("comments").delete().eq("id", id);
+      if (error) console.error("Database delete comment error:", error);
+      else {
+        setComments((prev) => prev.filter(c => c.id !== id));
+        return;
+      }
+    }
+    setComments((prev) => prev.filter(c => c.id !== id));
+  }, [isSupabaseConfigured]);
+
+  const updateClientStage = useCallback(async (clientId: number, newStage: ClientStage) => {
+    const category = newStage === "Lead" || newStage === "Proposal" ? "Potential" : "Ongoing";
+    
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from("clients")
+        .update({ stage: newStage, category })
+        .eq("id", clientId);
+      
+      if (error) console.error("Database update client stage error:", error);
+      else {
+        setClients((prev) =>
+          prev.map((c) => (c.id === clientId ? { ...c, stage: newStage, category } : c))
+        );
+        return;
+      }
+    }
+    setClients((prev) =>
+      prev.map((c) => (c.id === clientId ? { ...c, stage: newStage, category } : c))
+    );
+  }, [isSupabaseConfigured]);
+
+  const updateClientAdmin = useCallback(async (clientId: number, adminId: string) => {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from("clients")
+        .update({ assigned_admin_id: adminId })
+        .eq("id", clientId);
+
+      if (error) console.error("Database assign admin error:", error);
+      else {
+        setClients((prev) =>
+          prev.map((c) => (c.id === clientId ? { ...c, assignedAdminId: adminId } : c))
+        );
+        return;
+      }
+    }
     setClients((prev) =>
       prev.map((c) => (c.id === clientId ? { ...c, assignedAdminId: adminId } : c))
     );
-  }, []);
+  }, [isSupabaseConfigured]);
 
-  // --- Outreach mutator callbacks ---
-  const updateLeadStatus = useCallback((leadId: string, status: OutreachStatus) => {
+  const updateLeadStatus = useCallback(async (leadId: string, status: OutreachStatus) => {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from("outreach_leads")
+        .update({ status })
+        .eq("id", leadId);
+      
+      if (error) console.error("Database lead status error:", error);
+      else {
+        setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status } : l));
+        return;
+      }
+    }
     setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status } : l));
-  }, []);
+  }, [isSupabaseConfigured]);
 
-  const incrementLeadCalls = useCallback((leadId: string) => {
-    setLeads(prev => prev.map(l => l.id === leadId ? { ...l, callsMade: l.callsMade + 1 } : l));
-  }, []);
+  const incrementLeadCalls = useCallback(async (leadId: string) => {
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead) return;
+    const calls = lead.callsMade + 1;
 
-  const addLeadNote = useCallback((leadId: string, note: string) => {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from("outreach_leads")
+        .update({ calls_made: calls })
+        .eq("id", leadId);
+
+      if (error) console.error("Database calls counter error:", error);
+      else {
+        setLeads(prev => prev.map(l => l.id === leadId ? { ...l, callsMade: calls } : l));
+        return;
+      }
+    }
+    setLeads(prev => prev.map(l => l.id === leadId ? { ...l, callsMade: calls } : l));
+  }, [leads, isSupabaseConfigured]);
+
+  const addLeadNote = useCallback(async (leadId: string, note: string) => {
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead) return;
+    const notes = [...lead.notes, note];
+
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from("outreach_leads")
+        .update({ notes, last_contacted: "Just now" })
+        .eq("id", leadId);
+
+      if (error) console.error("Database lead note error:", error);
+      else {
+        setLeads(prev => prev.map(l => l.id === leadId ? { ...l, notes, lastContacted: "Just now" } : l));
+        return;
+      }
+    }
     setLeads(prev => prev.map(l => l.id === leadId ? { ...l, notes: [...l.notes, note], lastContacted: "Just now" } : l));
-  }, []);
+  }, [leads, isSupabaseConfigured]);
 
-  const addNewLead = useCallback((lead: Omit<OutreachLead, "id" | "callsMade" | "notes" | "lastContacted">) => {
+  const addNewLead = useCallback(async (lead: Omit<OutreachLead, "id" | "callsMade" | "notes" | "lastContacted">) => {
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase.from("outreach_leads").insert({
+        company_name: lead.companyName,
+        project_description: lead.projectDescription,
+        source: lead.source,
+        status: lead.status,
+        estimated_value: lead.estimatedValue,
+        assigned_admin_id: lead.assignedAdminId || null,
+        calls_made: 0,
+        notes: ["Lead sourced, initial status logged."],
+        last_contacted: "Just now",
+        sourced_by_id: lead.sourcedById || null,
+        engagement_score: lead.engagementScore,
+      }).select();
+
+      if (error) console.error("Database add lead error:", error);
+      else if (data && data.length > 0) {
+        setLeads(prev => [...prev, mapLeadToTS(data[0])]);
+        return;
+      }
+    }
     setLeads(prev => [
       ...prev,
       {
@@ -342,13 +711,60 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         lastContacted: "Just now"
       }
     ]);
-  }, []);
+  }, [isSupabaseConfigured]);
 
-  const convertLeadToClient = useCallback((leadId: string) => {
+  const convertLeadToClient = useCallback(async (leadId: string) => {
     const lead = leads.find(l => l.id === leadId);
     if (!lead) return;
 
-    // Create new Ongoing client dynamically
+    if (isSupabaseConfigured) {
+      // Create new client in db
+      const { data: clientData, error: clientErr } = await supabase.from("clients").insert({
+        name: lead.companyName,
+        project: lead.projectDescription,
+        location: "India",
+        category: "Ongoing",
+        stage: "In Dev",
+        health: 80,
+        revenue: lead.estimatedValue,
+        last_activity: "Lead converted into project workspace",
+        avatar: lead.companyName.split(" ").map(w => w[0]).join("").toUpperCase().substring(0, 2),
+        assigned_admin_id: lead.assignedAdminId || null,
+      }).select();
+
+      if (clientErr) {
+        console.error("Error creating client from lead:", clientErr);
+        return;
+      }
+
+      if (clientData && clientData.length > 0) {
+        const newClient = mapClientToTS(clientData[0]);
+        
+        // Add automatic onboarding tasks in DB
+        const dbTasks = [
+          { client_id: newClient.id, title: "Draft custom branding mockups", assigned_admin_id: "da444444-4444-4444-4444-444444444444", status: "Todo", internal_notes: ["Muskan to align with lead branding parameters."], created_at: "Just now" },
+          { client_id: newClient.id, title: "Initialize database schema & env", assigned_admin_id: "da222222-2222-2222-2222-222222222222", status: "Todo", internal_notes: ["Mouriyan to construct Supabase instance."], created_at: "Just now" },
+          { client_id: newClient.id, title: "Draft delivery roadmap agreement", assigned_admin_id: "da111111-1111-1111-1111-111111111111", status: "Todo", internal_notes: ["Lakshya to review contract SLA milestones."], created_at: "Just now" }
+        ];
+
+        await Promise.all([
+          supabase.from("internal_tasks").insert(dbTasks),
+          supabase.from("outreach_leads").delete().eq("id", leadId),
+          supabase.from("activities").insert({
+            action: `🤝 Converted lead to client`,
+            client: lead.companyName,
+            time: "Just now",
+            type: "milestone"
+          })
+        ]);
+
+        // Re-trigger global dashboard fetch to sync everything properly
+        if (userProfile) await fetchOperationalData(userProfile);
+        return;
+      }
+    }
+
+    // Local Fallback
     const newId = clients.length + 1;
     const newClient: CRMClient = {
       id: newId,
@@ -364,7 +780,6 @@ export function CRMProvider({ children }: { children: ReactNode }) {
       assignedAdminId: lead.assignedAdminId || "a1"
     };
 
-    // Add automatic onboarding internal tasks for the team
     const defaultTasks: InternalTask[] = [
       { id: `t_conv_${Date.now()}_1`, clientId: newId, title: "Draft custom branding mockups", assignedAdminId: "a4", status: "Todo", internalNotes: ["Muskan to align with lead branding parameters."], createdAt: "Just now" },
       { id: `t_conv_${Date.now()}_2`, clientId: newId, title: "Initialize database schema & env", assignedAdminId: "a2", status: "Todo", internalNotes: ["Mouriyan to construct Supabase instance."], createdAt: "Just now" },
@@ -378,10 +793,38 @@ export function CRMProvider({ children }: { children: ReactNode }) {
       { id: Date.now(), action: `🤝 Converted lead to client`, client: lead.companyName, time: "Just now", type: "milestone" },
       ...prev
     ]);
-  }, [leads, clients]);
+  }, [leads, clients, isSupabaseConfigured, userProfile, fetchOperationalData]);
 
-  // --- Support Flag mutator callbacks ---
-  const addFlag = useCallback((newFlag: Omit<ProjectFlag, "id" | "createdAt" | "status" | "sprintLogs">) => {
+  const addFlag = useCallback(async (newFlag: Omit<ProjectFlag, "id" | "createdAt" | "status" | "sprintLogs">) => {
+    const logs = [{ id: `sl_flag_${Date.now()}`, author: "System", text: "Flag logged by client portal. Assigned sprint owner notified.", timestamp: "Just now" }];
+    
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase.from("project_flags").insert({
+        client_id: newFlag.clientId,
+        title: newFlag.title,
+        description: newFlag.description,
+        severity: newFlag.severity,
+        status: "Open",
+        created_at: "Just now",
+        assigned_admin_id: newFlag.assignedAdminId || null,
+        sprint_logs: logs,
+      }).select();
+
+      if (error) console.error("Database flag logging error:", error);
+      else if (data && data.length > 0) {
+        setFlags(prev => [...prev, mapFlagToTS(data[0])]);
+        
+        await supabase.from("activities").insert({
+          action: `🚨 New Flag: ${newFlag.title}`,
+          client: clients.find(c => c.id === newFlag.clientId)?.name || `Client ID ${newFlag.clientId}`,
+          time: "Just now",
+          type: "alert"
+        });
+        
+        return;
+      }
+    }
+    // Local Fallback
     setFlags(prev => [
       ...prev,
       {
@@ -389,67 +832,115 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         id: `f_${Date.now()}`,
         status: "Open",
         createdAt: "Just now",
-        sprintLogs: [
-          { id: `sl_flag_${Date.now()}`, author: "System", text: "Flag logged by client portal. Assigned sprint owner notified.", timestamp: "Just now" }
-        ]
+        sprintLogs: logs
       }
     ]);
     setActivities(prev => [
       { id: Date.now(), action: `🚨 New Flag: ${newFlag.title}`, client: `Client ID ${newFlag.clientId}`, time: "Just now", type: "alert" },
       ...prev
     ]);
-  }, []);
+  }, [isSupabaseConfigured, clients]);
 
-  const updateFlagStatus = useCallback((flagId: string, status: FlagStatus) => {
-    setFlags(prev => prev.map(f => {
-      if (f.id === flagId) {
-        return { 
-          ...f, 
-          status,
-          sprintLogs: [
-            ...f.sprintLogs,
-            { id: `sl_status_${Date.now()}`, author: "System", text: `Ticket transitioned to status: ${status}`, timestamp: "Just now" }
-          ]
-        };
+  const updateFlagStatus = useCallback(async (flagId: string, status: FlagStatus) => {
+    const flag = flags.find(f => f.id === flagId);
+    if (!flag) return;
+
+    const updatedLogs = [
+      ...flag.sprintLogs,
+      { id: `sl_status_${Date.now()}`, author: "System", text: `Ticket transitioned to status: ${status}`, timestamp: "Just now" }
+    ];
+
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from("project_flags")
+        .update({ status, sprint_logs: updatedLogs })
+        .eq("id", flagId);
+
+      if (error) console.error("Database flag status error:", error);
+      else {
+        setFlags(prev => prev.map(f => f.id === flagId ? { ...f, status, sprintLogs: updatedLogs } : f));
+        return;
       }
-      return f;
-    }));
-  }, []);
+    }
+    setFlags(prev => prev.map(f => f.id === flagId ? { ...f, status, sprintLogs: updatedLogs } : f));
+  }, [flags, isSupabaseConfigured]);
 
-  const assignFlagAdmin = useCallback((flagId: string, adminId: string) => {
+  const assignFlagAdmin = useCallback(async (flagId: string, adminId: string) => {
+    const flag = flags.find(f => f.id === flagId);
+    if (!flag) return;
+
     const admin = team.find(t => t.id === adminId);
-    setFlags(prev => prev.map(f => {
-      if (f.id === flagId) {
-        return { 
-          ...f, 
-          assignedAdminId: adminId,
-          sprintLogs: [
-            ...f.sprintLogs,
-            { id: `sl_assign_${Date.now()}`, author: "System", text: `Sprint owner assigned: ${admin?.name || "Unassigned"}`, timestamp: "Just now" }
-          ]
-        };
-      }
-      return f;
-    }));
-  }, [team]);
+    const updatedLogs = [
+      ...flag.sprintLogs,
+      { id: `sl_assign_${Date.now()}`, author: "System", text: `Sprint owner assigned: ${admin?.name || "Unassigned"}`, timestamp: "Just now" }
+    ];
 
-  const addFlagSprintLog = useCallback((flagId: string, author: string, text: string) => {
-    setFlags(prev => prev.map(f => {
-      if (f.id === flagId) {
-        return {
-          ...f,
-          sprintLogs: [
-            ...f.sprintLogs,
-            { id: `sl_note_${Date.now()}`, author, text, timestamp: "Just now" }
-          ]
-        };
-      }
-      return f;
-    }));
-  }, []);
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from("project_flags")
+        .update({ assigned_admin_id: adminId, sprint_logs: updatedLogs })
+        .eq("id", flagId);
 
-  // --- Changelog Composer mutator callbacks ---
-  const createRelease = useCallback((newRelease: Omit<ChangelogRelease, "id" | "publishedAt" | "status">) => {
+      if (error) console.error("Database assign flag admin error:", error);
+      else {
+        setFlags(prev => prev.map(f => f.id === flagId ? { ...f, assignedAdminId: adminId, sprintLogs: updatedLogs } : f));
+        return;
+      }
+    }
+    setFlags(prev => prev.map(f => f.id === flagId ? { ...f, assignedAdminId: adminId, sprintLogs: updatedLogs } : f));
+  }, [flags, team, isSupabaseConfigured]);
+
+  const addFlagSprintLog = useCallback(async (flagId: string, author: string, text: string) => {
+    const flag = flags.find(f => f.id === flagId);
+    if (!flag) return;
+
+    const updatedLogs = [
+      ...flag.sprintLogs,
+      { id: `sl_note_${Date.now()}`, author, text, timestamp: "Just now" }
+    ];
+
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from("project_flags")
+        .update({ sprint_logs: updatedLogs })
+        .eq("id", flagId);
+
+      if (error) console.error("Database flag note error:", error);
+      else {
+        setFlags(prev => prev.map(f => f.id === flagId ? { ...f, sprintLogs: updatedLogs } : f));
+        return;
+      }
+    }
+    setFlags(prev => prev.map(f => f.id === flagId ? { ...f, sprintLogs: updatedLogs } : f));
+  }, [flags, isSupabaseConfigured]);
+
+  const createRelease = useCallback(async (newRelease: Omit<ChangelogRelease, "id" | "publishedAt" | "status">) => {
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase.from("releases").insert({
+        client_id: newRelease.clientId,
+        version: newRelease.version,
+        title: newRelease.title,
+        what_was_improved: newRelease.whatWasImproved,
+        published_at: "Just now",
+        status: "Awaiting Review",
+        release_notes: newRelease.releaseNotes || null,
+      }).select();
+
+      if (error) console.error("Database create release error:", error);
+      else if (data && data.length > 0) {
+        setReleases(prev => [mapReleaseToTS(data[0]), ...prev]);
+        
+        await supabase.from("activities").insert({
+          action: `📢 Changelog Drafted: ${newRelease.title}`,
+          client: clients.find(c => c.id === newRelease.clientId)?.name || `Client ID ${newRelease.clientId}`,
+          time: "Just now",
+          type: "comment"
+        });
+        
+        return;
+      }
+    }
+    // Local Fallback
     setReleases(prev => [
       ...prev,
       {
@@ -463,21 +954,60 @@ export function CRMProvider({ children }: { children: ReactNode }) {
       { id: Date.now(), action: `📢 Changelog Drafted: ${newRelease.title}`, client: `Client ID ${newRelease.clientId}`, time: "Just now", type: "comment" },
       ...prev
     ]);
-  }, []);
+  }, [isSupabaseConfigured, clients]);
 
-  const approveRelease = useCallback((releaseId: string) => {
+  const approveRelease = useCallback(async (releaseId: string) => {
+    const rel = releases.find(r => r.id === releaseId);
+    if (!rel) return;
+
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from("releases")
+        .update({ status: "Approved", approved_at: "Just now" })
+        .eq("id", releaseId);
+
+      if (error) console.error("Database approve release error:", error);
+      else {
+        setReleases(prev => prev.map(r => r.id === releaseId ? { ...r, status: "Approved", approvedAt: "Just now" } : r));
+        
+        await supabase.from("activities").insert({
+          action: `✅ Changelog Approved: ${rel.title}`,
+          client: clients.find(c => c.id === rel.clientId)?.name || `Client ID ${rel.clientId}`,
+          time: "Just now",
+          type: "milestone"
+        });
+        
+        return;
+      }
+    }
+    // Local Fallback
     setReleases(prev => prev.map(r => r.id === releaseId ? { ...r, status: "Approved", approvedAt: "Just now" } : r));
-    setActivities(prev => {
-      const rel = releases.find(r => r.id === releaseId);
-      return [
-        { id: Date.now(), action: `✅ Changelog Approved: ${rel?.title || "Release"}`, client: `Client ID ${rel?.clientId}`, time: "Just now", type: "milestone" },
-        ...prev
-      ];
-    });
-  }, [releases]);
+    setActivities(prev => [
+      { id: Date.now(), action: `✅ Changelog Approved: ${rel?.title || "Release"}`, client: `Client ID ${rel?.clientId}`, time: "Just now", type: "milestone" },
+      ...prev
+    ]);
+  }, [releases, isSupabaseConfigured, clients]);
 
-  // --- Internal Collaboration Gate callbacks ---
-  const addInternalTask = useCallback((task: Omit<InternalTask, "id" | "createdAt" | "status" | "internalNotes">) => {
+  const addInternalTask = useCallback(async (task: Omit<InternalTask, "id" | "createdAt" | "status" | "internalNotes">) => {
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase.from("internal_tasks").insert({
+        client_id: task.clientId || null,
+        product_id: task.productId || null,
+        title: task.title,
+        assigned_admin_id: task.assignedAdminId,
+        status: "Todo",
+        origin_comment_id: task.originCommentId || null,
+        internal_notes: ["Internal task initialized by collaboration review gate."],
+        created_at: "Just now",
+      }).select();
+
+      if (error) console.error("Database internal task creation error:", error);
+      else if (data && data.length > 0) {
+        setInternalTasks(prev => [mapTaskToTS(data[0]), ...prev]);
+        return;
+      }
+    }
+    // Local Fallback
     setInternalTasks(prev => [
       ...prev,
       {
@@ -488,15 +1018,44 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         createdAt: "Just now"
       }
     ]);
-  }, []);
+  }, [isSupabaseConfigured]);
 
-  const updateInternalTaskStatus = useCallback((taskId: string, status: TaskStatus) => {
+  const updateInternalTaskStatus = useCallback(async (taskId: string, status: TaskStatus) => {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from("internal_tasks")
+        .update({ status })
+        .eq("id", taskId);
+
+      if (error) console.error("Database internal task update error:", error);
+      else {
+        setInternalTasks(prev => prev.map(t => t.id === taskId ? { ...t, status } : t));
+        return;
+      }
+    }
     setInternalTasks(prev => prev.map(t => t.id === taskId ? { ...t, status } : t));
-  }, []);
+  }, [isSupabaseConfigured]);
 
-  const addInternalTaskNote = useCallback((taskId: string, note: string) => {
-    setInternalTasks(prev => prev.map(t => t.id === taskId ? { ...t, internalNotes: [...t.internalNotes, note] } : t));
-  }, []);
+  const addInternalTaskNote = useCallback(async (taskId: string, note: string) => {
+    const task = internalTasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const notes = [...task.internalNotes, note];
+
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from("internal_tasks")
+        .update({ internal_notes: notes })
+        .eq("id", taskId);
+
+      if (error) console.error("Database internal task note error:", error);
+      else {
+        setInternalTasks(prev => prev.map(t => t.id === taskId ? { ...t, internalNotes: notes } : t));
+        return;
+      }
+    }
+    setInternalTasks(prev => prev.map(t => t.id === taskId ? { ...t, internalNotes: notes } : t));
+  }, [internalTasks, isSupabaseConfigured]);
 
   return (
     <CRMContext.Provider value={{ 
@@ -505,7 +1064,8 @@ export function CRMProvider({ children }: { children: ReactNode }) {
       updateLeadStatus, incrementLeadCalls, addLeadNote, convertLeadToClient, addNewLead,
       addFlag, updateFlagStatus, assignFlagAdmin, addFlagSprintLog,
       createRelease, approveRelease,
-      addInternalTask, updateInternalTaskStatus, addInternalTaskNote
+      addInternalTask, updateInternalTaskStatus, addInternalTaskNote,
+      userProfile, loading, isSupabaseConfigured, signOut
     }}>
       {children}
     </CRMContext.Provider>
