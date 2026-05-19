@@ -1,5 +1,5 @@
--- Almmatix OS Supabase Schema Seeding
--- Paste this script directly into the Supabase SQL Editor.
+-- Almmatix OS Supabase Complete Schema Seeding Script
+-- Paste this script directly into the Supabase SQL Editor of your new project.
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -308,21 +308,75 @@ CREATE POLICY "Clients can view their project releases"
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
-  INSERT INTO public.profiles (id, name, role, category, avatar, color_var, primary_focus)
+  INSERT INTO public.profiles (
+    id, 
+    name, 
+    role, 
+    category, 
+    avatar, 
+    color_var, 
+    primary_focus,
+    responsibilities,
+    active_tasks
+  )
   VALUES (
     new.id,
-    COALESCE(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
-    CASE WHEN new.email LIKE '%@almmatix.com' THEN 'Partner' ELSE 'Client Partner' END,
-    CASE WHEN new.email LIKE '%@almmatix.com' THEN 'admin' ELSE 'client' END,
-    UPPER(SUBSTRING(COALESCE(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)) FROM 1 FOR 2)),
     CASE 
-      WHEN new.email = 'lakshya@almmatix.com' THEN 'var(--color-admin-lakshya)'
-      WHEN new.email = 'mouriyan@almmatix.com' THEN 'var(--color-admin-mouriyan)'
-      WHEN new.email = 'ankit@almmatix.com' THEN 'var(--color-admin-ankit)'
-      WHEN new.email = 'muskan@almmatix.com' THEN 'var(--color-admin-muskan)'
+      WHEN new.email = 'lakshbetala15@gmail.com' THEN 'Lakshya'
+      WHEN new.email = 'gandhimouriyan1234@gmail.com' THEN 'Mouriyan'
+      WHEN new.email = 'monarchankit25@gmail.com' THEN 'Ankit'
+      WHEN new.email = 'muskanabani01@gmail.com' THEN 'Muskan'
+      ELSE COALESCE(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1))
+    END,
+    CASE 
+      WHEN new.email = 'lakshbetala15@gmail.com' THEN 'PM & Client Delivery Lead'
+      WHEN new.email = 'gandhimouriyan1234@gmail.com' THEN 'Backend & Tech Delivery Lead'
+      WHEN new.email = 'monarchankit25@gmail.com' THEN 'Outreach & Marketing Lead'
+      WHEN new.email = 'muskanabani01@gmail.com' THEN 'Brand & Marketing Director'
+      ELSE 'Client Partner'
+    END,
+    CASE 
+      WHEN new.email IN (
+        'lakshbetala15@gmail.com', 
+        'gandhimouriyan1234@gmail.com', 
+        'monarchankit25@gmail.com', 
+        'muskanabani01@gmail.com'
+      ) THEN 'admin' 
+      ELSE 'client' 
+    END,
+    CASE 
+      WHEN new.email = 'lakshbetala15@gmail.com' THEN 'LB'
+      WHEN new.email = 'gandhimouriyan1234@gmail.com' THEN 'MR'
+      WHEN new.email = 'monarchankit25@gmail.com' THEN 'AK'
+      WHEN new.email = 'muskanabani01@gmail.com' THEN 'MK'
+      ELSE UPPER(SUBSTRING(COALESCE(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)) FROM 1 FOR 2))
+    END,
+    CASE 
+      WHEN new.email = 'lakshbetala15@gmail.com' THEN 'var(--color-admin-lakshya)'
+      WHEN new.email = 'gandhimouriyan1234@gmail.com' THEN 'var(--color-admin-mouriyan)'
+      WHEN new.email = 'monarchankit25@gmail.com' THEN 'var(--color-admin-ankit)'
+      WHEN new.email = 'muskanabani01@gmail.com' THEN 'var(--color-admin-muskan)'
       ELSE 'var(--color-neutral)'
     END,
-    CASE WHEN new.email LIKE '%@almmatix.com' THEN 'Client Delivery' ELSE 'Product Sandbox' END
+    CASE 
+      WHEN new.email IN ('lakshbetala15@gmail.com', 'gandhimouriyan1234@gmail.com') THEN 'Client Delivery'
+      WHEN new.email IN ('monarchankit25@gmail.com', 'muskanabani01@gmail.com') THEN 'Outreach & Marketing'
+      ELSE 'Product Sandbox'
+    END,
+    CASE 
+      WHEN new.email = 'lakshbetala15@gmail.com' THEN ARRAY['Client Communication', 'Product Strategy', 'QA / Delivery Gate']
+      WHEN new.email = 'gandhimouriyan1234@gmail.com' THEN ARRAY['API Architecture', 'Database Schema', 'Production Builds']
+      WHEN new.email = 'monarchankit25@gmail.com' THEN ARRAY['Lead Sourcing', 'Cold Calling Funnel', 'Client Accounts']
+      WHEN new.email = 'muskanabani01@gmail.com' THEN ARRAY['UI/UX Design Sprints', 'Brand Assets', 'Social Media Branding']
+      ELSE ARRAY[]::text[]
+    END,
+    CASE 
+      WHEN new.email = 'lakshbetala15@gmail.com' THEN ARRAY['Review Supreme Petro Release', 'Rafter.so Onboarding']
+      WHEN new.email = 'gandhimouriyan1234@gmail.com' THEN ARRAY['Supabase Auth Setup', 'BI Database Performance Optimization']
+      WHEN new.email = 'monarchankit25@gmail.com' THEN ARRAY['Karthik Exports Pitch Deck', 'Social Media Leads Sourcing']
+      WHEN new.email = 'muskanabani01@gmail.com' THEN ARRAY['NJ Jewellers Price Board UI', 'Almmatix Marketing Banners']
+      ELSE ARRAY[]::text[]
+    END
   );
   RETURN NEW;
 END;
@@ -331,3 +385,10 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- 11. Initial Database Seed Values for Non-Relational Fields
+INSERT INTO public.internal_products (id, name, stage, progress, description, repo_link, sandbox_link, metrics)
+VALUES 
+  ('p1', 'Almmatix CRM Core', 'Beta', 85, 'Our proprietary internal management tool and Agency OS.', 'github.com/almmatix/crm-core', 'almmatix.com/sandbox/crm', '{"label": "Sprint Velocity", "value": "9.2 pts/wk"}'),
+  ('p2', 'Design System V2', 'Planning', 20, 'Unified component library for fast shipping.', 'github.com/almmatix/design-v2', NULL, '{"label": "Total Components", "value": "48 assets"}'),
+  ('p3', 'Supabase Boilerplate', 'In Dev', 40, 'Quickstart backend template for SaaS projects.', 'github.com/almmatix/supabase-starter', 'supabase-starter.almmatix.com', '{"label": "Active Integrations", "value": "6 engines"}');

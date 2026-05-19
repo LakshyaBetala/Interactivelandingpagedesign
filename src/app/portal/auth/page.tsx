@@ -36,9 +36,15 @@ export default function AuthPage() {
 
     try {
       if (isSignUp) {
-        // Enforce Almmatix domain for Admin signups
-        if (activeTab === "admin" && !email.toLowerCase().endsWith("@almmatix.com")) {
-          throw new Error("Only @almmatix.com email addresses are authorized to register as partners.");
+        // Enforce specific Admin emails for Partner registration
+        const ADMIN_EMAILS = [
+          "lakshbetala15@gmail.com",
+          "gandhimouriyan1234@gmail.com",
+          "monarchankit25@gmail.com",
+          "muskanabani01@gmail.com"
+        ];
+        if (activeTab === "admin" && !ADMIN_EMAILS.includes(email.toLowerCase())) {
+          throw new Error("Only registered partner Gmail addresses are authorized for console access.");
         }
 
         const { data, error } = await supabase.auth.signUp({
@@ -165,8 +171,8 @@ export default function AuthPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder={
                     activeTab === "admin"
-                      ? "name@almmatix.com"
-                      : "partner@clientcompany.com"
+                      ? "partner@gmail.com"
+                      : "client@company.com"
                   }
                   className="w-full bg-sand/10 border-2 border-charcoal px-3 py-2 text-xs font-mono text-charcoal outline-none focus:border-ember focus:bg-white transition-all placeholder:text-charcoal/30"
                 />
@@ -226,7 +232,7 @@ export default function AuthPage() {
 
           <p className="font-mono text-[0.55rem] text-charcoal/45 mt-2 leading-relaxed">
             {activeTab === "admin"
-              ? "Notice: Accessing administrative assets requires verification. Registrants with domain @almmatix.com are seeded with admin access."
+              ? "Notice: Accessing administrative assets requires verification. Registrants must use an authorized partner Gmail account."
               : "Welcome client: Log in with credentials provided by your Almmatix project manager to monitor tickets and verify releases."}
           </p>
         </div>
