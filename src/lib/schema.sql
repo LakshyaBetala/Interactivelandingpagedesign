@@ -16,6 +16,7 @@ DROP TABLE IF EXISTS public.comments CASCADE;
 DROP TABLE IF EXISTS public.internal_products CASCADE;
 DROP TABLE IF EXISTS public.clients CASCADE;
 DROP TABLE IF EXISTS public.profiles CASCADE;
+DROP TABLE IF EXISTS public.authorized_emails CASCADE;
 
 DROP TYPE IF EXISTS client_stage CASCADE;
 DROP TYPE IF EXISTS client_category CASCADE;
@@ -304,80 +305,149 @@ CREATE POLICY "Clients can view their project releases"
         )
     );
 
--- 10. Triggers for Automatic Profile Creation on Signup
+-- 10. Credentials Provisioning (Pre-Authorization table)
+CREATE TABLE public.authorized_emails (
+    email text PRIMARY KEY,
+    name text NOT NULL,
+    role text,
+    category text NOT NULL CHECK (category IN ('admin', 'client')),
+    avatar text,
+    color_var text,
+    primary_focus text,
+    responsibilities text[] DEFAULT '{}'::text[],
+    active_tasks text[] DEFAULT '{}'::text[],
+    client_id integer,
+    created_at timestamp with time zone DEFAULT now()
+);
+
+ALTER TABLE public.authorized_emails ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Admins have full access to authorized emails"
+    ON public.authorized_emails FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles 
+            WHERE id = auth.uid() AND category = 'admin'
+        )
+    );
+
+CREATE POLICY "Allow public select on authorized emails during signup"
+    ON public.authorized_emails FOR SELECT USING (true);
+
+-- 11. Triggers for Automatic Profile Creation on Signup (Incorporating Pre-Authorization Lookup)
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
+DECLARE
+  pre_auth RECORD;
 BEGIN
-  INSERT INTO public.profiles (
-    id, 
-    name, 
-    role, 
-    category, 
-    avatar, 
-    color_var, 
-    primary_focus,
-    responsibilities,
-    active_tasks
-  )
-  VALUES (
-    new.id,
-    CASE 
-      WHEN new.email = 'lakshbetala15@gmail.com' THEN 'Lakshya'
-      WHEN new.email = 'gandhimouriyan1234@gmail.com' THEN 'Mouriyan'
-      WHEN new.email = 'monarchankit25@gmail.com' THEN 'Ankit'
-      WHEN new.email = 'muskanabani01@gmail.com' THEN 'Muskan'
-      ELSE COALESCE(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1))
-    END,
-    CASE 
-      WHEN new.email = 'lakshbetala15@gmail.com' THEN 'PM & Client Delivery Lead'
-      WHEN new.email = 'gandhimouriyan1234@gmail.com' THEN 'Backend & Tech Delivery Lead'
-      WHEN new.email = 'monarchankit25@gmail.com' THEN 'Outreach & Marketing Lead'
-      WHEN new.email = 'muskanabani01@gmail.com' THEN 'Brand & Marketing Director'
-      ELSE 'Client Partner'
-    END,
-    CASE 
-      WHEN new.email IN (
-        'lakshbetala15@gmail.com', 
-        'gandhimouriyan1234@gmail.com', 
-        'monarchankit25@gmail.com', 
-        'muskanabani01@gmail.com'
-      ) THEN 'admin' 
-      ELSE 'client' 
-    END,
-    CASE 
-      WHEN new.email = 'lakshbetala15@gmail.com' THEN 'LB'
-      WHEN new.email = 'gandhimouriyan1234@gmail.com' THEN 'MR'
-      WHEN new.email = 'monarchankit25@gmail.com' THEN 'AK'
-      WHEN new.email = 'muskanabani01@gmail.com' THEN 'MK'
-      ELSE UPPER(SUBSTRING(COALESCE(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)) FROM 1 FOR 2))
-    END,
-    CASE 
-      WHEN new.email = 'lakshbetala15@gmail.com' THEN 'var(--color-admin-lakshya)'
-      WHEN new.email = 'gandhimouriyan1234@gmail.com' THEN 'var(--color-admin-mouriyan)'
-      WHEN new.email = 'monarchankit25@gmail.com' THEN 'var(--color-admin-ankit)'
-      WHEN new.email = 'muskanabani01@gmail.com' THEN 'var(--color-admin-muskan)'
-      ELSE 'var(--color-neutral)'
-    END,
-    CASE 
-      WHEN new.email IN ('lakshbetala15@gmail.com', 'gandhimouriyan1234@gmail.com') THEN 'Client Delivery'
-      WHEN new.email IN ('monarchankit25@gmail.com', 'muskanabani01@gmail.com') THEN 'Outreach & Marketing'
-      ELSE 'Product Sandbox'
-    END,
-    CASE 
-      WHEN new.email = 'lakshbetala15@gmail.com' THEN ARRAY['Client Communication', 'Product Strategy', 'QA / Delivery Gate']
-      WHEN new.email = 'gandhimouriyan1234@gmail.com' THEN ARRAY['API Architecture', 'Database Schema', 'Production Builds']
-      WHEN new.email = 'monarchankit25@gmail.com' THEN ARRAY['Lead Sourcing', 'Cold Calling Funnel', 'Client Accounts']
-      WHEN new.email = 'muskanabani01@gmail.com' THEN ARRAY['UI/UX Design Sprints', 'Brand Assets', 'Social Media Branding']
-      ELSE ARRAY[]::text[]
-    END,
-    CASE 
-      WHEN new.email = 'lakshbetala15@gmail.com' THEN ARRAY['Review Supreme Petro Release', 'Rafter.so Onboarding']
-      WHEN new.email = 'gandhimouriyan1234@gmail.com' THEN ARRAY['Supabase Auth Setup', 'BI Database Performance Optimization']
-      WHEN new.email = 'monarchankit25@gmail.com' THEN ARRAY['Karthik Exports Pitch Deck', 'Social Media Leads Sourcing']
-      WHEN new.email = 'muskanabani01@gmail.com' THEN ARRAY['NJ Jewellers Price Board UI', 'Almmatix Marketing Banners']
-      ELSE ARRAY[]::text[]
-    END
-  );
+  -- Check if email is pre-authorized
+  SELECT * INTO pre_auth FROM public.authorized_emails WHERE LOWER(email) = LOWER(new.email);
+
+  IF pre_auth.email IS NOT NULL THEN
+    -- Match account with pre-authorized parameters
+    INSERT INTO public.profiles (
+      id, 
+      name, 
+      role, 
+      category, 
+      avatar, 
+      color_var, 
+      primary_focus,
+      responsibilities,
+      active_tasks
+    )
+    VALUES (
+      new.id,
+      pre_auth.name,
+      pre_auth.role,
+      pre_auth.category,
+      pre_auth.avatar,
+      pre_auth.color_var,
+      pre_auth.primary_focus,
+      pre_auth.responsibilities,
+      pre_auth.active_tasks
+    );
+
+    -- If client profile, dynamically link it to their pre-assigned clients project
+    IF pre_auth.category = 'client' AND pre_auth.client_id IS NOT NULL THEN
+      UPDATE public.clients 
+      SET profile_id = new.id 
+      WHERE id = pre_auth.client_id;
+    END IF;
+
+  ELSE
+    -- Automatic registration default for the 4 core partner credentials
+    INSERT INTO public.profiles (
+      id, 
+      name, 
+      role, 
+      category, 
+      avatar, 
+      color_var, 
+      primary_focus,
+      responsibilities,
+      active_tasks
+    )
+    VALUES (
+      new.id,
+      CASE 
+        WHEN new.email = 'lakshbetala15@gmail.com' THEN 'Lakshya'
+        WHEN new.email = 'gandhimouriyan1234@gmail.com' THEN 'Mouriyan'
+        WHEN new.email = 'monarchankit25@gmail.com' THEN 'Ankit'
+        WHEN new.email = 'muskanabani01@gmail.com' THEN 'Muskan'
+        ELSE COALESCE(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1))
+      END,
+      CASE 
+        WHEN new.email = 'lakshbetala15@gmail.com' THEN 'PM & Client Delivery Lead'
+        WHEN new.email = 'gandhimouriyan1234@gmail.com' THEN 'Backend & Tech Delivery Lead'
+        WHEN new.email = 'monarchankit25@gmail.com' THEN 'Outreach & Marketing Lead'
+        WHEN new.email = 'muskanabani01@gmail.com' THEN 'Brand & Marketing Director'
+        ELSE 'Client Partner'
+      END,
+      CASE 
+        WHEN new.email IN (
+          'lakshbetala15@gmail.com', 
+          'gandhimouriyan1234@gmail.com', 
+          'monarchankit25@gmail.com', 
+          'muskanabani01@gmail.com'
+        ) THEN 'admin' 
+        ELSE 'client' 
+      END,
+      CASE 
+        WHEN new.email = 'lakshbetala15@gmail.com' THEN 'LB'
+        WHEN new.email = 'gandhimouriyan1234@gmail.com' THEN 'MR'
+        WHEN new.email = 'monarchankit25@gmail.com' THEN 'AK'
+        WHEN new.email = 'muskanabani01@gmail.com' THEN 'MK'
+        ELSE UPPER(SUBSTRING(COALESCE(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)) FROM 1 FOR 2))
+      END,
+      CASE 
+        WHEN new.email = 'lakshbetala15@gmail.com' THEN 'var(--color-admin-lakshya)'
+        WHEN new.email = 'gandhimouriyan1234@gmail.com' THEN 'var(--color-admin-mouriyan)'
+        WHEN new.email = 'monarchankit25@gmail.com' THEN 'var(--color-admin-ankit)'
+        WHEN new.email = 'muskanabani01@gmail.com' THEN 'var(--color-admin-muskan)'
+        ELSE 'var(--color-neutral)'
+      END,
+      CASE 
+        WHEN new.email IN ('lakshbetala15@gmail.com', 'gandhimouriyan1234@gmail.com') THEN 'Client Delivery'
+        WHEN new.email IN ('monarchankit25@gmail.com', 'muskanabani01@gmail.com') THEN 'Outreach & Marketing'
+        ELSE 'Product Sandbox'
+      END,
+      CASE 
+        WHEN new.email = 'lakshbetala15@gmail.com' THEN ARRAY['Client Communication', 'Product Strategy', 'QA / Delivery Gate']
+        WHEN new.email = 'gandhimouriyan1234@gmail.com' THEN ARRAY['API Architecture', 'Database Schema', 'Production Builds']
+        WHEN new.email = 'monarchankit25@gmail.com' THEN ARRAY['Lead Sourcing', 'Cold Calling Funnel', 'Client Accounts']
+        WHEN new.email = 'muskanabani01@gmail.com' THEN ARRAY['UI/UX Design Sprints', 'Brand Assets', 'Social Media Branding']
+        ELSE ARRAY[]::text[]
+      END,
+      CASE 
+        WHEN new.email = 'lakshbetala15@gmail.com' THEN ARRAY['Review Supreme Petro Release', 'Rafter.so Onboarding']
+        WHEN new.email = 'gandhimouriyan1234@gmail.com' THEN ARRAY['Supabase Auth Setup', 'BI Database Performance Optimization']
+        WHEN new.email = 'monarchankit25@gmail.com' THEN ARRAY['Karthik Exports Pitch Deck', 'Social Media Leads Sourcing']
+        WHEN new.email = 'muskanabani01@gmail.com' THEN ARRAY['NJ Jewellers Price Board UI', 'Almmatix Marketing Banners']
+        ELSE ARRAY[]::text[]
+      END
+    );
+  END IF;
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -386,7 +456,7 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
--- 11. Initial Database Seed Values for Non-Relational Fields
+-- 12. Initial Database Seed Values for Non-Relational Fields
 INSERT INTO public.internal_products (id, name, stage, progress, description, repo_link, sandbox_link, metrics)
 VALUES 
   ('p1', 'Almmatix CRM Core', 'Beta', 85, 'Our proprietary internal management tool and Agency OS.', 'github.com/almmatix/crm-core', 'almmatix.com/sandbox/crm', '{"label": "Sprint Velocity", "value": "9.2 pts/wk"}'),

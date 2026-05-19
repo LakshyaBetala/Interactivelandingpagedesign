@@ -137,6 +137,7 @@ export interface ChangelogRelease {
 // --- Supabase DB Types ---
 export interface UserProfile {
   id: string;
+  email: string;
   name: string;
   role: string;
   category: "admin" | "client";
@@ -145,6 +146,20 @@ export interface UserProfile {
   primaryFocus: string;
   responsibilities: string[];
   activeTasks: string[];
+}
+
+export interface AuthorizedEmail {
+  email: string;
+  name: string;
+  role: string;
+  category: "admin" | "client";
+  avatar: string;
+  colorVar: string;
+  primaryFocus: string;
+  responsibilities: string[];
+  activeTasks: string[];
+  clientId?: number;
+  createdAt?: string;
 }
 
 // --- Initial Mock Datasets (Fallback-Safe) ---
@@ -243,6 +258,89 @@ const INITIAL_INTERNAL_TASKS: InternalTask[] = [
   { id: "t2", clientId: 3, title: "Redesign rate details modal", assignedAdminId: "a4", status: "Resolved", originCommentId: "3", internalNotes: ["Client wanted decimal roundups.", "UI layout signed off by Lakshya."], createdAt: "2 days ago" },
   { id: "t3", productId: "p1", title: "Automate outbound lead email sync", assignedAdminId: "a3", status: "Todo", internalNotes: ["Integrate Resend API key config.", "Draft cold sequences for Muskan to review."], createdAt: "Just now" }
 ];
+
+const INITIAL_AUTH_EMAILS: AuthorizedEmail[] = [
+  {
+    email: "lakshbetala15@gmail.com",
+    name: "Lakshya",
+    role: "PM & Client Delivery Lead",
+    category: "admin",
+    avatar: "LB",
+    colorVar: "var(--color-admin-lakshya)",
+    primaryFocus: "Client Delivery",
+    responsibilities: ["Client Communication", "Product Strategy", "QA / Delivery Gate"],
+    activeTasks: ["Review Supreme Petro Release", "Rafter.so Onboarding"],
+  },
+  {
+    email: "gandhimouriyan1234@gmail.com",
+    name: "Mouriyan",
+    role: "Backend & Tech Delivery Lead",
+    category: "admin",
+    avatar: "MR",
+    colorVar: "var(--color-admin-mouriyan)",
+    primaryFocus: "Client Delivery",
+    responsibilities: ["API Architecture", "Database Schema", "Production Builds"],
+    activeTasks: ["Supabase Auth Setup", "BI Database Performance Optimization"],
+  },
+  {
+    email: "monarchankit25@gmail.com",
+    name: "Ankit",
+    role: "Outreach & Marketing Lead",
+    category: "admin",
+    avatar: "AK",
+    colorVar: "var(--color-admin-ankit)",
+    primaryFocus: "Outreach & Marketing",
+    responsibilities: ["Lead Sourcing", "Cold Calling Funnel", "Client Accounts"],
+    activeTasks: ["Karthik Exports Pitch Deck", "Social Media Leads Sourcing"],
+  },
+  {
+    email: "muskanabani01@gmail.com",
+    name: "Muskan",
+    role: "Brand & Marketing Director",
+    category: "admin",
+    avatar: "MK",
+    colorVar: "var(--color-admin-muskan)",
+    primaryFocus: "Outreach & Marketing",
+    responsibilities: ["UI/UX Design Sprints", "Brand Assets", "Social Media Branding"],
+    activeTasks: ["NJ Jewellers Price Board UI", "Almmatix Marketing Banners"],
+  },
+  {
+    email: "intern.outreach@almmatix.com",
+    name: "Outreach Intern",
+    role: "Outreach Intern",
+    category: "admin",
+    avatar: "OI",
+    colorVar: "var(--color-admin-ankit)",
+    primaryFocus: "Outreach & Marketing",
+    responsibilities: ["Lead Sourcing", "Data Entry"],
+    activeTasks: ["Call 10 Sourced Leads"],
+  },
+  {
+    email: "intern.dev@almmatix.com",
+    name: "Delivery Intern",
+    role: "Dev Intern",
+    category: "admin",
+    avatar: "DI",
+    colorVar: "var(--color-admin-mouriyan)",
+    primaryFocus: "Client Delivery",
+    responsibilities: ["Bug Fixes", "CSS Polishing"],
+    activeTasks: ["Fix Columns Safaris Layout jitter"],
+  }
+];
+
+const mapAuthEmailToTS = (db: any): AuthorizedEmail => ({
+  email: db.email,
+  name: db.name,
+  role: db.role || "",
+  category: db.category,
+  avatar: db.avatar || "",
+  colorVar: db.color_var || "var(--color-neutral)",
+  primaryFocus: db.primary_focus || "Client Delivery",
+  responsibilities: db.responsibilities || [],
+  activeTasks: db.active_tasks || [],
+  clientId: db.client_id || undefined,
+  createdAt: db.created_at || "",
+});
 
 // --- Mappers: DB format to/from Application UI camelCase types ---
 
@@ -388,9 +486,13 @@ interface CRMContextProps {
 
   // Real auth properties
   userProfile: UserProfile | null;
+  setUserProfile: React.Dispatch<React.SetStateAction<UserProfile | null>>;
   loading: boolean;
   isSupabaseConfigured: boolean;
   signOut: () => Promise<void>;
+  authorizedEmails: AuthorizedEmail[];
+  provisionUser: (emailData: Omit<AuthorizedEmail, "createdAt">) => Promise<boolean>;
+  deprovisionUser: (email: string) => Promise<boolean>;
 }
 
 const CRMContext = createContext<CRMContextProps | undefined>(undefined);
@@ -402,6 +504,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
 
   // Database application states
   const [clients, setClients] = useState<CRMClient[]>(INITIAL_CLIENTS);
+  const [authorizedEmails, setAuthorizedEmails] = useState<AuthorizedEmail[]>(INITIAL_AUTH_EMAILS);
   const [team, setTeam] = useState<TeamMember[]>(INITIAL_TEAM);
   const [products, setProducts] = useState<InternalProduct[]>(INITIAL_PRODUCTS);
   const [comments, setComments] = useState<Comment[]>(INITIAL_COMMENTS);
@@ -440,6 +543,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
           { data: dbFlags },
           { data: dbReleases },
           { data: dbTasks },
+          { data: dbAuthEmails },
         ] = await Promise.all([
           supabase.from("profiles").select("*"),
           supabase.from("clients").select("*"),
@@ -449,6 +553,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
           supabase.from("project_flags").select("*"),
           supabase.from("releases").select("*"),
           supabase.from("internal_tasks").select("*"),
+          supabase.from("authorized_emails").select("*"),
         ]);
 
         if (dbProfiles) setTeam(dbProfiles.map(mapTeamMemberToTS));
@@ -459,6 +564,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         if (dbFlags) setFlags(dbFlags.map(mapFlagToTS));
         if (dbReleases) setReleases(dbReleases.map(mapReleaseToTS));
         if (dbTasks) setInternalTasks(dbTasks.map(mapTaskToTS));
+        if (dbAuthEmails) setAuthorizedEmails(dbAuthEmails.map(mapAuthEmailToTS));
       } else {
         // Client sandboxing - fetch ONLY their record
         const { data: dbClients } = await supabase
@@ -496,6 +602,18 @@ export function CRMProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const configured = checkSupabaseStatus();
     if (!configured) {
+      setUserProfile({
+        id: "a1",
+        email: "lakshbetala15@gmail.com",
+        name: "Lakshya",
+        role: "PM & Client Delivery Lead",
+        category: "admin",
+        avatar: "LB",
+        colorVar: "var(--color-admin-lakshya)",
+        primaryFocus: "Client Delivery",
+        responsibilities: ["Client Communication", "Product Strategy", "QA / Delivery Gate"],
+        activeTasks: ["Review Supreme Petro Release", "Rafter.so Onboarding"],
+      });
       setLoading(false);
       return;
     }
@@ -514,6 +632,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         if (dbProfile) {
           const profile: UserProfile = {
             id: dbProfile.id,
+            email: session.user.email || "",
             name: dbProfile.name,
             role: dbProfile.role || "Consultant",
             category: dbProfile.category as "admin" | "client",
@@ -536,6 +655,61 @@ export function CRMProvider({ children }: { children: ReactNode }) {
       subscription.unsubscribe();
     };
   }, [checkSupabaseStatus, fetchOperationalData]);
+
+  const provisionUser = useCallback(async (emailData: Omit<AuthorizedEmail, "createdAt">) => {
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from("authorized_emails")
+        .insert({
+          email: emailData.email.toLowerCase(),
+          name: emailData.name,
+          role: emailData.role,
+          category: emailData.category,
+          avatar: emailData.avatar,
+          color_var: emailData.colorVar,
+          primary_focus: emailData.primaryFocus,
+          responsibilities: emailData.responsibilities,
+          active_tasks: emailData.activeTasks,
+          client_id: emailData.clientId || null,
+        })
+        .select();
+
+      if (error) {
+        console.error("Database insert pre-authorized email error:", error);
+        return false;
+      } else if (data && data.length > 0) {
+        setAuthorizedEmails((prev) => [mapAuthEmailToTS(data[0]), ...prev]);
+        return true;
+      }
+    }
+    // Safe Local Fallback
+    const newAuth: AuthorizedEmail = {
+      ...emailData,
+      email: emailData.email.toLowerCase(),
+      createdAt: "Just now",
+    };
+    setAuthorizedEmails((prev) => [newAuth, ...prev]);
+    return true;
+  }, [isSupabaseConfigured]);
+
+  const deprovisionUser = useCallback(async (email: string) => {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from("authorized_emails")
+        .delete()
+        .eq("email", email.toLowerCase());
+
+      if (error) {
+        console.error("Database delete pre-authorized email error:", error);
+        return false;
+      } else {
+        setAuthorizedEmails((prev) => prev.filter((ae) => ae.email.toLowerCase() !== email.toLowerCase()));
+        return true;
+      }
+    }
+    setAuthorizedEmails((prev) => prev.filter((ae) => ae.email.toLowerCase() !== email.toLowerCase()));
+    return true;
+  }, [isSupabaseConfigured]);
 
   // Sign out helper
   const signOut = async () => {
@@ -1065,7 +1239,8 @@ export function CRMProvider({ children }: { children: ReactNode }) {
       addFlag, updateFlagStatus, assignFlagAdmin, addFlagSprintLog,
       createRelease, approveRelease,
       addInternalTask, updateInternalTaskStatus, addInternalTaskNote,
-      userProfile, loading, isSupabaseConfigured, signOut
+      userProfile, setUserProfile, loading, isSupabaseConfigured, signOut,
+      authorizedEmails, provisionUser, deprovisionUser
     }}>
       {children}
     </CRMContext.Provider>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   useCRM, 
@@ -76,15 +76,15 @@ const formatCurrency = (amount: number) => {
 
 export default function AdminDashboard() {
   const { 
-    clients, 
+    clients: allClients, 
     team, 
     products, 
     activities, 
     comments, 
     leads, 
-    flags, 
-    releases, 
-    internalTasks,
+    flags: allFlags, 
+    releases: allReleases, 
+    internalTasks: allInternalTasks,
     currentAdminId, 
     updateClientStage, 
     updateClientAdmin, 
@@ -101,7 +101,14 @@ export default function AdminDashboard() {
     approveRelease,
     addInternalTask,
     updateInternalTaskStatus,
-    addInternalTaskNote
+    addInternalTaskNote,
+    userProfile,
+    setUserProfile,
+    isSupabaseConfigured,
+    signOut,
+    authorizedEmails,
+    provisionUser,
+    deprovisionUser
   } = useCRM();
 
   const [activeTab, setActiveTab] = useState("overview");
@@ -148,11 +155,170 @@ export default function AdminDashboard() {
     setTaskComposerComment(null);
   }, []);
 
+  const isCorePartner = useMemo(() => {
+    if (!userProfile?.email) return true;
+    const coreEmails = [
+      "lakshbetala15@gmail.com",
+      "gandhimouriyan1234@gmail.com",
+      "monarchankit25@gmail.com",
+      "muskanabani01@gmail.com"
+    ];
+    return coreEmails.includes(userProfile.email.toLowerCase());
+  }, [userProfile]);
+
+  const clients = useMemo(() => {
+    if (isCorePartner) return allClients;
+    if (userProfile?.primaryFocus === "Outreach & Marketing") return [];
+    return allClients.filter(c => c.assignedAdminId === currentAdminId);
+  }, [allClients, isCorePartner, userProfile, currentAdminId]);
+
+  const flags = useMemo(() => {
+    if (isCorePartner) return allFlags;
+    if (userProfile?.primaryFocus === "Outreach & Marketing") return [];
+    return allFlags.filter(f => f.assignedAdminId === currentAdminId);
+  }, [allFlags, isCorePartner, userProfile, currentAdminId]);
+
+  const releases = useMemo(() => {
+    if (isCorePartner) return allReleases;
+    if (userProfile?.primaryFocus === "Outreach & Marketing") return [];
+    const clientIds = clients.map(c => c.id);
+    return allReleases.filter(r => clientIds.includes(r.clientId));
+  }, [allReleases, isCorePartner, userProfile, clients]);
+
+  const internalTasks = useMemo(() => {
+    if (isCorePartner) return allInternalTasks;
+    if (userProfile?.primaryFocus === "Outreach & Marketing") return [];
+    return allInternalTasks.filter(t => t.assignedAdminId === currentAdminId);
+  }, [allInternalTasks, isCorePartner, userProfile, currentAdminId]);
+
   const potentialClients = useMemo(() => clients.filter(c => c.category === "Potential"), [clients]);
   const ongoingClients = useMemo(() => clients.filter(c => c.category === "Ongoing"), [clients]);
   
   // Current logged in admin
   const currentAdmin = team.find(t => t.id === currentAdminId) || team[0];
+
+  const visibleTabs = useMemo(() => {
+    const tabs = [
+      { id: "overview", label: "Overview" },
+    ];
+
+    if (isCorePartner) {
+      tabs.push(
+        { id: "clients", label: `Client Desk (${allClients.filter(c => c.category === "Ongoing").length})` },
+        { id: "internal tasks", label: `Sprint Tasks (${allInternalTasks.filter(t => t.status !== "Resolved").length})` },
+        { id: "outreach", label: `Outreach Funnel (${leads.length})` },
+        { id: "support queue", label: `Support Queue (${allFlags.filter(f => f.status !== "Resolved").length})` },
+        { id: "releases", label: "Changelogs Composer" },
+        { id: "products", label: "The Lab (SaaS)" },
+        { id: "provisioning", label: "Access & Provisioning" }
+      );
+    } else {
+      const isOutreach = userProfile?.primaryFocus === "Outreach & Marketing";
+      if (isOutreach) {
+        tabs.push(
+          { id: "outreach", label: `Outreach Funnel (${leads.length})` }
+        );
+      } else {
+        const assignedClientsCount = allClients.filter(c => c.category === "Ongoing" && c.assignedAdminId === currentAdminId).length;
+        const assignedTasksCount = allInternalTasks.filter(t => t.status !== "Resolved" && t.assignedAdminId === currentAdminId).length;
+        const assignedFlagsCount = allFlags.filter(f => f.status !== "Resolved" && f.assignedAdminId === currentAdminId).length;
+        
+        tabs.push(
+          { id: "clients", label: `My Clients (${assignedClientsCount})` },
+          { id: "internal tasks", label: `My Sprints (${assignedTasksCount})` },
+          { id: "support queue", label: `My Support Queue (${assignedFlagsCount})` },
+          { id: "releases", label: "My Changelogs" }
+        );
+      }
+    }
+    return tabs;
+  }, [isCorePartner, userProfile, allClients, allInternalTasks, leads, allFlags, currentAdminId]);
+
+  // Outreach Analytics Metrics Sourced By muskan & ankit
+  const outreachAnalytics = useMemo(() => {
+    const totalPipeline = leads.reduce((acc, l) => acc + l.estimatedValue, 0);
+    const avgScore = leads.length > 0 ? Math.round(leads.reduce((acc, l) => acc + l.engagementScore, 0) / leads.length) : 0;
+    const ankitLeads = leads.filter(l => l.sourcedById === "a3").length;
+    const muskanLeads = leads.filter(l => l.sourcedById === "a4").length;
+    return { totalPipeline, avgScore, ankitLeads, muskanLeads };
+  }, [leads]);
+
+  const overviewStats = useMemo(() => {
+    if (isCorePartner) {
+      return [
+        { label: "Ongoing Accounts Managed", value: allClients.filter(c => c.category === "Ongoing").length, color: "text-charcoal" },
+        { label: "Active Team Sprint Tasks", value: allInternalTasks.filter(t => t.status !== "Resolved").length, color: "text-indigo-600" },
+        { label: "Support Escalation Tickets", value: allFlags.filter(f => f.status !== "Resolved").length, color: "text-rose-500" },
+        { label: "Outreach Lead pipeline", value: formatCurrency(outreachAnalytics.totalPipeline), color: "text-emerald-700" }
+      ];
+    } else {
+      const isOutreach = userProfile?.primaryFocus === "Outreach & Marketing";
+      if (isOutreach) {
+        return [
+          { label: "Outreach Leads Sourced", value: leads.length, color: "text-charcoal" },
+          { label: "Total Lead Pipeline", value: formatCurrency(outreachAnalytics.totalPipeline), color: "text-emerald-700" },
+          { label: "Average Lead Score", value: `${outreachAnalytics.avgScore}%`, color: "text-indigo-600" }
+        ];
+      } else {
+        const assignedClientsCount = allClients.filter(c => c.category === "Ongoing" && c.assignedAdminId === currentAdminId).length;
+        const assignedTasksCount = allInternalTasks.filter(t => t.status !== "Resolved" && t.assignedAdminId === currentAdminId).length;
+        const assignedFlagsCount = allFlags.filter(f => f.status !== "Resolved" && f.assignedAdminId === currentAdminId).length;
+        
+        return [
+          { label: "My Assigned Clients", value: assignedClientsCount, color: "text-charcoal" },
+          { label: "My Active Sprints", value: assignedTasksCount, color: "text-indigo-600" },
+          { label: "My Support Tickets", value: assignedFlagsCount, color: "text-rose-500" }
+        ];
+      }
+    }
+  }, [isCorePartner, allClients, allInternalTasks, allFlags, outreachAnalytics, leads, userProfile, currentAdminId]);
+
+  // Tab safety gate
+  useEffect(() => {
+    const isValid = visibleTabs.some(t => t.id === activeTab);
+    if (!isValid && visibleTabs.length > 0) {
+      setActiveTab("overview");
+    }
+  }, [activeTab, visibleTabs]);
+
+  // Pre-authorization provisioner form states
+  const [provEmail, setProvEmail] = useState("");
+  const [provName, setProvName] = useState("");
+  const [provRole, setProvRole] = useState("Dev Intern");
+  const [provCategory, setProvCategory] = useState<"admin" | "client">("admin");
+  const [provFocus, setProvFocus] = useState<"Client Delivery" | "Outreach & Marketing">("Client Delivery");
+  const [provResponsibilities, setProvResponsibilities] = useState<string[]>([]);
+  const [provClientId, setProvClientId] = useState<string>("");
+  const [provIsSubmitting, setProvIsSubmitting] = useState(false);
+
+  const handleProvisionSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!provEmail.trim() || !provName.trim()) return;
+    setProvIsSubmitting(true);
+    const success = await provisionUser({
+      email: provEmail.trim().toLowerCase(),
+      name: provName.trim(),
+      role: provRole.trim(),
+      category: provCategory,
+      avatar: provName.split(" ").map(w => w[0]).join("").toUpperCase().substring(0, 2),
+      colorVar: provCategory === "admin" 
+        ? (provFocus === "Client Delivery" ? "var(--color-admin-mouriyan)" : "var(--color-admin-muskan)")
+        : "var(--color-neutral)",
+      primaryFocus: provCategory === "admin" ? provFocus : "Product Sandbox",
+      responsibilities: provResponsibilities,
+      activeTasks: provCategory === "admin" ? ["Complete operational system onboarding"] : [],
+      clientId: provCategory === "client" && provClientId ? Number(provClientId) : undefined
+    });
+    setProvIsSubmitting(false);
+    if (success) {
+      setProvEmail("");
+      setProvName("");
+      setProvResponsibilities([]);
+      alert("🎉 Invited email successfully added to authorization registry! They can now sign up using this email and set their secret password.");
+    } else {
+      alert("❌ Error pre-authorizing credentials. Please try again.");
+    }
+  };
 
   const stagger = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.05 } } };
   const fadeUp = { hidden: { opacity: 0, y: 12, filter: "blur(3px)" }, show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] as const } } };
@@ -224,14 +390,6 @@ export default function AdminDashboard() {
     alert("🎯 Sourced outreach target successfully logged into calling pipeline!");
   };
 
-  // Outreach Analytics Metrics Sourced By muskan & ankit
-  const outreachAnalytics = useMemo(() => {
-    const totalPipeline = leads.reduce((acc, l) => acc + l.estimatedValue, 0);
-    const avgScore = leads.length > 0 ? Math.round(leads.reduce((acc, l) => acc + l.engagementScore, 0) / leads.length) : 0;
-    const ankitLeads = leads.filter(l => l.sourcedById === "a3").length;
-    const muskanLeads = leads.filter(l => l.sourcedById === "a4").length;
-    return { totalPipeline, avgScore, ankitLeads, muskanLeads };
-  }, [leads]);
 
   return (
     <div className="flex flex-col min-h-screen bg-sand relative noise-overlay pb-10">
@@ -248,15 +406,7 @@ export default function AdminDashboard() {
           </div>
 
           <nav className="hidden xl:flex gap-1">
-            {[
-              { id: "overview", label: "Overview" },
-              { id: "clients", label: `Client Desk (${ongoingClients.length})` },
-              { id: "internal tasks", label: `Sprint Tasks (${internalTasks.filter(t => t.status !== "Resolved").length})` },
-              { id: "outreach", label: `Outreach Funnel (${leads.length})` },
-              { id: "support queue", label: `Support Queue (${flags.filter(f => f.status !== "Resolved").length})` },
-              { id: "releases", label: "Changelogs Composer" },
-              { id: "products", label: "The Lab (SaaS)" }
-            ].map((tab) => (
+            {visibleTabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => handleTabChange(tab.id)}
@@ -292,13 +442,8 @@ export default function AdminDashboard() {
             <motion.div key="overview" initial="hidden" animate="show" exit="hidden" variants={stagger} className="flex flex-col gap-10">
 
               {/* Dynamic OS Stats Grid */}
-              <motion.div variants={fadeUp} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {[
-                  { label: "Ongoing Accounts Managed", value: ongoingClients.length, color: "text-charcoal" },
-                  { label: "Active Team Sprint Tasks", value: internalTasks.filter(t => t.status !== "Resolved").length, color: "text-indigo-600" },
-                  { label: "Support Escalation Tickets", value: flags.filter(f => f.status !== "Resolved").length, color: "text-rose-500" },
-                  { label: "Outreach Lead pipeline", value: formatCurrency(outreachAnalytics.totalPipeline), color: "text-emerald-700" }
-                ].map((s, idx) => (
+              <motion.div variants={fadeUp} className={`grid grid-cols-2 lg:grid-cols-${overviewStats.length} gap-4`}>
+                {overviewStats.map((s, idx) => (
                   <div key={idx} className="bg-sand-light/60 border border-taupe/10 rounded-xl p-5 hover:border-taupe/20 transition-all flex flex-col justify-between shadow-xs">
                     <div className="portal-label text-[0.625rem] mb-2">{s.label}</div>
                     <div className={`text-2xl font-extrabold font-display ${s.color}`}>{s.value}</div>
@@ -1363,8 +1508,341 @@ export default function AdminDashboard() {
             </motion.div>
           )}
 
+          {/* ═══ TAB 8: ACCESS & PROVISIONING (CORE PARTNERS ONLY) ═══ */}
+          {activeTab === "provisioning" && isCorePartner && (
+            <motion.div key="provisioning" initial="hidden" animate="show" exit="hidden" variants={stagger}>
+              <motion.div variants={fadeUp} className="flex flex-col gap-8">
+                <div>
+                  <h2 className="text-xl font-bold font-display flex items-center gap-2">
+                    Access & Credentials Provisioning
+                    <span className="text-[0.55rem] font-mono uppercase bg-amber-500 text-charcoal px-2 py-0.5 rounded font-extrabold">Partners Only</span>
+                  </h2>
+                  <p className="text-sm text-taupe mt-1">Pre-authorize email addresses for new team interns or client sandboxes. They can then register themselves with a custom password.</p>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                  {/* Left side: Provisioning Form */}
+                  <form onSubmit={handleProvisionSubmit} className="lg:col-span-5 bg-sand-light/60 border border-taupe/15 rounded-2xl p-6 flex flex-col gap-5 shadow-xs">
+                    <div className="text-xs uppercase tracking-widest font-mono text-charcoal font-bold border-b border-taupe/10 pb-2">Pre-Authorize Credentials</div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[0.625rem] font-mono uppercase text-taupe font-bold">Email Address</label>
+                      <input
+                        type="email"
+                        required
+                        value={provEmail}
+                        onChange={(e) => setProvEmail(e.target.value)}
+                        placeholder="e.g. intern.dev@almmatix.com"
+                        className="w-full bg-sand-warm/30 border border-taupe/20 px-3 py-2 text-xs rounded font-sans focus:outline-none focus:border-charcoal transition-all text-charcoal font-medium placeholder-taupe/40"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[0.625rem] font-mono uppercase text-taupe font-bold">Invitee Full Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={provName}
+                        onChange={(e) => setProvName(e.target.value)}
+                        placeholder="e.g. John Doe"
+                        className="w-full bg-sand-warm/30 border border-taupe/20 px-3 py-2 text-xs rounded font-sans focus:outline-none focus:border-charcoal transition-all text-charcoal font-medium placeholder-taupe/40"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[0.625rem] font-mono uppercase text-taupe font-bold">Designation / Role Title</label>
+                      <input
+                        type="text"
+                        required
+                        value={provRole}
+                        onChange={(e) => setProvRole(e.target.value)}
+                        placeholder="e.g. Developer Intern"
+                        className="w-full bg-sand-warm/30 border border-taupe/20 px-3 py-2 text-xs rounded font-sans focus:outline-none focus:border-charcoal transition-all text-charcoal font-medium placeholder-taupe/40"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[0.625rem] font-mono uppercase text-taupe font-bold">Account Category</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { id: "admin", label: "Startup Admin (Intern/Dev)" },
+                          { id: "client", label: "Client Partner" }
+                        ].map((cat) => (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            onClick={() => {
+                              setProvCategory(cat.id as any);
+                              if (cat.id === "client") {
+                                setProvRole("Client Partner");
+                              } else {
+                                setProvRole("Dev Intern");
+                              }
+                            }}
+                            className={`py-2 px-3 rounded text-[0.65rem] uppercase font-mono font-bold tracking-wider border transition-all text-center focus:outline-none ${
+                              provCategory === cat.id
+                                ? "bg-charcoal text-sand border-charcoal"
+                                : "border-taupe/20 text-taupe hover:border-taupe/40 hover:bg-sand-warm/20"
+                            }`}
+                          >
+                            {cat.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {provCategory === "admin" ? (
+                      <>
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[0.625rem] font-mono uppercase text-taupe font-bold">Primary Specialization Focus</label>
+                          <div className="grid grid-cols-2 gap-2">
+                            {[
+                              { id: "Client Delivery", label: "Client Delivery" },
+                              { id: "Outreach & Marketing", label: "Outreach Funnel" }
+                            ].map((focus) => (
+                              <button
+                                key={focus.id}
+                                type="button"
+                                onClick={() => {
+                                  setProvFocus(focus.id as any);
+                                  setProvResponsibilities([]);
+                                }}
+                                className={`py-2 px-2 rounded text-[0.65rem] uppercase font-mono font-bold tracking-wider border transition-all text-center focus:outline-none ${
+                                  provFocus === focus.id
+                                    ? "bg-ember text-sand border-ember"
+                                    : "border-taupe/20 text-taupe hover:border-taupe/40 hover:bg-sand-warm/20"
+                                }`}
+                              >
+                                {focus.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[0.625rem] font-mono uppercase text-taupe font-bold">Seeded Staff Responsibilities</label>
+                          <div className="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto border border-taupe/10 p-3 rounded bg-sand-warm/25">
+                            {(provFocus === "Client Delivery" 
+                              ? ["API Architecture", "Database Schema", "Production Builds", "Bug Fixes", "CSS Polishing", "Client Communication"]
+                              : ["Lead Sourcing", "Cold Calling Funnel", "Social Media Outreach", "Client Outreach", "Sales Pitching"]
+                            ).map((resp) => {
+                              const checked = provResponsibilities.includes(resp);
+                              return (
+                                <label key={resp} className="flex items-center gap-2 cursor-pointer text-[0.65rem] font-mono font-medium text-charcoal select-none">
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={() => {
+                                      if (checked) {
+                                        setProvResponsibilities(prev => prev.filter(r => r !== resp));
+                                      } else {
+                                        setProvResponsibilities(prev => [...prev, resp]);
+                                      }
+                                    }}
+                                    className="rounded border-taupe/30 text-ember focus:ring-ember cursor-pointer"
+                                  />
+                                  {resp}
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[0.625rem] font-mono uppercase text-taupe font-bold">Link to Active Client Project</label>
+                        <select
+                          required
+                          value={provClientId}
+                          onChange={(e) => setProvClientId(e.target.value)}
+                          className="w-full bg-sand-warm/30 border border-taupe/20 px-3 py-2 text-xs rounded font-sans focus:outline-none focus:border-charcoal transition-all text-charcoal font-semibold"
+                        >
+                          <option value="">-- Choose Client Sandbox Workspace --</option>
+                          {allClients.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name} ({c.project})
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-[0.55rem] text-taupe font-mono lowercase mt-0.5">Linking a client to a project restricts their live dashboard to this specific project only.</p>
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={provIsSubmitting}
+                      className="w-full bg-charcoal hover:bg-ember text-sand font-mono uppercase py-2.5 rounded-lg text-xs font-bold tracking-widest transition-all duration-300 shadow-sm border border-charcoal focus:outline-none flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {provIsSubmitting ? "Processing Authorization..." : "⚡ Pre-Authorize Credentials"}
+                    </button>
+                  </form>
+
+                  {/* Right side: Registry Directory */}
+                  <div className="lg:col-span-7 bg-sand-light/60 border border-taupe/15 rounded-2xl p-6 flex flex-col gap-4 shadow-xs min-h-[500px]">
+                    <div className="flex justify-between items-center border-b border-taupe/10 pb-2">
+                      <div className="text-xs uppercase tracking-widest font-mono text-charcoal font-bold">Authorized Sign-Up Registry</div>
+                      <span className="text-[0.6rem] font-mono bg-charcoal text-sand px-2 py-0.5 rounded">{authorizedEmails.length} active invitations</span>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left font-sans text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-taupe/15 text-[0.625rem] font-mono uppercase text-taupe tracking-wider">
+                            <th className="pb-3 font-semibold">User Details</th>
+                            <th className="pb-3 font-semibold">Category</th>
+                            <th className="pb-3 font-semibold">Focus / Project</th>
+                            <th className="pb-3 font-semibold text-right">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {authorizedEmails.length === 0 ? (
+                            <tr>
+                              <td colSpan={4} className="py-8 text-center text-taupe font-mono text-[0.65rem] uppercase">
+                                No pre-authorized email invitations active
+                              </td>
+                            </tr>
+                          ) : (
+                            authorizedEmails.map((ae) => {
+                              const isLive = team.some(t => t.name.toLowerCase() === ae.name.toLowerCase());
+                              const linkedClient = ae.clientId ? allClients.find(c => c.id === ae.clientId) : null;
+                              return (
+                                <tr key={ae.email} className="border-b border-taupe/10 last:border-0 hover:bg-sand-warm/20 transition-all">
+                                  <td className="py-4 pr-3">
+                                    <div className="flex items-center gap-3">
+                                      <span className="w-8 h-8 rounded bg-charcoal text-sand flex items-center justify-center text-[0.6rem] font-extrabold" style={{ backgroundColor: ae.colorVar }}>
+                                        {ae.avatar}
+                                      </span>
+                                      <div>
+                                        <div className="font-bold text-charcoal leading-tight">{ae.name}</div>
+                                        <div className="text-[0.625rem] font-mono text-taupe leading-relaxed">{ae.email}</div>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="py-4">
+                                    <span className={`inline-flex px-2 py-0.5 rounded text-[0.55rem] uppercase tracking-widest font-mono font-bold ${
+                                      ae.category === "admin" 
+                                        ? "bg-amber-100 text-amber-800 border border-amber-200" 
+                                        : "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                                    }`}>
+                                      {ae.category}
+                                    </span>
+                                  </td>
+                                  <td className="py-4">
+                                    {ae.category === "admin" ? (
+                                      <div>
+                                        <div className="font-semibold text-charcoal">{ae.role}</div>
+                                        <div className="text-[0.625rem] font-mono text-taupe">{ae.primaryFocus}</div>
+                                      </div>
+                                    ) : (
+                                      <div>
+                                        {linkedClient ? (
+                                          <>
+                                            <div className="font-semibold text-charcoal">{linkedClient.name}</div>
+                                            <div className="text-[0.625rem] font-mono text-taupe leading-none mt-0.5">{linkedClient.project}</div>
+                                          </>
+                                        ) : (
+                                          <span className="text-rose-500 font-mono text-[0.6rem]">No Project Linked</span>
+                                        )}
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td className="py-4 text-right">
+                                    {/* Core partners are immutable */}
+                                    {[
+                                      "lakshbetala15@gmail.com",
+                                      "gandhimouriyan1234@gmail.com",
+                                      "monarchankit25@gmail.com",
+                                      "muskanabani01@gmail.com"
+                                    ].includes(ae.email.toLowerCase()) ? (
+                                      <span className="text-[0.58rem] font-mono uppercase bg-charcoal text-sand px-2 py-0.5 rounded">Core Partner</span>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={async () => {
+                                          if (confirm(`Revoke all sign-up permissions for ${ae.name} (${ae.email})?`)) {
+                                            await deprovisionUser(ae.email);
+                                          }
+                                        }}
+                                        className="text-[0.6rem] font-mono uppercase border border-rose-500/30 text-rose-500 hover:bg-rose-500 hover:text-white px-2 py-1 rounded transition-all focus:outline-none"
+                                      >
+                                        [ Revoke Access ]
+                                      </button>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+
         </AnimatePresence>
       </main>
+
+      {/* ──── SIMULATOR SWITCHER (MOCK ONLY) ──── */}
+      {!isSupabaseConfigured && (
+        <div className="fixed bottom-4 right-4 z-50 bg-charcoal text-sand border border-sand p-4 rounded-xl shadow-2xl w-72 font-mono text-[0.625rem] tracking-wider uppercase border-sand/40">
+          <div className="flex justify-between items-center mb-2 border-b border-sand/20 pb-1">
+            <span className="font-extrabold text-ember flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-ember animate-pulse" />
+              OS SANDBOX SIMULATOR
+            </span>
+            <span className="text-[0.55rem] text-taupe">Mock Mode</span>
+          </div>
+          <div className="text-[0.55rem] text-sand/70 mb-3 normal-case font-sans tracking-normal leading-relaxed text-left">
+            Toggle between roles to verify access filters: Core Partners see all, Outreach interns see leads only, Dev interns see assigned projects only.
+          </div>
+          <div className="flex flex-col gap-1.5 max-h-56 overflow-y-auto pr-1">
+            {[
+              { email: "lakshbetala15@gmail.com", name: "Lakshya (Core Partner)", role: "PM & Client Delivery Lead", focus: "Client Delivery", cat: "admin" },
+              { email: "gandhimouriyan1234@gmail.com", name: "Mouriyan (Core Partner)", role: "Backend & Tech Delivery Lead", focus: "Client Delivery", cat: "admin" },
+              { email: "monarchankit25@gmail.com", name: "Ankit (Core Partner)", role: "Outreach & Marketing Lead", focus: "Outreach & Marketing", cat: "admin" },
+              { email: "muskanabani01@gmail.com", name: "Muskan (Core Partner)", role: "Brand & Marketing Director", focus: "Outreach & Marketing", cat: "admin" },
+              { email: "intern.outreach@almmatix.com", name: "Outreach Intern (Non-core)", role: "Outreach Intern", focus: "Outreach & Marketing", cat: "admin" },
+              { email: "intern.dev@almmatix.com", name: "Delivery Intern (Non-core)", role: "Dev Intern", focus: "Client Delivery", cat: "admin" },
+            ].map((mock) => {
+              const active = userProfile?.email?.toLowerCase() === mock.email.toLowerCase();
+              return (
+                <button
+                  key={mock.email}
+                  onClick={() => {
+                    setUserProfile({
+                      id: mock.email === "lakshbetala15@gmail.com" ? "a1" : mock.email === "gandhimouriyan1234@gmail.com" ? "a2" : mock.email === "monarchankit25@gmail.com" ? "a3" : mock.email === "muskanabani01@gmail.com" ? "a4" : `mock_${mock.email.split("@")[0]}`,
+                      email: mock.email,
+                      name: mock.name.split(" ")[0],
+                      role: mock.role,
+                      category: mock.cat as "admin" | "client",
+                      avatar: mock.name.substring(0, 2).toUpperCase(),
+                      colorVar: mock.email === "lakshbetala15@gmail.com" ? "var(--color-admin-lakshya)" : mock.email === "gandhimouriyan1234@gmail.com" ? "var(--color-admin-mouriyan)" : mock.email === "monarchankit25@gmail.com" ? "var(--color-admin-ankit)" : mock.email === "muskanabani01@gmail.com" ? "var(--color-admin-muskan)" : "var(--color-neutral)",
+                      primaryFocus: mock.focus,
+                      responsibilities: ["Simulation Task"],
+                      activeTasks: ["Simulation Task Active"]
+                    });
+                    setActiveTab("overview");
+                  }}
+                  className={`w-full text-left p-1.5 rounded transition-all flex items-center justify-between border ${
+                    active 
+                      ? "bg-sand text-charcoal border-ember font-bold" 
+                      : "bg-charcoal/40 text-sand/80 border-transparent hover:bg-sand-warm/10"
+                  }`}
+                >
+                  <span>{mock.name}</span>
+                  <span className="text-[0.5rem] px-1 py-0.2 rounded border border-sand/15 font-mono uppercase bg-black/30">
+                    {mock.focus.split(" ")[0]}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
