@@ -54,23 +54,41 @@ export default function Navbar() {
       >
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12 flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
-          <a href="/" className="flex items-center gap-2.5 group">
-            <Image
-              src="/images/almmatix_logo.png"
-              alt="Almmatix"
-              width={42}
-              height={42}
-              style={{ width: 42, height: "auto" }}
-              className="transition-transform duration-300 group-hover:scale-110"
-            />
-            <span
-              className={`font-display text-xl font-bold tracking-tight transition-colors duration-500 ${
-                isDark ? "text-[#E6DFD5]" : "text-[#0D0D0D]"
-              }`}
+          <div className="flex items-center gap-1">
+            <a href="/" className="flex items-center gap-2.5 group">
+              <Image
+                src="/images/almmatix_logo.png"
+                alt="Almmatix"
+                width={42}
+                height={42}
+                style={{ width: 42, height: "auto" }}
+                className="transition-transform duration-300 group-hover:scale-110"
+              />
+              <span
+                className={`font-display text-xl font-bold tracking-tight transition-colors duration-500 ${
+                  isDark ? "text-[#E6DFD5]" : "text-[#0D0D0D]"
+                }`}
+              >
+                Almmatix
+              </span>
+            </a>
+
+            {/* Secret OS Portal Gateway */}
+            <a
+              href="/portal"
+              aria-label="Almmatix OS Gateway"
+              className="relative inline-flex items-center justify-center p-1 group/gate select-none cursor-pointer"
             >
-              Almmatix
-            </span>
-          </a>
+              <span className={`font-mono text-sm tracking-tighter opacity-15 group-hover/gate:opacity-100 group-hover/gate:text-[#FF5A1F] transition-all duration-300 ${
+                isDark ? "text-[#E6DFD5]" : "text-[#0D0D0D]"
+              }`}>
+                //
+              </span>
+              <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 font-mono text-[7px] tracking-[0.15em] text-[#FF5A1F] bg-[#0c0c0c] px-1 py-0.5 border border-[#3A3632]/25 rounded scale-0 group-hover/gate:scale-100 origin-center transition-all duration-200 whitespace-nowrap shadow-lg">
+                OS
+              </span>
+            </a>
+          </div>
 
           {/* Desktop Nav Links */}
           <div className="hidden md:flex items-center gap-10">
