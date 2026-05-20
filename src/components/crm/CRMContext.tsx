@@ -708,6 +708,15 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     const usersRaw = localStorage.getItem("almmatix_users");
     if (usersRaw) {
       setCrmUsers(JSON.parse(usersRaw));
+    } else {
+      const defaultAdmins = [
+        { id: "a1", email: "lakshbetala15@gmail.com", password: "admin", name: "Lakshya", role: "admin", category: "admin", createdBy: "System" },
+        { id: "a2", email: "gandhimouriyan1234@gmail.com", password: "admin", name: "Mouriyan", role: "admin", category: "admin", createdBy: "System" },
+        { id: "a3", email: "monarchankit25@gmail.com", password: "admin", name: "Ankit", role: "admin", category: "admin", createdBy: "System" },
+        { id: "a4", email: "muskanabani01@gmail.com", password: "admin", name: "Muskan", role: "admin", category: "admin", createdBy: "System" }
+      ];
+      localStorage.setItem("almmatix_users", JSON.stringify(defaultAdmins));
+      setCrmUsers(defaultAdmins);
     }
   }, []);
 
