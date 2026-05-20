@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 
 // --- Types ---
 
-export type ClientStage = "Lead" | "Requirements" | "Demo" | "Quoted" | "Confirmed" | "Maintenance";
+export type ClientStage = "Requirement" | "Model" | "Demo 1" | "Converted" | "Dev 1" | "Demo 2" | "Dev Final" | "Final Demo" | "Delivery" | "Maintenance";
 export type ClientCategory = "Potential" | "Ongoing";
 
 export interface CRMClient {
@@ -134,6 +134,23 @@ export interface ChangelogRelease {
   releaseNotes?: string; // High-level admin signoff summary
 }
 
+// --- Social Media Pipeline ---
+export type SocialPlatform = "Instagram" | "Twitter" | "LinkedIn" | "Reddit" | "YouTube";
+export type SocialContentType = "Reel" | "Post" | "Story" | "Tweet" | "Blog" | "Thread";
+export type SocialStatus = "Idea" | "Planned" | "In Progress" | "Scheduled" | "Posted";
+
+export interface SocialMediaItem {
+  id: string;
+  platform: SocialPlatform;
+  contentType: SocialContentType;
+  description: string;
+  status: SocialStatus;
+  assignedAdminId: string;
+  clientTag?: string;
+  scheduledDate?: string;
+  createdAt: string;
+}
+
 // --- Supabase DB Types ---
 export interface UserProfile {
   id: string;
@@ -172,15 +189,15 @@ const INITIAL_TEAM: TeamMember[] = [
 ];
 
 const INITIAL_CLIENTS: CRMClient[] = [
-  { id: 1, name: "UPKEM", project: "Mobile App", location: "India", category: "Ongoing", stage: "Confirmed", health: 90, revenue: 80000, lastActivity: "Active development", avatar: "UP", assignedAdminId: "a1" },
-  { id: 2, name: "SPC (Supreme Petro)", project: "Tally BI Dashboard + AI Agents", location: "Chennai", category: "Potential", stage: "Quoted", health: 70, revenue: 40000, lastActivity: "Dashboard quoted ₹40k, AI Agents ₹1.75L to quote", avatar: "SP", assignedAdminId: "a1" },
-  { id: 3, name: "NJ Jewellers", project: "Gold Price Board", location: "Chennai", category: "Potential", stage: "Quoted", health: 75, revenue: 25000, lastActivity: "Confirm expected next week", avatar: "NJ", assignedAdminId: "a1" },
+  { id: 1, name: "UPKEM", project: "Mobile App", location: "India", category: "Ongoing", stage: "Dev 1", health: 90, revenue: 80000, lastActivity: "Building app screens — dashboard + profile", avatar: "UP", assignedAdminId: "a1" },
+  { id: 2, name: "SPC (Supreme Petro)", project: "Tally BI Dashboard + AI Agents", location: "Chennai", category: "Potential", stage: "Model", health: 70, revenue: 40000, lastActivity: "Dashboard quoted ₹40k, AI Agents ₹1.75L to quote", avatar: "SP", assignedAdminId: "a1" },
+  { id: 3, name: "NJ Jewellers", project: "Gold Price Board", location: "Chennai", category: "Potential", stage: "Demo 1", health: 75, revenue: 25000, lastActivity: "Confirm expected next week", avatar: "NJ", assignedAdminId: "a1" },
   { id: 4, name: "DOITFORME", project: "Website", location: "India", category: "Ongoing", stage: "Maintenance", health: 95, revenue: 0, lastActivity: "Already built, maintenance mode", avatar: "DI", assignedAdminId: "a1" },
-  { id: 5, name: "Sumati", project: "Small project", location: "India", category: "Potential", stage: "Requirements", health: 50, revenue: 0, lastActivity: "Exploring scope", avatar: "SU", assignedAdminId: "a2" },
-  { id: 6, name: "Varsiddhi", project: "TBD", location: "India", category: "Potential", stage: "Lead", health: 30, revenue: 0, lastActivity: "Not confirmed, exploring", avatar: "VA", assignedAdminId: "a2" },
-  { id: 7, name: "MMXport", project: "TBD", location: "India", category: "Potential", stage: "Lead", health: 40, revenue: 0, lastActivity: "Early stage discussions", avatar: "MM", assignedAdminId: "a2" },
-  { id: 8, name: "Techie", project: "Personalized LinkedIn", location: "India", category: "Potential", stage: "Requirements", health: 45, revenue: 0, lastActivity: "LinkedIn automation for tech", avatar: "TE", assignedAdminId: "a2" },
-  { id: 9, name: "Greenlit", project: "New Product", location: "India", category: "Ongoing", stage: "Demo", health: 60, revenue: 0, lastActivity: "In product pipeline", avatar: "GL", assignedAdminId: "a1" },
+  { id: 5, name: "Sumati", project: "Small project", location: "India", category: "Potential", stage: "Requirement", health: 50, revenue: 0, lastActivity: "Exploring scope", avatar: "SU", assignedAdminId: "a2" },
+  { id: 6, name: "Varsiddhi", project: "TBD", location: "India", category: "Potential", stage: "Requirement", health: 30, revenue: 0, lastActivity: "Not confirmed, exploring", avatar: "VA", assignedAdminId: "a2" },
+  { id: 7, name: "MMXport", project: "TBD", location: "India", category: "Potential", stage: "Requirement", health: 40, revenue: 0, lastActivity: "Early stage discussions", avatar: "MM", assignedAdminId: "a2" },
+  { id: 8, name: "Techie", project: "Personalized LinkedIn", location: "India", category: "Potential", stage: "Model", health: 45, revenue: 0, lastActivity: "LinkedIn automation for tech", avatar: "TE", assignedAdminId: "a2" },
+  { id: 9, name: "Greenlit", project: "New Product", location: "India", category: "Ongoing", stage: "Model", health: 60, revenue: 0, lastActivity: "In product pipeline", avatar: "GL", assignedAdminId: "a1" },
 ];
 
 const INITIAL_PRODUCTS: InternalProduct[] = [
@@ -201,6 +218,15 @@ const INITIAL_ACTIVITY: Activity[] = [
   { id: 2, action: "SPC dashboard demo being prepared", client: "SPC", time: "1 hr ago", type: "comment" },
   { id: 3, action: "NJ Jewellers confirmation pending", client: "NJ Jewellers", time: "3 hrs ago", type: "alert" },
   { id: 4, action: "DOITFORME maintenance check done", client: "DOITFORME", time: "5 hrs ago", type: "milestone" },
+];
+
+const INITIAL_SOCIAL_MEDIA: SocialMediaItem[] = [
+  { id: "sm1", platform: "Instagram", contentType: "Reel", description: "UPKEM app development behind-the-scenes", status: "Posted", assignedAdminId: "a4", clientTag: "UPKEM", scheduledDate: "2026-05-19", createdAt: "2026-05-18" },
+  { id: "sm2", platform: "LinkedIn", contentType: "Post", description: "Almmatix case study — SPC dashboard project", status: "In Progress", assignedAdminId: "a4", clientTag: "SPC", scheduledDate: "2026-05-20", createdAt: "2026-05-19" },
+  { id: "sm3", platform: "Twitter", contentType: "Tweet", description: "Thread on AI agents for business automation", status: "Planned", assignedAdminId: "a4", scheduledDate: "2026-05-21", createdAt: "2026-05-20" },
+  { id: "sm4", platform: "Instagram", contentType: "Story", description: "Team work culture at Almmatix", status: "Scheduled", assignedAdminId: "a4", scheduledDate: "2026-05-20", createdAt: "2026-05-19" },
+  { id: "sm5", platform: "Reddit", contentType: "Post", description: "How we built a CRM for our agency in 2 weeks", status: "Idea", assignedAdminId: "a3", scheduledDate: "2026-05-23", createdAt: "2026-05-20" },
+  { id: "sm6", platform: "LinkedIn", contentType: "Post", description: "NJ Jewellers gold price board showcase", status: "Planned", assignedAdminId: "a4", clientTag: "NJ Jewellers", scheduledDate: "2026-05-22", createdAt: "2026-05-20" },
 ];
 
 const INITIAL_LEADS: OutreachLead[] = [
@@ -457,6 +483,8 @@ interface CRMContextProps {
   products: InternalProduct[];
   comments: Comment[];
   activities: Activity[];
+  socialMedia: SocialMediaItem[];
+  setSocialMedia: React.Dispatch<React.SetStateAction<SocialMediaItem[]>>;
   leads: OutreachLead[];
   flags: ProjectFlag[];
   releases: ChangelogRelease[];
@@ -531,6 +559,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
   const [products, setProducts] = useState<InternalProduct[]>(INITIAL_PRODUCTS);
   const [comments, setComments] = useState<Comment[]>(INITIAL_COMMENTS);
   const [activities, setActivities] = useState<Activity[]>(INITIAL_ACTIVITY);
+  const [socialMedia, setSocialMedia] = useState<SocialMediaItem[]>(INITIAL_SOCIAL_MEDIA);
   const [leads, setLeads] = useState<OutreachLead[]>(INITIAL_LEADS);
   const [flags, setFlags] = useState<ProjectFlag[]>(INITIAL_FLAGS);
   const [releases, setReleases] = useState<ChangelogRelease[]>(INITIAL_RELEASES);
@@ -797,7 +826,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
   }, [isSupabaseConfigured]);
 
   const updateClientStage = useCallback(async (clientId: number, newStage: ClientStage) => {
-    const category: ClientCategory = (newStage === "Lead" || newStage === "Requirements" || newStage === "Demo" || newStage === "Quoted") ? "Potential" : "Ongoing";
+    const category: ClientCategory = (newStage === "Requirement" || newStage === "Model" || newStage === "Demo 1") ? "Potential" : "Ongoing";
     
     if (isSupabaseConfigured) {
       const { error } = await supabase
@@ -1007,7 +1036,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         project: lead.projectDescription,
         location: "India",
         category: "Ongoing",
-        stage: "Confirmed",
+        stage: "Converted",
         health: 80,
         revenue: lead.estimatedValue,
         last_activity: "Lead converted into project",
@@ -1055,7 +1084,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
       project: lead.projectDescription,
       location: "India",
       category: "Ongoing",
-      stage: "Confirmed",
+      stage: "Converted",
       health: 80,
       revenue: lead.estimatedValue,
       lastActivity: "Lead converted into project",
@@ -1459,7 +1488,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
 
   return (
     <CRMContext.Provider value={{ 
-      clients, team, products, comments, activities, leads, flags, releases, internalTasks, currentAdminId, selectedClientId, setSelectedClientId,
+      clients, team, products, comments, activities, socialMedia, setSocialMedia, leads, flags, releases, internalTasks, currentAdminId, selectedClientId, setSelectedClientId,
       addComment, deleteComment, updateClientStage, updateClientAdmin,
       updateClient, updateLead, updateInternalTask, updateFlag,
       updateLeadStatus, incrementLeadCalls, addLeadNote, convertLeadToClient, addNewLead,

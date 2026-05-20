@@ -2,149 +2,111 @@
 
 import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useCRM, ClientStage, OutreachStatus, TaskStatus, FlagSeverity, FlagStatus } from "./CRMContext";
+import { useCRM, ClientStage, OutreachStatus, TaskStatus, FlagSeverity, FlagStatus, SocialStatus, SocialPlatform, SocialContentType } from "./CRMContext";
 import ClientPortalView from "./ClientPortalView";
 
-// Helpers
 const formatINR = (n: number) => n > 0 ? "₹" + n.toLocaleString("en-IN") : "—";
-const STAGES: ClientStage[] = ["Lead", "Requirements", "Demo", "Quoted", "Confirmed", "Maintenance"];
+
+const PROJECT_STAGES: ClientStage[] = ["Requirement", "Model", "Demo 1", "Converted", "Dev 1", "Demo 2", "Dev Final", "Final Demo", "Delivery", "Maintenance"];
 const LEAD_STATUSES: OutreachStatus[] = ["Lead", "Contacted", "Responded", "Requirements", "Demo", "Quoted", "Converted", "Lost"];
 const TASK_STATUSES: TaskStatus[] = ["Todo", "In Progress", "In Review", "Resolved"];
-const SEVERITIES: FlagSeverity[] = ["Critical", "High", "Medium", "Low"];
-const FLAG_STATUSES: FlagStatus[] = ["Open", "Investigating", "In Dev", "Resolved"];
 
-const stageColor = (s: string) => {
-  if (s === "Confirmed" || s === "Maintenance" || s === "Converted" || s === "Resolved" || s === "Approved") return "bg-emerald-50 text-emerald-700 border-emerald-200";
-  if (s === "Quoted" || s === "Demo" || s === "In Review" || s === "Awaiting Review") return "bg-blue-50 text-blue-700 border-blue-200";
-  if (s === "Requirements" || s === "Responded" || s === "In Progress" || s === "Investigating" || s === "In Dev") return "bg-amber-50 text-amber-700 border-amber-200";
-  if (s === "Lead" || s === "Contacted" || s === "Todo" || s === "Open") return "bg-slate-50 text-slate-600 border-slate-200";
-  if (s === "Lost" || s === "Critical") return "bg-red-50 text-red-700 border-red-200";
-  return "bg-slate-50 text-slate-600 border-slate-200";
-};
+type Section = "dashboard" | "projects" | "social" | "leads" | "care" | "products";
 
-const severityDot = (s: FlagSeverity) => {
-  if (s === "Critical") return "bg-red-500";
-  if (s === "High") return "bg-amber-500";
-  if (s === "Medium") return "bg-yellow-400";
-  return "bg-slate-300";
-};
-
-type Tab = "projects" | "leads" | "tasks" | "issues" | "team" | "client-view";
+// Person color map
+const personColor: Record<string, string> = { a1: "#FF5A1F", a2: "#0D9488", a3: "#65A30D", a4: "#9333EA" };
 
 export default function AdminDashboard() {
   const crm = useCRM();
-  const { clients, team, leads, internalTasks, flags, comments, activities, userProfile, isSupabaseOnline, signOut } = crm;
-  const [activeTab, setActiveTab] = useState<Tab>("projects");
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
-  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const [selectedFlagId, setSelectedFlagId] = useState<string | null>(null);
-  const [showAddForm, setShowAddForm] = useState(false);
+  const { clients, team, leads, internalTasks, flags, comments, activities, products, userProfile, isSupabaseOnline, signOut } = crm;
+  const [section, setSection] = useState<Section>("dashboard");
+  const [selectedId, setSelectedId] = useState<string | number | null>(null);
+  const [showAdd, setShowAdd] = useState(false);
 
   const isIntern = userProfile?.role?.toLowerCase().includes("intern") || false;
-  const isCorePartner = ["a1", "a2", "a3", "a4"].includes(crm.currentAdminId) || 
-    ["lakshbetala15@gmail.com", "gandhimouriyan1234@gmail.com", "monarchankit25@gmail.com", "muskanabani01@gmail.com"]
-      .includes(userProfile?.email?.toLowerCase() || "");
 
-  // Stats
-  const confirmedProjects = clients.filter(c => c.stage === "Confirmed" || c.stage === "Maintenance").length;
-  const pipelineValue = clients.reduce((sum, c) => sum + c.revenue, 0) + leads.reduce((sum, l) => sum + l.estimatedValue, 0);
-  const openIssues = flags.filter(f => f.status !== "Resolved").length;
-  const activeTasks = internalTasks.filter(t => t.status !== "Resolved").length;
-
-  const tabs: { id: Tab; label: string; count?: number }[] = [
+  const sections: { id: Section; label: string; count?: number }[] = [
+    { id: "dashboard", label: "Dashboard" },
     { id: "projects", label: "Projects", count: clients.length },
+    { id: "social", label: "Social Media", count: (crm as any).socialMedia?.length || 0 },
     { id: "leads", label: "Leads", count: leads.length },
-    { id: "tasks", label: "Tasks", count: activeTasks },
-    { id: "issues", label: "Issues", count: openIssues },
-    { id: "team", label: "Team", count: team.length },
-    { id: "client-view", label: "Client View" },
+    { id: "care", label: "Client Care", count: flags.filter(f => f.status !== "Resolved").length },
+    { id: "products", label: "Products", count: products.length },
   ];
 
-  const closeDrawer = () => { setSelectedProjectId(null); setSelectedLeadId(null); setSelectedTaskId(null); setSelectedFlagId(null); };
-  const drawerOpen = selectedProjectId !== null || selectedLeadId !== null || selectedTaskId !== null || selectedFlagId !== null;
-
   return (
-    <div className="flex h-screen bg-[var(--color-bg)] text-[var(--color-text)] font-sans overflow-hidden">
+    <div className="flex h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] font-sans overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-56 flex-shrink-0 bg-[var(--color-surface)] border-r border-[var(--color-border)] flex flex-col">
-        <div className="p-5 pb-4">
-          <h1 className="text-base font-bold tracking-tight">almmatix</h1>
-          <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">Management Console</p>
+      <aside className="w-52 flex-shrink-0 bg-[var(--color-bg-raised)] border-r border-[var(--color-border-subtle)] flex flex-col">
+        <div className="p-5 pb-3">
+          <h1 className="text-sm font-bold tracking-tight text-[var(--color-text-primary)]">almmatix</h1>
+          <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5 font-mono uppercase tracking-wider">Console</p>
         </div>
 
-        <nav className="flex-1 px-3 space-y-0.5">
-          {tabs.map(tab => (
+        <nav className="flex-1 px-2 mt-2 space-y-0.5">
+          {sections.map(s => (
             <button
-              key={tab.id}
-              onClick={() => { setActiveTab(tab.id); closeDrawer(); setShowAddForm(false); }}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ${
-                activeTab === tab.id
-                  ? "bg-[var(--color-accent)] text-white"
-                  : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]"
+              key={s.id}
+              onClick={() => { setSection(s.id); setSelectedId(null); setShowAdd(false); }}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-[13px] transition-all duration-150 ${
+                section === s.id
+                  ? "bg-[var(--color-ember)] text-white font-semibold"
+                  : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-soft)]"
               }`}
             >
-              <span>{tab.label}</span>
-              {tab.count !== undefined && (
-                <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${
-                  activeTab === tab.id ? "bg-white/20" : "bg-[var(--color-border-light)]"
-                }`}>{tab.count}</span>
+              <span>{s.label}</span>
+              {s.count !== undefined && (
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                  section === s.id ? "bg-white/20" : "bg-[var(--color-border)]"
+                }`}>{s.count}</span>
               )}
             </button>
           ))}
         </nav>
 
-        <div className="p-4 border-t border-[var(--color-border)] space-y-3">
+        <div className="p-4 border-t border-[var(--color-border-subtle)] space-y-2">
           <div className="flex items-center gap-2">
-            <span className={`w-1.5 h-1.5 rounded-full ${isSupabaseOnline ? "bg-emerald-500" : "bg-amber-500 animate-pulse"}`} />
-            <span className="text-[11px] text-[var(--color-text-muted)]">{isSupabaseOnline ? "Connected" : "Offline"}</span>
+            <span className={`w-1.5 h-1.5 rounded-full ${isSupabaseOnline ? "bg-[var(--color-ok)]" : "bg-[var(--color-warn)] animate-pulse"}`} />
+            <span className="text-[10px] text-[var(--color-text-muted)]">{isSupabaseOnline ? "Connected" : "Offline"}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-[13px] font-medium">{userProfile?.name || "Admin"}</span>
-            <button onClick={signOut} className="text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-danger)] transition-colors">Sign out</button>
+            <span className="text-[12px] font-medium text-[var(--color-text-secondary)]">{userProfile?.name || "Admin"}</span>
+            <button onClick={signOut} className="text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-bad)] transition-colors">Sign out</button>
           </div>
         </div>
       </aside>
 
-      {/* Main content */}
+      {/* Main */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        {/* Top bar */}
-        <header className="h-14 flex-shrink-0 border-b border-[var(--color-border)] flex items-center justify-between px-6 bg-[var(--color-surface)]">
-          <h2 className="text-[15px] font-semibold">{tabs.find(t => t.id === activeTab)?.label}</h2>
-          {activeTab !== "client-view" && activeTab !== "team" && (
-            <button
-              onClick={() => setShowAddForm(!showAddForm)}
-              className="px-3 py-1.5 bg-[var(--color-accent)] text-white text-[12px] font-medium rounded-lg hover:bg-[var(--color-accent-hover)] transition-colors"
-            >
-              + New
-            </button>
+        <header className="h-12 flex-shrink-0 border-b border-[var(--color-border-subtle)] flex items-center justify-between px-6 bg-[var(--color-bg-raised)]">
+          <h2 className="text-[14px] font-semibold">{sections.find(s => s.id === section)?.label}</h2>
+          {section !== "dashboard" && section !== "products" && (
+            <button onClick={() => setShowAdd(!showAdd)} className="px-3 py-1 bg-[var(--color-ember)] text-white text-[11px] font-semibold rounded-lg hover:bg-[var(--color-ember-hover)] transition-colors">+ New</button>
           )}
         </header>
 
         <div className="flex-1 flex overflow-hidden">
-          {/* Content area */}
-          <div className="flex-1 overflow-y-auto crm-scrollbar p-6">
+          <div className="flex-1 overflow-y-auto crm-scroll p-6">
             <AnimatePresence mode="wait">
-              <motion.div key={activeTab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-                {activeTab === "projects" && <ProjectsTab crm={crm} isIntern={isIntern} onSelect={setSelectedProjectId} selectedId={selectedProjectId} showAdd={showAddForm} onCloseAdd={() => setShowAddForm(false)} stats={{ confirmedProjects, pipelineValue, openIssues, activeTasks }} />}
-                {activeTab === "leads" && <LeadsTab crm={crm} onSelect={setSelectedLeadId} selectedId={selectedLeadId} showAdd={showAddForm} onCloseAdd={() => setShowAddForm(false)} />}
-                {activeTab === "tasks" && <TasksTab crm={crm} onSelect={setSelectedTaskId} showAdd={showAddForm} onCloseAdd={() => setShowAddForm(false)} />}
-                {activeTab === "issues" && <IssuesTab crm={crm} onSelect={setSelectedFlagId} showAdd={showAddForm} onCloseAdd={() => setShowAddForm(false)} />}
-                {activeTab === "team" && <TeamTab crm={crm} isCorePartner={isCorePartner} />}
-                {activeTab === "client-view" && <div className="bg-[var(--color-dark-bg)] rounded-xl overflow-hidden -m-6 min-h-full"><ClientPortalView /></div>}
+              <motion.div key={section} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                {section === "dashboard" && <DashboardSection crm={crm} isIntern={isIntern} />}
+                {section === "projects" && <ProjectsSection crm={crm} isIntern={isIntern} onSelect={setSelectedId} selectedId={selectedId} showAdd={showAdd} onCloseAdd={() => setShowAdd(false)} />}
+                {section === "social" && <SocialSection crm={crm} showAdd={showAdd} onCloseAdd={() => setShowAdd(false)} />}
+                {section === "leads" && <LeadsSection crm={crm} onSelect={setSelectedId} selectedId={selectedId} showAdd={showAdd} onCloseAdd={() => setShowAdd(false)} />}
+                {section === "care" && <CareSection crm={crm} onSelect={setSelectedId} showAdd={showAdd} onCloseAdd={() => setShowAdd(false)} />}
+                {section === "products" && <ProductsSection crm={crm} />}
               </motion.div>
             </AnimatePresence>
           </div>
 
-          {/* Drawer */}
+          {/* Right drawer */}
           <AnimatePresence>
-            {drawerOpen && (
-              <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: 420, opacity: 1 }} exit={{ width: 0, opacity: 0 }} transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] as const }} className="flex-shrink-0 border-l border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
-                <div className="w-[420px] h-full overflow-y-auto crm-scrollbar">
-                  {selectedProjectId !== null && <ProjectDrawer crm={crm} clientId={selectedProjectId} isIntern={isIntern} onClose={closeDrawer} />}
-                  {selectedLeadId !== null && <LeadDrawer crm={crm} leadId={selectedLeadId} onClose={closeDrawer} />}
-                  {selectedTaskId !== null && <TaskDrawer crm={crm} taskId={selectedTaskId} onClose={closeDrawer} />}
-                  {selectedFlagId !== null && <FlagDrawer crm={crm} flagId={selectedFlagId} onClose={closeDrawer} />}
+            {selectedId !== null && section !== "dashboard" && (
+              <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: 400, opacity: 1 }} exit={{ width: 0, opacity: 0 }} transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] as const }} className="flex-shrink-0 border-l border-[var(--color-border-subtle)] bg-[var(--color-bg-raised)] overflow-hidden">
+                <div className="w-[400px] h-full overflow-y-auto crm-scroll">
+                  {section === "projects" && <ProjectDrawer crm={crm} clientId={selectedId as number} isIntern={isIntern} onClose={() => setSelectedId(null)} />}
+                  {section === "leads" && <LeadDrawer crm={crm} leadId={selectedId as string} onClose={() => setSelectedId(null)} />}
+                  {section === "care" && <FlagDrawer crm={crm} flagId={selectedId as string} onClose={() => setSelectedId(null)} />}
                 </div>
               </motion.div>
             )}
@@ -155,64 +117,155 @@ export default function AdminDashboard() {
   );
 }
 
-// ===== PROJECTS TAB =====
-function ProjectsTab({ crm, isIntern, onSelect, selectedId, showAdd, onCloseAdd, stats }: any) {
-  const { clients, team } = crm;
+/* ===== SECTION 1: DASHBOARD ===== */
+function DashboardSection({ crm, isIntern }: any) {
+  const { clients, team, leads, internalTasks, flags, comments, activities } = crm;
+
+  const confirmed = clients.filter((c: any) => ["Converted", "Dev 1", "Demo 2", "Dev Final", "Final Demo", "Delivery"].includes(c.stage)).length;
+  const pipeline = clients.reduce((s: number, c: any) => s + c.revenue, 0) + leads.reduce((s: number, l: any) => s + l.estimatedValue, 0);
+  const openFlags = flags.filter((f: any) => f.status !== "Resolved").length;
+
   return (
-    <div className="space-y-6">
-      {/* Stats row */}
-      <div className="grid grid-cols-4 gap-4">
+    <div className="space-y-6 max-w-4xl">
+      {/* Quick stats */}
+      <div className="grid grid-cols-4 gap-3">
         {[
-          { label: "Confirmed", value: stats.confirmedProjects, color: "text-emerald-600" },
-          { label: "Pipeline", value: formatINR(stats.pipelineValue), color: "text-blue-600" },
-          { label: "Open issues", value: stats.openIssues, color: stats.openIssues > 0 ? "text-amber-600" : "text-slate-500" },
-          { label: "Active tasks", value: stats.activeTasks, color: "text-slate-700" },
+          { label: "Active Projects", value: confirmed, color: "text-[var(--color-ok)]" },
+          { label: "Pipeline Value", value: isIntern ? "—" : formatINR(pipeline), color: "text-[var(--color-text-primary)]" },
+          { label: "Open Issues", value: openFlags, color: openFlags > 0 ? "text-[var(--color-warn)]" : "text-[var(--color-text-muted)]" },
+          { label: "Leads", value: leads.length, color: "text-[var(--color-text-primary)]" },
         ].map(s => (
-          <div key={s.label} className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4">
-            <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase tracking-wide">{s.label}</p>
-            <p className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value}</p>
+          <div key={s.label} className="bg-[var(--color-bg-soft)] border border-[var(--color-border)] rounded-xl p-4">
+            <p className="text-[10px] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">{s.label}</p>
+            <p className={`text-xl font-bold mt-1 ${s.color}`}>{s.value}</p>
           </div>
         ))}
       </div>
 
-      {/* Add form */}
-      {showAdd && <AddClientForm crm={crm} onClose={onCloseAdd} />}
+      {/* People lanes — the core insight */}
+      <div className="space-y-3">
+        <h3 className="text-[11px] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">Team Status</h3>
+        {team.map((member: any) => {
+          const myTasks = internalTasks.filter((t: any) => t.assignedAdminId === member.id);
+          const nowTask = myTasks.find((t: any) => t.status === "In Progress");
+          const nextTask = myTasks.find((t: any) => t.status === "Todo");
+          const blockedTask = myTasks.find((t: any) => t.status === "In Review");
+          const myProjects = clients.filter((c: any) => c.assignedAdminId === member.id);
 
-      {/* Project list */}
-      <div className="space-y-2">
-        {clients.map((c: any) => {
-          const owner = team.find((t: any) => t.id === c.assignedAdminId);
           return (
-            <button
-              key={c.id}
-              onClick={() => onSelect(c.id)}
-              className={`w-full text-left p-4 rounded-xl border transition-all duration-150 ${
-                selectedId === c.id
-                  ? "border-[var(--color-accent)] bg-[var(--color-accent-light)]/30"
-                  : "border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-accent)]/40 hover:shadow-sm"
-              }`}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[11px] font-bold text-slate-500 flex-shrink-0">{c.avatar}</span>
-                    <div className="min-w-0">
-                      <h3 className="text-[14px] font-semibold truncate">{c.name}</h3>
-                      <p className="text-[12px] text-[var(--color-text-secondary)] truncate">{c.project} · {c.location}</p>
-                    </div>
-                  </div>
+            <div key={member.id} className="bg-[var(--color-surface)] rounded-xl p-4 border border-[var(--color-border-card)]">
+              <div className="flex items-center gap-3 mb-3">
+                <span className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold text-white" style={{ backgroundColor: personColor[member.id] || "#78716C" }}>{member.avatar}</span>
+                <div>
+                  <h4 className="text-[13px] font-semibold text-[var(--color-card-text)]">{member.name}</h4>
+                  <p className="text-[10px] text-[var(--color-card-text-muted)]">{member.role}</p>
                 </div>
-                <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-                  {!isIntern && c.revenue > 0 && <span className="text-[12px] font-semibold text-[var(--color-text)]">{formatINR(c.revenue)}</span>}
-                  <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${stageColor(c.stage)}`}>{c.stage}</span>
+                <span className="ml-auto text-[10px] text-[var(--color-card-text-muted)]">{myProjects.length} projects · {myTasks.filter((t: any) => t.status !== "Resolved").length} tasks</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="rounded-lg bg-white/60 p-2.5 border border-[var(--color-border-card)]/50">
+                  <p className="text-[9px] font-mono uppercase tracking-wider text-[var(--color-ok)] mb-1">Now</p>
+                  <p className="text-[11px] text-[var(--color-card-text)] leading-snug font-medium">{nowTask?.title || "No active task"}</p>
+                </div>
+                <div className="rounded-lg bg-white/60 p-2.5 border border-[var(--color-border-card)]/50">
+                  <p className="text-[9px] font-mono uppercase tracking-wider text-[var(--color-info)] mb-1">Next</p>
+                  <p className="text-[11px] text-[var(--color-card-text)] leading-snug font-medium">{nextTask?.title || "Queue empty"}</p>
+                </div>
+                <div className="rounded-lg bg-white/60 p-2.5 border border-[var(--color-border-card)]/50">
+                  <p className="text-[9px] font-mono uppercase tracking-wider text-[var(--color-warn)] mb-1">Review</p>
+                  <p className="text-[11px] text-[var(--color-card-text)] leading-snug font-medium">{blockedTask?.title || "Nothing pending"}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-4 mt-2.5 ml-10">
-                <span className="text-[11px] text-[var(--color-text-muted)]">{owner?.name || "Unassigned"}</span>
-                <span className="text-[11px] text-[var(--color-text-muted)]">·</span>
-                <span className="text-[11px] text-[var(--color-text-muted)] truncate">{c.lastActivity}</span>
-                <span className="text-[11px] text-[var(--color-text-muted)]">·</span>
-                <span className="text-[11px] text-[var(--color-text-muted)]">Health {c.health}%</span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Needs attention */}
+      {(comments.length > 0 || flags.filter((f: any) => f.status !== "Resolved").length > 0) && (
+        <div className="space-y-2">
+          <h3 className="text-[11px] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">Needs Attention</h3>
+          <div className="space-y-1.5">
+            {comments.filter((c: any) => c.role === "client").slice(0, 3).map((c: any) => {
+              const client = clients.find((cl: any) => cl.id === c.clientId);
+              return (
+                <div key={c.id} className="flex items-center gap-3 bg-[var(--color-bg-soft)] border border-[var(--color-border)] rounded-lg px-4 py-2.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-warn)]" />
+                  <span className="text-[12px] text-[var(--color-text-secondary)] flex-1">Client feedback from <strong className="text-[var(--color-text-primary)]">{client?.name || "Unknown"}</strong> — {c.text.substring(0, 60)}...</span>
+                  <span className="text-[10px] text-[var(--color-text-muted)]">{c.timeElapsed}</span>
+                </div>
+              );
+            })}
+            {flags.filter((f: any) => f.status === "Open").slice(0, 2).map((f: any) => {
+              const client = clients.find((c: any) => c.id === f.clientId);
+              return (
+                <div key={f.id} className="flex items-center gap-3 bg-[var(--color-bg-soft)] border border-[var(--color-border)] rounded-lg px-4 py-2.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-bad)]" />
+                  <span className="text-[12px] text-[var(--color-text-secondary)] flex-1">Open issue on <strong className="text-[var(--color-text-primary)]">{client?.name}</strong>: {f.title}</span>
+                  <span className="text-[10px] text-[var(--color-text-muted)]">{f.severity}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Recent activity */}
+      <div className="space-y-2">
+        <h3 className="text-[11px] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">Recent Activity</h3>
+        <div className="space-y-1">
+          {activities.slice(0, 5).map((a: any) => (
+            <div key={a.id} className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-[var(--color-bg-soft)] transition-colors">
+              <span className={`w-1 h-1 rounded-full ${a.type === "milestone" ? "bg-[var(--color-ok)]" : a.type === "alert" ? "bg-[var(--color-warn)]" : "bg-[var(--color-text-muted)]"}`} />
+              <span className="text-[12px] text-[var(--color-text-secondary)] flex-1">{a.action}</span>
+              <span className="text-[10px] text-[var(--color-text-muted)]">{a.time}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ===== SECTION 2: PROJECTS ===== */
+function ProjectsSection({ crm, isIntern, onSelect, selectedId, showAdd, onCloseAdd }: any) {
+  const stageIdx = (s: string) => PROJECT_STAGES.indexOf(s as ClientStage);
+
+  return (
+    <div className="space-y-4">
+      {showAdd && <AddProjectForm crm={crm} onClose={onCloseAdd} />}
+      <div className="space-y-2">
+        {crm.clients.map((c: any) => {
+          const owner = crm.team.find((t: any) => t.id === c.assignedAdminId);
+          const si = stageIdx(c.stage);
+          return (
+            <button key={c.id} onClick={() => onSelect(c.id)} className={`w-full text-left rounded-xl border transition-all duration-150 ${
+              selectedId === c.id ? "border-[var(--color-ember)]/60 bg-[var(--color-ember-soft)]" : "border-[var(--color-border)] bg-[var(--color-bg-soft)] hover:border-[var(--color-text-muted)]/30"
+            }`}>
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-8 h-8 rounded-lg bg-[var(--color-surface)] flex items-center justify-center text-[10px] font-bold text-[var(--color-card-text)]">{c.avatar}</span>
+                    <div>
+                      <h3 className="text-[13px] font-semibold">{c.name}</h3>
+                      <p className="text-[11px] text-[var(--color-text-muted)]">{c.project}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {!isIntern && c.revenue > 0 && <span className="text-[12px] font-semibold">{formatINR(c.revenue)}</span>}
+                    <span className="text-[10px] font-medium text-[var(--color-text-secondary)]">{owner?.name}</span>
+                  </div>
+                </div>
+                {/* 10-step progress bar */}
+                <div className="flex gap-0.5">
+                  {PROJECT_STAGES.map((stage, i) => (
+                    <div key={stage} className={`h-1 flex-1 rounded-full transition-colors ${i <= si ? "bg-[var(--color-ember)]" : "bg-[var(--color-border)]"}`} title={stage} />
+                  ))}
+                </div>
+                <div className="flex items-center justify-between mt-1.5">
+                  <span className="text-[10px] text-[var(--color-text-muted)]">{c.stage}</span>
+                  <span className="text-[10px] text-[var(--color-text-muted)]">{c.lastActivity}</span>
+                </div>
               </div>
             </button>
           );
@@ -222,180 +275,256 @@ function ProjectsTab({ crm, isIntern, onSelect, selectedId, showAdd, onCloseAdd,
   );
 }
 
-// ===== ADD CLIENT FORM =====
-function AddClientForm({ crm, onClose }: any) {
-  const [name, setName] = useState(""); const [project, setProject] = useState(""); const [location, setLocation] = useState("India");
-  const [stage, setStage] = useState<ClientStage>("Lead"); const [revenue, setRevenue] = useState(0); const [admin, setAdmin] = useState("a1");
+function AddProjectForm({ crm, onClose }: any) {
+  const [name, setName] = useState(""); const [project, setProject] = useState(""); const [stage, setStage] = useState<ClientStage>("Requirement"); const [revenue, setRevenue] = useState(0); const [admin, setAdmin] = useState("a1");
   const submit = () => {
     if (!name || !project) return;
-    crm.addNewClient({ name, project, location, category: (stage === "Lead" || stage === "Requirements" || stage === "Demo" || stage === "Quoted") ? "Potential" as const : "Ongoing" as const, stage, revenue, assignedAdminId: admin });
+    crm.addNewClient({ name, project, location: "India", category: "Potential" as const, stage, revenue, assignedAdminId: admin });
     onClose();
   };
   return (
-    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-3">
-      <div className="flex items-center justify-between"><h3 className="text-[13px] font-semibold">Add Project</h3><button onClick={onClose} className="text-[var(--color-text-muted)] text-lg">×</button></div>
-      <div className="grid grid-cols-2 gap-3">
-        <input placeholder="Client name" value={name} onChange={e => setName(e.target.value)} className="col-span-2 border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none focus:border-[var(--color-accent)]" />
-        <input placeholder="Project name" value={project} onChange={e => setProject(e.target.value)} className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none focus:border-[var(--color-accent)]" />
-        <input placeholder="Location" value={location} onChange={e => setLocation(e.target.value)} className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none focus:border-[var(--color-accent)]" />
-        <select value={stage} onChange={e => setStage(e.target.value as ClientStage)} className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none">
-          {STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+    <div className="bg-[var(--color-bg-soft)] border border-[var(--color-border)] rounded-xl p-4 space-y-3">
+      <div className="flex items-center justify-between"><h3 className="text-[12px] font-semibold">New Project</h3><button onClick={onClose} className="text-[var(--color-text-muted)] text-sm">×</button></div>
+      <div className="grid grid-cols-2 gap-2">
+        <input placeholder="Client name" value={name} onChange={e => setName(e.target.value)} className="col-span-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-[12px] text-[var(--color-text-primary)] outline-none focus:border-[var(--color-ember)] placeholder:text-[var(--color-text-faint)]" />
+        <input placeholder="Project name" value={project} onChange={e => setProject(e.target.value)} className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-[12px] text-[var(--color-text-primary)] outline-none focus:border-[var(--color-ember)] placeholder:text-[var(--color-text-faint)]" />
+        <input type="number" placeholder="Revenue (₹)" value={revenue || ""} onChange={e => setRevenue(Number(e.target.value))} className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-[12px] text-[var(--color-text-primary)] outline-none focus:border-[var(--color-ember)] placeholder:text-[var(--color-text-faint)]" />
+        <select value={stage} onChange={e => setStage(e.target.value as ClientStage)} className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-[12px] text-[var(--color-text-primary)] outline-none">
+          {PROJECT_STAGES.map(s => <option key={s}>{s}</option>)}
         </select>
-        <input type="number" placeholder="Revenue (₹)" value={revenue || ""} onChange={e => setRevenue(Number(e.target.value))} className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none focus:border-[var(--color-accent)]" />
-        <select value={admin} onChange={e => setAdmin(e.target.value)} className="col-span-2 border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none">
+        <select value={admin} onChange={e => setAdmin(e.target.value)} className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-[12px] text-[var(--color-text-primary)] outline-none">
           {crm.team.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
       </div>
-      <button onClick={submit} className="w-full bg-[var(--color-accent)] text-white text-[12px] font-medium py-2 rounded-lg hover:bg-[var(--color-accent-hover)] transition-colors">Add Project</button>
+      <button onClick={submit} className="w-full bg-[var(--color-ember)] text-white text-[11px] font-semibold py-2 rounded-lg hover:bg-[var(--color-ember-hover)] transition-colors">Create Project</button>
     </div>
   );
 }
 
-// ===== PROJECT DRAWER =====
+/* ===== PROJECT DRAWER ===== */
 function ProjectDrawer({ crm, clientId, isIntern, onClose }: any) {
   const client = crm.clients.find((c: any) => c.id === clientId);
   if (!client) return null;
   const owner = crm.team.find((t: any) => t.id === client.assignedAdminId);
-  const projectComments = crm.comments.filter((c: any) => c.clientId === clientId);
-  const projectFlags = crm.flags.filter((f: any) => f.clientId === clientId);
-  const projectTasks = crm.internalTasks.filter((t: any) => t.clientId === clientId);
+  const pTasks = crm.internalTasks.filter((t: any) => t.clientId === clientId);
+  const pFlags = crm.flags.filter((f: any) => f.clientId === clientId);
+  const pComments = crm.comments.filter((c: any) => c.clientId === clientId);
+  const si = PROJECT_STAGES.indexOf(client.stage);
 
   return (
     <div className="p-5 space-y-5">
       <div className="flex items-center justify-between">
-        <h3 className="text-[15px] font-bold">{client.name}</h3>
-        <button onClick={onClose} className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] text-lg">×</button>
+        <h3 className="text-[14px] font-bold">{client.name}</h3>
+        <button onClick={onClose} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-sm">×</button>
       </div>
 
-      {/* Editable fields */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Project</span>
-          <span className="text-[13px]">{client.project}</span>
+      {/* Stage pipeline visual */}
+      <div className="space-y-1.5">
+        <div className="flex gap-0.5">
+          {PROJECT_STAGES.map((stage, i) => (
+            <div key={stage} className={`h-1.5 flex-1 rounded-full ${i <= si ? "bg-[var(--color-ember)]" : "bg-[var(--color-border)]"}`} />
+          ))}
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Location</span>
-          <span className="text-[13px]">{client.location}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Stage</span>
-          <select value={client.stage} onChange={e => crm.updateClientStage(clientId, e.target.value as ClientStage)} className="text-[12px] border border-[var(--color-border)] rounded-lg px-2 py-1 bg-transparent outline-none">
-            {STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+          <span className="text-[10px] text-[var(--color-text-muted)]">Stage {si + 1}/{PROJECT_STAGES.length}</span>
+          <select value={client.stage} onChange={e => crm.updateClientStage(clientId, e.target.value as ClientStage)} className="text-[11px] bg-[var(--color-bg)] border border-[var(--color-border)] rounded px-2 py-0.5 text-[var(--color-text-primary)] outline-none">
+            {PROJECT_STAGES.map(s => <option key={s}>{s}</option>)}
           </select>
         </div>
+      </div>
+
+      {/* Details */}
+      <div className="space-y-2.5">
+        {[
+          { label: "Project", value: client.project },
+          { label: "Location", value: client.location },
+          { label: "Health", value: `${client.health}%` },
+        ].map(f => (
+          <div key={f.label} className="flex items-center justify-between">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">{f.label}</span>
+            <span className="text-[12px] text-[var(--color-text-secondary)]">{f.value}</span>
+          </div>
+        ))}
         <div className="flex items-center justify-between">
-          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Assigned to</span>
-          <select value={client.assignedAdminId || ""} onChange={e => crm.updateClientAdmin(clientId, e.target.value)} className="text-[12px] border border-[var(--color-border)] rounded-lg px-2 py-1 bg-transparent outline-none">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">Owner</span>
+          <select value={client.assignedAdminId || ""} onChange={e => crm.updateClientAdmin(clientId, e.target.value)} className="text-[11px] bg-[var(--color-bg)] border border-[var(--color-border)] rounded px-2 py-0.5 text-[var(--color-text-primary)] outline-none">
             {crm.team.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
         </div>
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Health</span>
-          <span className="text-[13px] font-semibold">{client.health}%</span>
-        </div>
       </div>
 
-      {/* Financials - hidden from interns */}
+      {/* Financials */}
       {!isIntern && (
         <div className="border-t border-[var(--color-border)] pt-4">
-          <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase mb-2">Financials</p>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-slate-50 rounded-lg p-3">
-              <p className="text-[10px] text-[var(--color-text-muted)]">Revenue</p>
-              <p className="text-[15px] font-bold">{formatINR(client.revenue)}</p>
+          <p className="text-[10px] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-2">Financials</p>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg p-3">
+              <p className="text-[9px] text-[var(--color-text-muted)]">Revenue</p>
+              <p className="text-[14px] font-bold">{formatINR(client.revenue)}</p>
             </div>
-            <div className="bg-slate-50 rounded-lg p-3">
-              <p className="text-[10px] text-[var(--color-text-muted)]">Spent (est.)</p>
-              <p className="text-[15px] font-bold">{formatINR(Math.round(client.revenue * 0.45))}</p>
+            <div className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg p-3">
+              <p className="text-[9px] text-[var(--color-text-muted)]">Spent (est.)</p>
+              <p className="text-[14px] font-bold">{formatINR(Math.round(client.revenue * 0.45))}</p>
             </div>
           </div>
         </div>
       )}
 
       {/* Tasks */}
-      {projectTasks.length > 0 && (
+      {pTasks.length > 0 && (
         <div className="border-t border-[var(--color-border)] pt-4">
-          <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase mb-2">Tasks ({projectTasks.length})</p>
-          <div className="space-y-1.5">
-            {projectTasks.map((t: any) => (
-              <div key={t.id} className="flex items-center justify-between p-2 rounded-lg bg-slate-50">
-                <span className="text-[12px] truncate flex-1">{t.title}</span>
-                <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full border ${stageColor(t.status)}`}>{t.status}</span>
-              </div>
-            ))}
-          </div>
+          <p className="text-[10px] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-2">Tasks ({pTasks.length})</p>
+          {pTasks.map((t: any) => (
+            <div key={t.id} className="flex items-center justify-between p-2 rounded-lg bg-[var(--color-bg)] mb-1">
+              <span className="text-[11px] text-[var(--color-text-secondary)] truncate flex-1">{t.title}</span>
+              <span className="text-[9px] text-[var(--color-text-muted)]">{t.status}</span>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* Issues */}
-      {projectFlags.length > 0 && (
+      {/* Comments */}
+      {pComments.length > 0 && (
         <div className="border-t border-[var(--color-border)] pt-4">
-          <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase mb-2">Issues ({projectFlags.length})</p>
-          <div className="space-y-1.5">
-            {projectFlags.map((f: any) => (
-              <div key={f.id} className="flex items-center gap-2 p-2 rounded-lg bg-slate-50">
-                <span className={`w-2 h-2 rounded-full ${severityDot(f.severity)}`} />
-                <span className="text-[12px] truncate flex-1">{f.title}</span>
-                <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full border ${stageColor(f.status)}`}>{f.status}</span>
+          <p className="text-[10px] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-2">Feedback</p>
+          {pComments.slice(0, 4).map((c: any) => (
+            <div key={c.id} className="p-2.5 rounded-lg bg-[var(--color-bg)] mb-1.5">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-[10px] font-semibold text-[var(--color-text-primary)]">{c.author}</span>
+                <span className="text-[9px] text-[var(--color-text-muted)]">{c.timeElapsed}</span>
               </div>
-            ))}
-          </div>
+              <p className="text-[11px] text-[var(--color-text-secondary)]">{c.text}</p>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* Recent comments */}
-      {projectComments.length > 0 && (
-        <div className="border-t border-[var(--color-border)] pt-4">
-          <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase mb-2">Recent feedback</p>
-          <div className="space-y-2">
-            {projectComments.slice(0, 5).map((c: any) => (
-              <div key={c.id} className="p-2.5 rounded-lg bg-slate-50">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[11px] font-semibold">{c.author}</span>
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${c.role === "admin" ? "bg-blue-100 text-blue-600" : "bg-slate-200 text-slate-600"}`}>{c.role}</span>
-                  <span className="text-[10px] text-[var(--color-text-muted)] ml-auto">{c.timeElapsed}</span>
-                </div>
-                <p className="text-[12px] text-[var(--color-text-secondary)]">{c.text}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Delete */}
       <div className="border-t border-[var(--color-border)] pt-4">
-        <button onClick={() => { crm.deleteClient(clientId); onClose(); }} className="text-[11px] text-[var(--color-danger)] hover:underline">Delete project</button>
+        <button onClick={() => { crm.deleteClient(clientId); onClose(); }} className="text-[10px] text-[var(--color-bad)] hover:underline">Delete project</button>
       </div>
     </div>
   );
 }
 
-// ===== LEADS TAB =====
-function LeadsTab({ crm, onSelect, selectedId, showAdd, onCloseAdd }: any) {
-  const { leads, team } = crm;
+/* ===== SECTION 3: SOCIAL MEDIA ===== */
+function SocialSection({ crm, showAdd, onCloseAdd }: any) {
+  const socialMedia: any[] = (crm as any).socialMedia || [];
+  const columns: { status: SocialStatus; label: string }[] = [
+    { status: "Idea", label: "Backlog" },
+    { status: "Planned", label: "Planned" },
+    { status: "In Progress", label: "Creating" },
+    { status: "Scheduled", label: "Scheduled" },
+    { status: "Posted", label: "Posted" },
+  ];
+
+  const platformIcon: Record<string, string> = { Instagram: "📸", Twitter: "𝕏", LinkedIn: "in", Reddit: "🔴", YouTube: "▶" };
+
   return (
     <div className="space-y-4">
+      {showAdd && <AddSocialForm crm={crm} onClose={onCloseAdd} />}
+      <div className="grid grid-cols-5 gap-3 min-h-[400px]">
+        {columns.map(col => {
+          const items = socialMedia.filter((i: any) => i.status === col.status);
+          return (
+            <div key={col.status}>
+              <div className="flex items-center justify-between mb-2 px-1">
+                <h4 className="text-[11px] font-semibold text-[var(--color-text-secondary)]">{col.label}</h4>
+                <span className="text-[10px] text-[var(--color-text-muted)] bg-[var(--color-border)] px-1.5 py-0.5 rounded-full">{items.length}</span>
+              </div>
+              <div className="space-y-2">
+                {items.map((item: any) => (
+                  <div key={item.id} className="bg-[var(--color-surface)] border border-[var(--color-border-card)] rounded-xl p-3">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <span className="text-[10px]">{platformIcon[item.platform] || "•"}</span>
+                      <span className="text-[10px] font-medium text-[var(--color-card-text-muted)]">{item.platform}</span>
+                      <span className="text-[10px] text-[var(--color-card-text-muted)]">·</span>
+                      <span className="text-[10px] text-[var(--color-card-text-muted)]">{item.contentType}</span>
+                    </div>
+                    <p className="text-[11px] text-[var(--color-card-text)] leading-snug font-medium">{item.description}</p>
+                    {item.clientTag && <span className="inline-block mt-1.5 text-[9px] px-1.5 py-0.5 bg-[var(--color-surface-muted)] rounded text-[var(--color-card-text-secondary)]">{item.clientTag}</span>}
+                    <p className="text-[9px] text-[var(--color-card-text-muted)] mt-1">{item.scheduledDate}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function AddSocialForm({ crm, onClose }: any) {
+  const [platform, setPlatform] = useState<SocialPlatform>("Instagram");
+  const [contentType, setContentType] = useState<SocialContentType>("Post");
+  const [desc, setDesc] = useState(""); const [date, setDate] = useState("");
+  return (
+    <div className="bg-[var(--color-bg-soft)] border border-[var(--color-border)] rounded-xl p-4 space-y-3">
+      <div className="flex items-center justify-between"><h3 className="text-[12px] font-semibold">New Content</h3><button onClick={onClose} className="text-[var(--color-text-muted)]">×</button></div>
+      <div className="grid grid-cols-2 gap-2">
+        <select value={platform} onChange={e => setPlatform(e.target.value as SocialPlatform)} className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-[12px] text-[var(--color-text-primary)] outline-none">
+          {(["Instagram", "Twitter", "LinkedIn", "Reddit", "YouTube"] as SocialPlatform[]).map(p => <option key={p}>{p}</option>)}
+        </select>
+        <select value={contentType} onChange={e => setContentType(e.target.value as SocialContentType)} className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-[12px] text-[var(--color-text-primary)] outline-none">
+          {(["Reel", "Post", "Story", "Tweet", "Blog", "Thread"] as SocialContentType[]).map(t => <option key={t}>{t}</option>)}
+        </select>
+        <input placeholder="What is this content about?" value={desc} onChange={e => setDesc(e.target.value)} className="col-span-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-[12px] text-[var(--color-text-primary)] outline-none focus:border-[var(--color-ember)] placeholder:text-[var(--color-text-faint)]" />
+        <input type="date" value={date} onChange={e => setDate(e.target.value)} className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-[12px] text-[var(--color-text-primary)] outline-none" />
+      </div>
+      <button className="w-full bg-[var(--color-ember)] text-white text-[11px] font-semibold py-2 rounded-lg hover:bg-[var(--color-ember-hover)] transition-colors">Add to Pipeline</button>
+    </div>
+  );
+}
+
+/* ===== SECTION 4: LEADS ===== */
+function LeadsSection({ crm, onSelect, selectedId, showAdd, onCloseAdd }: any) {
+  const { leads, team } = crm;
+  // Pipeline funnel counts
+  const funnelStages = [
+    { status: "Lead", label: "In Pipeline" },
+    { status: "Contacted", label: "Contacted" },
+    { status: "Responded", label: "In Talk" },
+    { status: "Demo", label: "Demo Stage" },
+    { status: "Quoted", label: "Quoted" },
+  ];
+
+  return (
+    <div className="space-y-5">
+      {/* Funnel */}
+      <div className="flex gap-2">
+        {funnelStages.map((fs, i) => {
+          const count = leads.filter((l: any) => l.status === fs.status || (fs.status === "Responded" && l.status === "Requirements")).length;
+          return (
+            <div key={fs.status} className="flex-1 bg-[var(--color-bg-soft)] border border-[var(--color-border)] rounded-xl p-3 text-center">
+              <p className="text-xl font-bold">{count}</p>
+              <p className="text-[9px] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mt-0.5">{fs.label}</p>
+            </div>
+          );
+        })}
+      </div>
+
       {showAdd && <AddLeadForm crm={crm} onClose={onCloseAdd} />}
-      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
-        <table className="w-full text-[13px]">
-          <thead><tr className="border-b border-[var(--color-border)] text-[11px] font-medium text-[var(--color-text-muted)] uppercase">
-            <th className="text-left p-3">Company</th><th className="text-left p-3">Project</th><th className="text-left p-3">Source</th><th className="text-left p-3">Value</th><th className="text-left p-3">Status</th><th className="text-left p-3">Owner</th>
+
+      {/* Lead table */}
+      <div className="bg-[var(--color-bg-soft)] border border-[var(--color-border)] rounded-xl overflow-hidden">
+        <table className="w-full text-[12px]">
+          <thead><tr className="border-b border-[var(--color-border)] text-[10px] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
+            <th className="text-left p-3">Company</th><th className="text-left p-3">Project</th><th className="text-left p-3">Value</th><th className="text-left p-3">Status</th><th className="text-left p-3">Owner</th>
           </tr></thead>
           <tbody>
             {leads.map((l: any) => {
               const owner = team.find((t: any) => t.id === l.assignedAdminId);
               return (
-                <tr key={l.id} onClick={() => onSelect(l.id)} className={`border-b border-[var(--color-border-light)] cursor-pointer transition-colors ${selectedId === l.id ? "bg-[var(--color-accent-light)]/30" : "hover:bg-[var(--color-surface-hover)]"}`}>
+                <tr key={l.id} onClick={() => onSelect(l.id)} className={`border-b border-[var(--color-border-subtle)] cursor-pointer transition-colors ${selectedId === l.id ? "bg-[var(--color-ember-soft)]" : "hover:bg-[var(--color-bg)]"}`}>
                   <td className="p-3 font-medium">{l.companyName}</td>
-                  <td className="p-3 text-[var(--color-text-secondary)] max-w-[200px] truncate">{l.projectDescription}</td>
-                  <td className="p-3 text-[var(--color-text-secondary)]">{l.source}</td>
+                  <td className="p-3 text-[var(--color-text-muted)] max-w-[200px] truncate">{l.projectDescription}</td>
                   <td className="p-3 font-medium">{formatINR(l.estimatedValue)}</td>
-                  <td className="p-3"><span className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${stageColor(l.status)}`}>{l.status}</span></td>
-                  <td className="p-3 text-[var(--color-text-secondary)]">{owner?.name || "—"}</td>
+                  <td className="p-3 text-[var(--color-text-secondary)]">{l.status}</td>
+                  <td className="p-3 text-[var(--color-text-muted)]">{owner?.name || "—"}</td>
                 </tr>
               );
             })}
-            {leads.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-[var(--color-text-muted)]">No leads yet. Click + New to add one.</td></tr>}
+            {leads.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-[var(--color-text-muted)]">No leads yet</td></tr>}
           </tbody>
         </table>
       </div>
@@ -404,248 +533,137 @@ function LeadsTab({ crm, onSelect, selectedId, showAdd, onCloseAdd }: any) {
 }
 
 function AddLeadForm({ crm, onClose }: any) {
-  const [company, setCompany] = useState(""); const [desc, setDesc] = useState(""); const [source, setSource] = useState<any>("LinkedIn"); const [value, setValue] = useState(0); const [admin, setAdmin] = useState("a3");
+  const [company, setCompany] = useState(""); const [desc, setDesc] = useState(""); const [value, setValue] = useState(0); const [admin, setAdmin] = useState("a3");
   const submit = () => {
     if (!company) return;
-    crm.addNewLead({ companyName: company, projectDescription: desc, source, status: "Lead" as const, estimatedValue: value, assignedAdminId: admin, sourcedById: admin, engagementScore: 10 });
+    crm.addNewLead({ companyName: company, projectDescription: desc, source: "LinkedIn" as const, status: "Lead" as const, estimatedValue: value, assignedAdminId: admin, sourcedById: admin, engagementScore: 10 });
     onClose();
   };
   return (
-    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-3">
-      <div className="flex items-center justify-between"><h3 className="text-[13px] font-semibold">Add Lead</h3><button onClick={onClose} className="text-[var(--color-text-muted)] text-lg">×</button></div>
-      <div className="grid grid-cols-2 gap-3">
-        <input placeholder="Company name" value={company} onChange={e => setCompany(e.target.value)} className="col-span-2 border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none focus:border-[var(--color-accent)]" />
-        <input placeholder="Project description" value={desc} onChange={e => setDesc(e.target.value)} className="col-span-2 border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none focus:border-[var(--color-accent)]" />
-        <select value={source} onChange={e => setSource(e.target.value)} className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none">
-          {["Cold Call", "LinkedIn", "Twitter", "Email", "Referral", "Instagram", "Social Media"].map(s => <option key={s}>{s}</option>)}
-        </select>
-        <input type="number" placeholder="Est. value (₹)" value={value || ""} onChange={e => setValue(Number(e.target.value))} className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none focus:border-[var(--color-accent)]" />
-        <select value={admin} onChange={e => setAdmin(e.target.value)} className="col-span-2 border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none">
+    <div className="bg-[var(--color-bg-soft)] border border-[var(--color-border)] rounded-xl p-4 space-y-3">
+      <div className="flex items-center justify-between"><h3 className="text-[12px] font-semibold">New Lead</h3><button onClick={onClose} className="text-[var(--color-text-muted)]">×</button></div>
+      <div className="grid grid-cols-2 gap-2">
+        <input placeholder="Company name" value={company} onChange={e => setCompany(e.target.value)} className="col-span-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-[12px] text-[var(--color-text-primary)] outline-none focus:border-[var(--color-ember)] placeholder:text-[var(--color-text-faint)]" />
+        <input placeholder="What do they need?" value={desc} onChange={e => setDesc(e.target.value)} className="col-span-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-[12px] text-[var(--color-text-primary)] outline-none focus:border-[var(--color-ember)] placeholder:text-[var(--color-text-faint)]" />
+        <input type="number" placeholder="Est. value (₹)" value={value || ""} onChange={e => setValue(Number(e.target.value))} className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-[12px] text-[var(--color-text-primary)] outline-none focus:border-[var(--color-ember)] placeholder:text-[var(--color-text-faint)]" />
+        <select value={admin} onChange={e => setAdmin(e.target.value)} className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-[12px] text-[var(--color-text-primary)] outline-none">
           {crm.team.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
       </div>
-      <button onClick={submit} className="w-full bg-[var(--color-accent)] text-white text-[12px] font-medium py-2 rounded-lg hover:bg-[var(--color-accent-hover)] transition-colors">Add Lead</button>
+      <button onClick={submit} className="w-full bg-[var(--color-ember)] text-white text-[11px] font-semibold py-2 rounded-lg hover:bg-[var(--color-ember-hover)] transition-colors">Add Lead</button>
     </div>
   );
 }
 
-// ===== LEAD DRAWER =====
+/* ===== LEAD DRAWER ===== */
 function LeadDrawer({ crm, leadId, onClose }: any) {
   const lead = crm.leads.find((l: any) => l.id === leadId);
   if (!lead) return null;
-  const [noteText, setNoteText] = useState("");
   const owner = crm.team.find((t: any) => t.id === lead.assignedAdminId);
+  const [noteText, setNoteText] = useState("");
 
   return (
     <div className="p-5 space-y-5">
       <div className="flex items-center justify-between">
-        <h3 className="text-[15px] font-bold">{lead.companyName}</h3>
-        <button onClick={onClose} className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] text-lg">×</button>
+        <h3 className="text-[14px] font-bold">{lead.companyName}</h3>
+        <button onClick={onClose} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">×</button>
       </div>
-      <p className="text-[13px] text-[var(--color-text-secondary)]">{lead.projectDescription}</p>
+      <p className="text-[12px] text-[var(--color-text-secondary)]">{lead.projectDescription}</p>
 
-      <div className="space-y-3">
+      <div className="space-y-2.5">
         <div className="flex items-center justify-between">
-          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Status</span>
-          <select value={lead.status} onChange={e => crm.updateLeadStatus(leadId, e.target.value)} className="text-[12px] border border-[var(--color-border)] rounded-lg px-2 py-1 bg-transparent outline-none">
-            {LEAD_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+          <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">Status</span>
+          <select value={lead.status} onChange={e => crm.updateLeadStatus(leadId, e.target.value)} className="text-[11px] bg-[var(--color-bg)] border border-[var(--color-border)] rounded px-2 py-0.5 text-[var(--color-text-primary)] outline-none">
+            {LEAD_STATUSES.map(s => <option key={s}>{s}</option>)}
           </select>
         </div>
+        <div className="flex items-center justify-between"><span className="text-[10px] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">Value</span><span className="text-[12px] font-semibold">{formatINR(lead.estimatedValue)}</span></div>
         <div className="flex items-center justify-between">
-          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Source</span>
-          <span className="text-[13px]">{lead.source}</span>
+          <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">Calls</span>
+          <div className="flex items-center gap-2"><span className="text-[12px]">{lead.callsMade}</span><button onClick={() => crm.incrementLeadCalls(leadId)} className="text-[10px] px-1.5 py-0.5 bg-[var(--color-border)] rounded hover:bg-[var(--color-text-muted)]/20">+1</button></div>
         </div>
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Value</span>
-          <span className="text-[13px] font-semibold">{formatINR(lead.estimatedValue)}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Calls made</span>
-          <div className="flex items-center gap-2">
-            <span className="text-[13px]">{lead.callsMade}</span>
-            <button onClick={() => crm.incrementLeadCalls(leadId)} className="text-[11px] px-2 py-0.5 bg-slate-100 rounded hover:bg-slate-200 transition-colors">+1</button>
-          </div>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Owner</span>
-          <span className="text-[13px]">{owner?.name || "—"}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Last contacted</span>
-          <span className="text-[13px]">{lead.lastContacted}</span>
-        </div>
+        <div className="flex items-center justify-between"><span className="text-[10px] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">Owner</span><span className="text-[12px]">{owner?.name || "—"}</span></div>
       </div>
 
-      {/* Notes */}
       <div className="border-t border-[var(--color-border)] pt-4">
-        <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase mb-2">Notes</p>
-        <div className="space-y-1.5 mb-3">
-          {lead.notes.map((n: string, i: number) => (
-            <div key={i} className="p-2 rounded-lg bg-slate-50 text-[12px]">{n}</div>
-          ))}
-        </div>
-        <div className="flex gap-2">
-          <input value={noteText} onChange={e => setNoteText(e.target.value)} placeholder="Add a note..." className="flex-1 border border-[var(--color-border)] rounded-lg px-3 py-1.5 text-[12px] bg-transparent outline-none focus:border-[var(--color-accent)]" onKeyDown={e => { if (e.key === "Enter" && noteText.trim()) { crm.addLeadNote(leadId, noteText.trim()); setNoteText(""); } }} />
-          <button onClick={() => { if (noteText.trim()) { crm.addLeadNote(leadId, noteText.trim()); setNoteText(""); } }} className="px-3 py-1.5 bg-[var(--color-accent)] text-white text-[11px] rounded-lg hover:bg-[var(--color-accent-hover)]">Add</button>
+        <p className="text-[10px] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-2">Notes</p>
+        {lead.notes.map((n: string, i: number) => <div key={i} className="p-2 rounded-lg bg-[var(--color-bg)] mb-1 text-[11px] text-[var(--color-text-secondary)]">{n}</div>)}
+        <div className="flex gap-2 mt-2">
+          <input value={noteText} onChange={e => setNoteText(e.target.value)} placeholder="Add note..." className="flex-1 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg px-3 py-1.5 text-[11px] text-[var(--color-text-primary)] outline-none focus:border-[var(--color-ember)] placeholder:text-[var(--color-text-faint)]" onKeyDown={e => { if (e.key === "Enter" && noteText.trim()) { crm.addLeadNote(leadId, noteText.trim()); setNoteText(""); } }} />
+          <button onClick={() => { if (noteText.trim()) { crm.addLeadNote(leadId, noteText.trim()); setNoteText(""); } }} className="px-3 py-1.5 bg-[var(--color-ember)] text-white text-[10px] rounded-lg">Add</button>
         </div>
       </div>
 
-      {/* Convert */}
       {lead.status !== "Converted" && lead.status !== "Lost" && (
         <div className="border-t border-[var(--color-border)] pt-4 space-y-2">
-          <button onClick={() => { crm.convertLeadToClient(leadId); onClose(); }} className="w-full bg-emerald-600 text-white text-[12px] font-medium py-2 rounded-lg hover:bg-emerald-700 transition-colors">Convert to Project</button>
-          <button onClick={() => { crm.deleteLead(leadId); onClose(); }} className="text-[11px] text-[var(--color-danger)] hover:underline">Delete lead</button>
+          <button onClick={() => { crm.convertLeadToClient(leadId); onClose(); }} className="w-full bg-[var(--color-ok)] text-white text-[11px] font-semibold py-2 rounded-lg hover:bg-emerald-600 transition-colors">Convert to Project</button>
+          <button onClick={() => { crm.deleteLead(leadId); onClose(); }} className="text-[10px] text-[var(--color-bad)] hover:underline">Delete lead</button>
         </div>
       )}
     </div>
   );
 }
 
-// ===== TASKS TAB (KANBAN) =====
-function TasksTab({ crm, onSelect, showAdd, onCloseAdd }: any) {
-  const { internalTasks, team, clients } = crm;
-
-  const columns: { status: TaskStatus; label: string }[] = [
-    { status: "Todo", label: "To Do" },
-    { status: "In Progress", label: "In Progress" },
-    { status: "In Review", label: "Review" },
-    { status: "Resolved", label: "Done" },
-  ];
-
-  return (
-    <div className="space-y-4">
-      {showAdd && <AddTaskForm crm={crm} onClose={onCloseAdd} />}
-      <div className="grid grid-cols-4 gap-4 min-h-[400px]">
-        {columns.map(col => {
-          const tasks = internalTasks.filter((t: any) => t.status === col.status);
-          return (
-            <div key={col.status} className="space-y-2">
-              <div className="flex items-center justify-between px-1 mb-1">
-                <h4 className="text-[12px] font-semibold text-[var(--color-text-secondary)]">{col.label}</h4>
-                <span className="text-[11px] text-[var(--color-text-muted)] bg-slate-100 px-1.5 py-0.5 rounded-full">{tasks.length}</span>
-              </div>
-              <div className="space-y-2">
-                {tasks.map((t: any) => {
-                  const owner = team.find((m: any) => m.id === t.assignedAdminId);
-                  const client = clients.find((c: any) => c.id === t.clientId);
-                  return (
-                    <div key={t.id} className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-3 hover:shadow-sm transition-shadow cursor-pointer" onClick={() => onSelect(t.id)}>
-                      <p className="text-[13px] font-medium leading-snug">{t.title}</p>
-                      <div className="flex items-center gap-2 mt-2">
-                        {client && <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 rounded text-[var(--color-text-secondary)]">{client.name}</span>}
-                        {owner && <span className="text-[10px] text-[var(--color-text-muted)] ml-auto">{owner.name}</span>}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function AddTaskForm({ crm, onClose }: any) {
-  const [title, setTitle] = useState(""); const [admin, setAdmin] = useState("a1"); const [clientId, setClientId] = useState<number | undefined>(undefined);
-  const submit = () => {
-    if (!title) return;
-    crm.addInternalTask({ title, assignedAdminId: admin, clientId, productId: undefined, originCommentId: undefined });
-    onClose();
-  };
-  return (
-    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-3">
-      <div className="flex items-center justify-between"><h3 className="text-[13px] font-semibold">Add Task</h3><button onClick={onClose} className="text-[var(--color-text-muted)] text-lg">×</button></div>
-      <input placeholder="Task title" value={title} onChange={e => setTitle(e.target.value)} className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none focus:border-[var(--color-accent)]" />
-      <div className="grid grid-cols-2 gap-3">
-        <select value={admin} onChange={e => setAdmin(e.target.value)} className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none">
-          {crm.team.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
-        </select>
-        <select value={clientId ?? ""} onChange={e => setClientId(e.target.value ? Number(e.target.value) : undefined)} className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none">
-          <option value="">No project</option>
-          {crm.clients.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-      </div>
-      <button onClick={submit} className="w-full bg-[var(--color-accent)] text-white text-[12px] font-medium py-2 rounded-lg hover:bg-[var(--color-accent-hover)] transition-colors">Add Task</button>
-    </div>
-  );
-}
-
-// ===== TASK DRAWER =====
-function TaskDrawer({ crm, taskId, onClose }: any) {
-  const task = crm.internalTasks.find((t: any) => t.id === taskId);
-  if (!task) return null;
-  const owner = crm.team.find((t: any) => t.id === task.assignedAdminId);
-  const client = crm.clients.find((c: any) => c.id === task.clientId);
-  const [noteText, setNoteText] = useState("");
-
-  return (
-    <div className="p-5 space-y-5">
-      <div className="flex items-center justify-between">
-        <h3 className="text-[15px] font-bold">{task.title}</h3>
-        <button onClick={onClose} className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] text-lg">×</button>
-      </div>
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Status</span>
-          <select value={task.status} onChange={e => crm.updateInternalTaskStatus(taskId, e.target.value)} className="text-[12px] border border-[var(--color-border)] rounded-lg px-2 py-1 bg-transparent outline-none">
-            {TASK_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Assigned to</span>
-          <select value={task.assignedAdminId} onChange={e => crm.updateInternalTask(taskId, { assignedAdminId: e.target.value })} className="text-[12px] border border-[var(--color-border)] rounded-lg px-2 py-1 bg-transparent outline-none">
-            {crm.team.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
-        </div>
-        {client && <div className="flex items-center justify-between"><span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Project</span><span className="text-[13px]">{client.name}</span></div>}
-        <div className="flex items-center justify-between"><span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Created</span><span className="text-[13px]">{task.createdAt}</span></div>
-      </div>
-
-      <div className="border-t border-[var(--color-border)] pt-4">
-        <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase mb-2">Internal notes</p>
-        <div className="space-y-1.5 mb-3">
-          {task.internalNotes.map((n: string, i: number) => <div key={i} className="p-2 rounded-lg bg-slate-50 text-[12px]">{n}</div>)}
-        </div>
-        <div className="flex gap-2">
-          <input value={noteText} onChange={e => setNoteText(e.target.value)} placeholder="Add a note..." className="flex-1 border border-[var(--color-border)] rounded-lg px-3 py-1.5 text-[12px] bg-transparent outline-none focus:border-[var(--color-accent)]" onKeyDown={e => { if (e.key === "Enter" && noteText.trim()) { crm.addInternalTaskNote(taskId, noteText.trim()); setNoteText(""); } }} />
-          <button onClick={() => { if (noteText.trim()) { crm.addInternalTaskNote(taskId, noteText.trim()); setNoteText(""); } }} className="px-3 py-1.5 bg-[var(--color-accent)] text-white text-[11px] rounded-lg">Add</button>
-        </div>
-      </div>
-
-      <div className="border-t border-[var(--color-border)] pt-4">
-        <button onClick={() => { crm.deleteInternalTask(taskId); onClose(); }} className="text-[11px] text-[var(--color-danger)] hover:underline">Delete task</button>
-      </div>
-    </div>
-  );
-}
-
-// ===== ISSUES TAB =====
-function IssuesTab({ crm, onSelect, showAdd, onCloseAdd }: any) {
+/* ===== SECTION 5: CLIENT CARE ===== */
+function CareSection({ crm, onSelect, showAdd, onCloseAdd }: any) {
   const { flags, clients, team } = crm;
+  const openFlags = flags.filter((f: any) => f.status !== "Resolved");
+  const resolvedFlags = flags.filter((f: any) => f.status === "Resolved");
+  const maintenanceProjects = clients.filter((c: any) => c.stage === "Maintenance" || c.stage === "Delivery");
+
+  const severityDot = (s: string) => s === "Critical" ? "bg-[var(--color-bad)]" : s === "High" ? "bg-[var(--color-warn)]" : s === "Medium" ? "bg-yellow-400" : "bg-[var(--color-text-muted)]";
+
   return (
-    <div className="space-y-4">
-      {showAdd && <AddIssueForm crm={crm} onClose={onCloseAdd} />}
-      <div className="space-y-2">
-        {flags.map((f: any) => {
-          const client = clients.find((c: any) => c.id === f.clientId);
-          const owner = team.find((t: any) => t.id === f.assignedAdminId);
-          return (
-            <button key={f.id} onClick={() => onSelect(f.id)} className="w-full text-left p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-accent)]/40 hover:shadow-sm transition-all">
-              <div className="flex items-center gap-3">
-                <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${severityDot(f.severity)}`} />
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-[13px] font-semibold truncate">{f.title}</h4>
-                  <p className="text-[11px] text-[var(--color-text-muted)]">{client?.name || "Unknown"} · {owner?.name || "Unassigned"}</p>
-                </div>
-                <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${stageColor(f.status)}`}>{f.status}</span>
-              </div>
-            </button>
-          );
-        })}
-        {flags.length === 0 && <div className="text-center py-12 text-[var(--color-text-muted)]">No issues. Looking good!</div>}
+    <div className="space-y-5">
+      {/* Maintenance projects */}
+      <div>
+        <h3 className="text-[11px] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-2">Active Maintenance</h3>
+        <div className="grid grid-cols-3 gap-2">
+          {maintenanceProjects.map((c: any) => (
+            <div key={c.id} className="bg-[var(--color-surface)] border border-[var(--color-border-card)] rounded-xl p-3">
+              <h4 className="text-[12px] font-semibold text-[var(--color-card-text)]">{c.name}</h4>
+              <p className="text-[10px] text-[var(--color-card-text-muted)]">{c.project}</p>
+            </div>
+          ))}
+          {maintenanceProjects.length === 0 && <p className="text-[11px] text-[var(--color-text-muted)] col-span-3">No maintenance projects</p>}
+        </div>
       </div>
+
+      {showAdd && <AddIssueForm crm={crm} onClose={onCloseAdd} />}
+
+      {/* Support queue */}
+      <div>
+        <h3 className="text-[11px] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-2">Support Queue ({openFlags.length})</h3>
+        <div className="space-y-1.5">
+          {openFlags.map((f: any) => {
+            const client = clients.find((c: any) => c.id === f.clientId);
+            return (
+              <button key={f.id} onClick={() => onSelect(f.id)} className="w-full text-left flex items-center gap-3 bg-[var(--color-bg-soft)] border border-[var(--color-border)] rounded-xl p-3 hover:border-[var(--color-text-muted)]/30 transition-colors">
+                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${severityDot(f.severity)}`} />
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-[12px] font-semibold truncate">{f.title}</h4>
+                  <p className="text-[10px] text-[var(--color-text-muted)]">{client?.name} · {f.status}</p>
+                </div>
+                <span className="text-[10px] text-[var(--color-text-muted)]">{f.severity}</span>
+              </button>
+            );
+          })}
+          {openFlags.length === 0 && <p className="text-[11px] text-[var(--color-text-muted)] py-4 text-center">No open issues — all clear</p>}
+        </div>
+      </div>
+
+      {/* Resolved */}
+      {resolvedFlags.length > 0 && (
+        <div>
+          <h3 className="text-[11px] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-2">Resolved ({resolvedFlags.length})</h3>
+          {resolvedFlags.slice(0, 5).map((f: any) => (
+            <div key={f.id} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[var(--color-bg-soft)]">
+              <span className="w-2 h-2 rounded-full bg-[var(--color-ok)]" />
+              <span className="text-[11px] text-[var(--color-text-secondary)] line-through">{f.title}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -653,186 +671,109 @@ function IssuesTab({ crm, onSelect, showAdd, onCloseAdd }: any) {
 function AddIssueForm({ crm, onClose }: any) {
   const [title, setTitle] = useState(""); const [desc, setDesc] = useState(""); const [severity, setSeverity] = useState<FlagSeverity>("Medium");
   const [clientId, setClientId] = useState(crm.clients[0]?.id || 1); const [admin, setAdmin] = useState("a1");
-  const submit = () => {
-    if (!title) return;
-    crm.addFlag({ clientId, title, description: desc, severity, assignedAdminId: admin });
-    onClose();
-  };
+  const submit = () => { if (!title) return; crm.addFlag({ clientId, title, description: desc, severity, assignedAdminId: admin }); onClose(); };
   return (
-    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-3">
-      <div className="flex items-center justify-between"><h3 className="text-[13px] font-semibold">Report Issue</h3><button onClick={onClose} className="text-[var(--color-text-muted)] text-lg">×</button></div>
-      <input placeholder="Issue title" value={title} onChange={e => setTitle(e.target.value)} className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none focus:border-[var(--color-accent)]" />
-      <textarea placeholder="Description" value={desc} onChange={e => setDesc(e.target.value)} rows={2} className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none focus:border-[var(--color-accent)] resize-none" />
-      <div className="grid grid-cols-3 gap-3">
-        <select value={severity} onChange={e => setSeverity(e.target.value as FlagSeverity)} className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none">
-          {SEVERITIES.map(s => <option key={s}>{s}</option>)}
-        </select>
-        <select value={clientId} onChange={e => setClientId(Number(e.target.value))} className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none">
-          {crm.clients.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-        <select value={admin} onChange={e => setAdmin(e.target.value)} className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none">
-          {crm.team.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
-        </select>
+    <div className="bg-[var(--color-bg-soft)] border border-[var(--color-border)] rounded-xl p-4 space-y-3">
+      <div className="flex items-center justify-between"><h3 className="text-[12px] font-semibold">Report Issue</h3><button onClick={onClose} className="text-[var(--color-text-muted)]">×</button></div>
+      <input placeholder="Issue title" value={title} onChange={e => setTitle(e.target.value)} className="w-full bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-[12px] text-[var(--color-text-primary)] outline-none focus:border-[var(--color-ember)] placeholder:text-[var(--color-text-faint)]" />
+      <textarea placeholder="Description" value={desc} onChange={e => setDesc(e.target.value)} rows={2} className="w-full bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-[12px] text-[var(--color-text-primary)] outline-none resize-none focus:border-[var(--color-ember)] placeholder:text-[var(--color-text-faint)]" />
+      <div className="grid grid-cols-3 gap-2">
+        <select value={severity} onChange={e => setSeverity(e.target.value as FlagSeverity)} className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-[12px] text-[var(--color-text-primary)] outline-none">{(["Low","Medium","High","Critical"] as FlagSeverity[]).map(s => <option key={s}>{s}</option>)}</select>
+        <select value={clientId} onChange={e => setClientId(Number(e.target.value))} className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-[12px] text-[var(--color-text-primary)] outline-none">{crm.clients.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
+        <select value={admin} onChange={e => setAdmin(e.target.value)} className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-[12px] text-[var(--color-text-primary)] outline-none">{crm.team.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}</select>
       </div>
-      <button onClick={submit} className="w-full bg-[var(--color-accent)] text-white text-[12px] font-medium py-2 rounded-lg hover:bg-[var(--color-accent-hover)] transition-colors">Report Issue</button>
+      <button onClick={submit} className="w-full bg-[var(--color-ember)] text-white text-[11px] font-semibold py-2 rounded-lg hover:bg-[var(--color-ember-hover)] transition-colors">Report Issue</button>
     </div>
   );
 }
 
-// ===== FLAG DRAWER =====
+/* ===== FLAG DRAWER ===== */
 function FlagDrawer({ crm, flagId, onClose }: any) {
   const flag = crm.flags.find((f: any) => f.id === flagId);
   if (!flag) return null;
   const client = crm.clients.find((c: any) => c.id === flag.clientId);
-  const owner = crm.team.find((t: any) => t.id === flag.assignedAdminId);
   const [logText, setLogText] = useState("");
 
   return (
     <div className="p-5 space-y-5">
       <div className="flex items-center justify-between">
-        <h3 className="text-[15px] font-bold">{flag.title}</h3>
-        <button onClick={onClose} className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] text-lg">×</button>
+        <h3 className="text-[14px] font-bold">{flag.title}</h3>
+        <button onClick={onClose} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">×</button>
       </div>
-      <p className="text-[13px] text-[var(--color-text-secondary)]">{flag.description}</p>
+      <p className="text-[12px] text-[var(--color-text-secondary)]">{flag.description}</p>
 
-      <div className="space-y-3">
-        <div className="flex items-center justify-between"><span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Project</span><span className="text-[13px]">{client?.name || "—"}</span></div>
+      <div className="space-y-2.5">
+        <div className="flex items-center justify-between"><span className="text-[10px] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">Project</span><span className="text-[12px]">{client?.name || "—"}</span></div>
+        <div className="flex items-center justify-between"><span className="text-[10px] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">Severity</span><span className="text-[12px]">{flag.severity}</span></div>
         <div className="flex items-center justify-between">
-          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Severity</span>
-          <div className="flex items-center gap-1.5"><span className={`w-2 h-2 rounded-full ${severityDot(flag.severity)}`} /><span className="text-[13px]">{flag.severity}</span></div>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Status</span>
-          <select value={flag.status} onChange={e => crm.updateFlagStatus(flagId, e.target.value)} className="text-[12px] border border-[var(--color-border)] rounded-lg px-2 py-1 bg-transparent outline-none">
-            {FLAG_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+          <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">Status</span>
+          <select value={flag.status} onChange={e => crm.updateFlagStatus(flagId, e.target.value)} className="text-[11px] bg-[var(--color-bg)] border border-[var(--color-border)] rounded px-2 py-0.5 text-[var(--color-text-primary)] outline-none">
+            {(["Open","Investigating","In Dev","Resolved"] as FlagStatus[]).map(s => <option key={s}>{s}</option>)}
           </select>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Assigned to</span>
-          <select value={flag.assignedAdminId || ""} onChange={e => crm.assignFlagAdmin(flagId, e.target.value)} className="text-[12px] border border-[var(--color-border)] rounded-lg px-2 py-1 bg-transparent outline-none">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">Assigned</span>
+          <select value={flag.assignedAdminId || ""} onChange={e => crm.assignFlagAdmin(flagId, e.target.value)} className="text-[11px] bg-[var(--color-bg)] border border-[var(--color-border)] rounded px-2 py-0.5 text-[var(--color-text-primary)] outline-none">
             {crm.team.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
         </div>
       </div>
 
-      {/* Dev logs */}
       <div className="border-t border-[var(--color-border)] pt-4">
-        <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase mb-2">Developer log</p>
-        <div className="space-y-1.5 mb-3">
-          {flag.sprintLogs.map((l: any) => (
-            <div key={l.id} className="p-2 rounded-lg bg-slate-50">
-              <div className="flex items-center gap-2 mb-0.5">
-                <span className="text-[11px] font-semibold">{l.author}</span>
-                <span className="text-[10px] text-[var(--color-text-muted)]">{l.timestamp}</span>
-              </div>
-              <p className="text-[12px] text-[var(--color-text-secondary)]">{l.text}</p>
-            </div>
-          ))}
-        </div>
-        <div className="flex gap-2">
-          <input value={logText} onChange={e => setLogText(e.target.value)} placeholder="Add update..." className="flex-1 border border-[var(--color-border)] rounded-lg px-3 py-1.5 text-[12px] bg-transparent outline-none focus:border-[var(--color-accent)]" onKeyDown={e => { if (e.key === "Enter" && logText.trim()) { crm.addFlagSprintLog(flagId, crm.userProfile?.name || "Admin", logText.trim()); setLogText(""); } }} />
-          <button onClick={() => { if (logText.trim()) { crm.addFlagSprintLog(flagId, crm.userProfile?.name || "Admin", logText.trim()); setLogText(""); } }} className="px-3 py-1.5 bg-[var(--color-accent)] text-white text-[11px] rounded-lg">Add</button>
-        </div>
-      </div>
-
-      <div className="border-t border-[var(--color-border)] pt-4">
-        <button onClick={() => { crm.deleteFlag(flagId); onClose(); }} className="text-[11px] text-[var(--color-danger)] hover:underline">Delete issue</button>
-      </div>
-    </div>
-  );
-}
-
-// ===== TEAM TAB =====
-function TeamTab({ crm, isCorePartner }: any) {
-  const { team, clients, internalTasks, leads, authorizedEmails } = crm;
-  const [showInvite, setShowInvite] = useState(false);
-
-  return (
-    <div className="space-y-6">
-      {/* Team grid */}
-      <div className="grid grid-cols-2 gap-4">
-        {team.map((m: any) => {
-          const memberProjects = clients.filter((c: any) => c.assignedAdminId === m.id).length;
-          const memberTasks = internalTasks.filter((t: any) => t.assignedAdminId === m.id && t.status !== "Resolved").length;
-          const memberLeads = leads.filter((l: any) => l.assignedAdminId === m.id).length;
-          return (
-            <div key={m.id} className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <span className="w-10 h-10 rounded-full flex items-center justify-center text-[13px] font-bold text-white" style={{ backgroundColor: m.colorVar?.replace("var(", "").replace(")", "") || "#64748B" }}>{m.avatar}</span>
-                <div>
-                  <h4 className="text-[14px] font-semibold">{m.name}</h4>
-                  <p className="text-[11px] text-[var(--color-text-secondary)]">{m.role}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4 text-[11px] text-[var(--color-text-muted)]">
-                <span>{memberProjects} projects</span>
-                <span>{memberTasks} tasks</span>
-                <span>{memberLeads} leads</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Invite form */}
-      {isCorePartner && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-[13px] font-semibold">Invite Team Member</h3>
-            <button onClick={() => setShowInvite(!showInvite)} className="text-[12px] text-[var(--color-accent)] hover:underline">{showInvite ? "Cancel" : "+ Invite"}</button>
+        <p className="text-[10px] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-2">Dev Log</p>
+        {flag.sprintLogs.map((l: any) => (
+          <div key={l.id} className="p-2 rounded-lg bg-[var(--color-bg)] mb-1">
+            <span className="text-[10px] font-semibold text-[var(--color-text-primary)]">{l.author}</span>
+            <span className="text-[9px] text-[var(--color-text-muted)] ml-2">{l.timestamp}</span>
+            <p className="text-[11px] text-[var(--color-text-secondary)] mt-0.5">{l.text}</p>
           </div>
-          {showInvite && <InviteForm crm={crm} onClose={() => setShowInvite(false)} />}
-
-          {/* Authorized emails */}
-          {authorizedEmails.length > 0 && (
-            <div className="border-t border-[var(--color-border)] pt-4">
-              <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase mb-2">Authorized accounts ({authorizedEmails.length})</p>
-              <div className="space-y-1.5">
-                {authorizedEmails.map((ae: any) => (
-                  <div key={ae.email} className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50">
-                    <div>
-                      <p className="text-[12px] font-medium">{ae.name}</p>
-                      <p className="text-[11px] text-[var(--color-text-muted)]">{ae.email} · {ae.role} · {ae.category}</p>
-                    </div>
-                    <button onClick={() => crm.deprovisionUser(ae.email)} className="text-[10px] text-[var(--color-danger)] hover:underline">Remove</button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+        ))}
+        <div className="flex gap-2 mt-2">
+          <input value={logText} onChange={e => setLogText(e.target.value)} placeholder="Add update..." className="flex-1 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg px-3 py-1.5 text-[11px] text-[var(--color-text-primary)] outline-none focus:border-[var(--color-ember)] placeholder:text-[var(--color-text-faint)]" onKeyDown={e => { if (e.key === "Enter" && logText.trim()) { crm.addFlagSprintLog(flagId, crm.userProfile?.name || "Admin", logText.trim()); setLogText(""); } }} />
+          <button onClick={() => { if (logText.trim()) { crm.addFlagSprintLog(flagId, crm.userProfile?.name || "Admin", logText.trim()); setLogText(""); } }} className="px-3 py-1.5 bg-[var(--color-ember)] text-white text-[10px] rounded-lg">Add</button>
         </div>
-      )}
+      </div>
+
+      <div className="border-t border-[var(--color-border)] pt-4">
+        <button onClick={() => { crm.deleteFlag(flagId); onClose(); }} className="text-[10px] text-[var(--color-bad)] hover:underline">Delete issue</button>
+      </div>
     </div>
   );
 }
 
-function InviteForm({ crm, onClose }: any) {
-  const [email, setEmail] = useState(""); const [name, setName] = useState(""); const [role, setRole] = useState("");
-  const [category, setCategory] = useState<"admin" | "client">("admin"); const [clientId, setClientId] = useState<number | undefined>(undefined);
-  const submit = async () => {
-    if (!email || !name || !role) return;
-    const avatar = name.split(" ").map(w => w[0]).join("").toUpperCase().substring(0, 2);
-    await crm.provisionUser({ email, name, role, category, avatar, colorVar: "var(--color-admin-ankit)", primaryFocus: category === "admin" ? "Client Delivery" : "Product Sandbox", responsibilities: [], activeTasks: [], clientId });
-    onClose();
-  };
+/* ===== SECTION 6: PRODUCTS ===== */
+function ProductsSection({ crm }: any) {
+  const { products } = crm;
+  const stageColor = (s: string) => s === "Beta" || s === "Live" ? "bg-[var(--color-ok)]" : s === "In Dev" ? "bg-[var(--color-warn)]" : "bg-[var(--color-text-muted)]";
+
   return (
-    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 space-y-3">
-      <div className="grid grid-cols-2 gap-3">
-        <input placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="col-span-2 border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none focus:border-[var(--color-accent)]" />
-        <input placeholder="Full name" value={name} onChange={e => setName(e.target.value)} className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none focus:border-[var(--color-accent)]" />
-        <input placeholder="Role title" value={role} onChange={e => setRole(e.target.value)} className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none focus:border-[var(--color-accent)]" />
-        <select value={category} onChange={e => setCategory(e.target.value as any)} className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none">
-          <option value="admin">Admin / Intern</option>
-          <option value="client">Client</option>
-        </select>
-        {category === "client" && (
-          <select value={clientId ?? ""} onChange={e => setClientId(e.target.value ? Number(e.target.value) : undefined)} className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none">
-            <option value="">Link to project...</option>
-            {crm.clients.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        )}
-      </div>
-      <button onClick={submit} className="w-full bg-[var(--color-accent)] text-white text-[12px] font-medium py-2 rounded-lg hover:bg-[var(--color-accent-hover)] transition-colors">Invite</button>
+    <div className="space-y-3 max-w-3xl">
+      <h3 className="text-[11px] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">Internal Products</h3>
+      {products.map((p: any) => {
+        const lead = crm.team.find((t: any) => t.id === p.leadId);
+        return (
+          <div key={p.id} className="bg-[var(--color-surface)] border border-[var(--color-border-card)] rounded-xl p-5">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h4 className="text-[14px] font-semibold text-[var(--color-card-text)]">{p.name}</h4>
+                <p className="text-[11px] text-[var(--color-card-text-muted)]">{p.description}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${stageColor(p.stage)}`} />
+                <span className="text-[11px] font-medium text-[var(--color-card-text-secondary)]">{p.stage}</span>
+              </div>
+            </div>
+            {/* Progress bar */}
+            <div className="h-1.5 bg-[var(--color-surface-deep)] rounded-full overflow-hidden mt-3">
+              <div className="h-full bg-[var(--color-ember)] rounded-full transition-all" style={{ width: `${p.progress}%` }} />
+            </div>
+            <div className="flex items-center justify-between mt-1.5">
+              <span className="text-[10px] text-[var(--color-card-text-muted)]">{p.progress}% complete</span>
+              <span className="text-[10px] text-[var(--color-card-text-muted)]">Lead: {lead?.name || "—"}</span>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
