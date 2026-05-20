@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  /* Refined Palette — Smoky Sand + Charcoal + Ember */
+  /* Clean Professional Palette */
   --color-sand: #E6DFD5;
   --color-sand-light: #EDE8E0;
   --color-sand-warm: #D9CFC2;
@@ -15,12 +15,41 @@
   --color-taupe: #878074;
   --color-taupe-light: #A49D93;
   --color-warm-dark: #3A3632;
-  
+
+  /* CRM Portal — Clean Neutral */
+  --color-bg: #F8FAFC;
+  --color-surface: #FFFFFF;
+  --color-surface-hover: #F1F5F9;
+  --color-border: #E2E8F0;
+  --color-border-light: #F1F5F9;
+  --color-text: #0F172A;
+  --color-text-secondary: #64748B;
+  --color-text-muted: #94A3B8;
+  --color-accent: #2563EB;
+  --color-accent-light: #DBEAFE;
+  --color-accent-hover: #1D4ED8;
+  --color-success: #059669;
+  --color-success-light: #D1FAE5;
+  --color-warning: #D97706;
+  --color-warning-light: #FEF3C7;
+  --color-danger: #DC2626;
+  --color-danger-light: #FEE2E2;
+
   /* Admin Persona Colors */
-  --color-admin-lakshya: var(--color-ember); /* Ember */
-  --color-admin-mouriyan: #0D9488; /* Teal */
-  --color-admin-ankit: #65A30D; /* Olive */
-  --color-admin-muskan: #9333EA; /* Plum */
+  --color-admin-lakshya: #2563EB;
+  --color-admin-mouriyan: #0D9488;
+  --color-admin-ankit: #65A30D;
+  --color-admin-muskan: #9333EA;
+
+  /* CRM Portal Dark */
+  --color-dark-bg: #09090B;
+  --color-dark-surface: #18181B;
+  --color-dark-surface-hover: #27272A;
+  --color-dark-border: #27272A;
+  --color-dark-text: #FAFAFA;
+  --color-dark-text-secondary: #A1A1AA;
+  --color-dark-text-muted: #71717A;
+  --color-dark-accent: #3B82F6;
 
   --font-sans: 'Satoshi', sans-serif;
   --font-display: 'Clash Display', sans-serif;
@@ -120,13 +149,13 @@ body {
 .stagger-children > *:nth-child(4) { animation-delay: 0.6s; }
 .stagger-children > *:nth-child(5) { animation-delay: 0.75s; }
 
-/* ===== CUSTOM SCROLLBAR ===== */
+/* ===== SCROLLBAR ===== */
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: var(--color-sand); }
 ::-webkit-scrollbar-thumb { background: var(--color-taupe); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-ember); }
 
-/* ===== MAGNETIC CURSOR EFFECT ===== */
+/* ===== MAGNETIC CURSOR ===== */
 .magnetic-hover {
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -134,38 +163,22 @@ body {
   transform: scale(1.02);
 }
 
-/* ===== PORTAL — CRM & CLIENT DASHBOARD ===== */
-
-/* Stat counter reveal */
+/* ===== CRM PORTAL ===== */
 @keyframes count-up {
-  from { opacity: 0; transform: translateY(12px); filter: blur(4px); }
-  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 .animate-count-up {
-  animation: count-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: count-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Health ring */
-@keyframes ring-fill {
-  from { stroke-dashoffset: 283; }
-}
-.health-ring {
-  transform: rotate(-90deg);
-  transform-origin: center;
-}
-.health-ring circle {
-  transition: stroke-dashoffset 1.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-/* Progress bar fill */
 @keyframes progress-fill {
   from { width: 0%; }
 }
 .animate-progress {
-  animation: progress-fill 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: progress-fill 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Subtle pulse for live indicator */
 @keyframes live-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
@@ -174,38 +187,14 @@ body {
   animation: live-pulse 2s ease-in-out infinite;
 }
 
-/* Dark scrollbar for portal dark sections */
+/* CRM scrollbar */
+.crm-scrollbar::-webkit-scrollbar { width: 4px; }
+.crm-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.crm-scrollbar::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
+.crm-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--color-text-muted); }
+
+/* Dark variant */
 .dark-scrollbar::-webkit-scrollbar { width: 4px; }
 .dark-scrollbar::-webkit-scrollbar-track { background: transparent; }
-.dark-scrollbar::-webkit-scrollbar-thumb { background: rgba(135,128,116,0.3); border-radius: 2px; }
-.dark-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--color-ember); }
-
-/* Noise overlay texture */
-.noise-overlay::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  opacity: 0.03;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Stat card styling */
-.stat-card {
-  font-family: var(--font-display);
-  font-size: clamp(2rem, 4vw, 4rem);
-  line-height: 1;
-  letter-spacing: -0.04em;
-  font-weight: 600;
-}
-
-/* Portal label text */
-.portal-label {
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  font-weight: 400;
-  color: var(--color-taupe);
-}
+.dark-scrollbar::-webkit-scrollbar-thumb { background: var(--color-dark-border); border-radius: 2px; }
+.dark-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--color-dark-text-muted); }

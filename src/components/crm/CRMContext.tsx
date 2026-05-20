@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 
 // --- Types ---
 
-export type ClientStage = "Lead" | "Proposal" | "In Dev" | "Active" | "Completed";
+export type ClientStage = "Lead" | "Requirements" | "Demo" | "Quoted" | "Confirmed" | "Maintenance";
 export type ClientCategory = "Potential" | "Ongoing";
 
 export interface CRMClient {
@@ -64,7 +64,7 @@ export interface Activity {
 }
 
 // --- Outreach Deal & Pipelines ---
-export type OutreachStatus = "Lead" | "Cold Contact" | "Discussion" | "Proposal" | "Converted" | "Lost";
+export type OutreachStatus = "Lead" | "Contacted" | "Responded" | "Requirements" | "Demo" | "Quoted" | "Converted" | "Lost";
 export type LeadSource = "Cold Call" | "LinkedIn" | "Twitter" | "Email" | "Referral" | "Instagram" | "Social Media";
 
 export interface OutreachLead {
@@ -172,11 +172,15 @@ const INITIAL_TEAM: TeamMember[] = [
 ];
 
 const INITIAL_CLIENTS: CRMClient[] = [
-  { id: 1, name: "Supreme Petro Chemicals", project: "Tally BI Dashboard", location: "Chennai", category: "Ongoing", stage: "Active", health: 92, revenue: 450000, lastActivity: "Training session completed", avatar: "SP", assignedAdminId: "a1" },
-  { id: 2, name: "Karthik Exports Pvt Ltd", project: "Website + CRM", location: "Coimbatore", category: "Potential", stage: "Proposal", health: 60, revenue: 280000, lastActivity: "Proposal sent, awaiting reply", avatar: "KE", assignedAdminId: "a3" },
-  { id: 3, name: "NJ Jewellers", project: "Gold Price Tracker", location: "Chennai", category: "Ongoing", stage: "In Dev", health: 85, revenue: 120000, lastActivity: "Phase 2 mockups approved", avatar: "NJ", assignedAdminId: "a4" },
-  { id: 4, name: "UPKEM Labs", project: "Pharma B2B Platform", location: "Mumbai", category: "Ongoing", stage: "Active", health: 78, revenue: 600000, lastActivity: "Admin panel deployed", avatar: "UP", assignedAdminId: "a2" },
-  { id: 5, name: "Rafter.so", project: "AI Code Platform", location: "Bangalore", category: "Potential", stage: "Lead", health: 45, revenue: 0, lastActivity: "CEO demo scheduled", avatar: "RF", assignedAdminId: "a1" },
+  { id: 1, name: "UPKEM", project: "Mobile App", location: "India", category: "Ongoing", stage: "Confirmed", health: 90, revenue: 80000, lastActivity: "Active development", avatar: "UP", assignedAdminId: "a1" },
+  { id: 2, name: "SPC (Supreme Petro)", project: "Tally BI Dashboard + AI Agents", location: "Chennai", category: "Potential", stage: "Quoted", health: 70, revenue: 40000, lastActivity: "Dashboard quoted ₹40k, AI Agents ₹1.75L to quote", avatar: "SP", assignedAdminId: "a1" },
+  { id: 3, name: "NJ Jewellers", project: "Gold Price Board", location: "Chennai", category: "Potential", stage: "Quoted", health: 75, revenue: 25000, lastActivity: "Confirm expected next week", avatar: "NJ", assignedAdminId: "a1" },
+  { id: 4, name: "DOITFORME", project: "Website", location: "India", category: "Ongoing", stage: "Maintenance", health: 95, revenue: 0, lastActivity: "Already built, maintenance mode", avatar: "DI", assignedAdminId: "a1" },
+  { id: 5, name: "Sumati", project: "Small project", location: "India", category: "Potential", stage: "Requirements", health: 50, revenue: 0, lastActivity: "Exploring scope", avatar: "SU", assignedAdminId: "a2" },
+  { id: 6, name: "Varsiddhi", project: "TBD", location: "India", category: "Potential", stage: "Lead", health: 30, revenue: 0, lastActivity: "Not confirmed, exploring", avatar: "VA", assignedAdminId: "a2" },
+  { id: 7, name: "MMXport", project: "TBD", location: "India", category: "Potential", stage: "Lead", health: 40, revenue: 0, lastActivity: "Early stage discussions", avatar: "MM", assignedAdminId: "a2" },
+  { id: 8, name: "Techie", project: "Personalized LinkedIn", location: "India", category: "Potential", stage: "Requirements", health: 45, revenue: 0, lastActivity: "LinkedIn automation for tech", avatar: "TE", assignedAdminId: "a2" },
+  { id: 9, name: "Greenlit", project: "New Product", location: "India", category: "Ongoing", stage: "Demo", health: 60, revenue: 0, lastActivity: "In product pipeline", avatar: "GL", assignedAdminId: "a1" },
 ];
 
 const INITIAL_PRODUCTS: InternalProduct[] = [
@@ -186,24 +190,22 @@ const INITIAL_PRODUCTS: InternalProduct[] = [
 ];
 
 const INITIAL_COMMENTS: Comment[] = [
-  { id: "1", author: "Rajesh", role: "client", text: "Can we make the Total Revenue number larger? It is our most important metric.", timestamp: "01:23", timeElapsed: "2 hours ago", clientId: 1 },
-  { id: "2", author: "Lakshya", role: "admin", text: "Done — updated in the latest build. Refresh to see it live.", timestamp: "01:23", timeElapsed: "1 hour ago", clientId: 1 },
-  { id: "3", author: "Nikhil", role: "client", text: "Is the real-time API rate configured yet? The tracker shows static data.", timestamp: "11:00", timeElapsed: "4 hours ago", clientId: 3 },
-  { id: "4", author: "Muskan", role: "admin", text: "Working on it. Visual design is ready, Mouriyan is linking backend today.", timestamp: "11:15", timeElapsed: "3 hours ago", clientId: 3 },
+  { id: "1", author: "UPKEM Team", role: "client", text: "Can we get a progress update on the app screens?", timestamp: "10:30", timeElapsed: "2 hours ago", clientId: 1 },
+  { id: "2", author: "Lakshya", role: "admin", text: "App screens for dashboard and profile are ready. Sharing build link today.", timestamp: "10:45", timeElapsed: "1 hour ago", clientId: 1 },
+  { id: "3", author: "SPC Team", role: "client", text: "When can we see the Tally dashboard demo?", timestamp: "11:00", timeElapsed: "4 hours ago", clientId: 2 },
+  { id: "4", author: "Lakshya", role: "admin", text: "Demo will be ready by end of this week. AI agents quote to follow.", timestamp: "11:15", timeElapsed: "3 hours ago", clientId: 2 },
 ];
 
 const INITIAL_ACTIVITY: Activity[] = [
-  { id: 1, action: "Milestone approved", client: "NJ Jewellers", time: "12 min ago", type: "milestone" },
-  { id: 2, action: "New feedback on demo", client: "Supreme Petro", time: "1 hr ago", type: "comment" },
-  { id: 3, action: "Invoice #INV-042 paid", client: "UPKEM Labs", time: "3 hrs ago", type: "invoice" },
-  { id: 4, action: "Follow-up overdue", client: "Karthik Exports", time: "5 hrs ago", type: "alert" },
+  { id: 1, action: "UPKEM app development in progress", client: "UPKEM", time: "30 min ago", type: "milestone" },
+  { id: 2, action: "SPC dashboard demo being prepared", client: "SPC", time: "1 hr ago", type: "comment" },
+  { id: 3, action: "NJ Jewellers confirmation pending", client: "NJ Jewellers", time: "3 hrs ago", type: "alert" },
+  { id: 4, action: "DOITFORME maintenance check done", client: "DOITFORME", time: "5 hrs ago", type: "milestone" },
 ];
 
 const INITIAL_LEADS: OutreachLead[] = [
-  { id: "l1", companyName: "Karthik Exports Pvt Ltd", projectDescription: "Automating lead capturing and exporting dashboard UI", source: "LinkedIn", status: "Proposal", estimatedValue: 280000, assignedAdminId: "a3", callsMade: 14, notes: ["Initial call positive", "Sent pitch deck", "Negotiating SLA terms"], lastContacted: "2 days ago", sourcedById: "a3", engagementScore: 82 },
-  { id: "l2", companyName: "Rafter.so", projectDescription: "AI Copilot code review infrastructure and landing client integration", source: "Cold Call", status: "Discussion", estimatedValue: 350000, assignedAdminId: "a1", callsMade: 6, notes: ["CEO demo scheduled for tomorrow", "Interested in active support scaling"], lastContacted: "Yesterday", sourcedById: "a3", engagementScore: 90 },
-  { id: "l3", companyName: "Alpha Labs Inc", projectDescription: "Web3 NFT collection landing page and smart contracts", source: "Email", status: "Cold Contact", estimatedValue: 180000, assignedAdminId: "a3", callsMade: 2, notes: ["Opened email pitch, need to follow up"], lastContacted: "3 days ago", sourcedById: "a4", engagementScore: 45 },
-  { id: "l4", companyName: "Zeta Health Group", projectDescription: "SaaS health records management UI Polish", source: "Twitter", status: "Lead", estimatedValue: 120000, assignedAdminId: "a4", callsMade: 1, notes: ["Replied to DM regarding UX audit services"], lastContacted: "4 days ago", sourcedById: "a4", engagementScore: 68 },
+  { id: "l1", companyName: "New Prospect A", projectDescription: "Website redesign and digital presence", source: "LinkedIn", status: "Lead", estimatedValue: 50000, assignedAdminId: "a3", callsMade: 2, notes: ["Found via LinkedIn outreach"], lastContacted: "2 days ago", sourcedById: "a3", engagementScore: 40 },
+  { id: "l2", companyName: "New Prospect B", projectDescription: "E-commerce platform development", source: "Cold Call", status: "Contacted", estimatedValue: 150000, assignedAdminId: "a3", callsMade: 5, notes: ["Cold called, showed interest", "Follow up scheduled"], lastContacted: "Yesterday", sourcedById: "a3", engagementScore: 55 },
 ];
 
 const INITIAL_FLAGS: ProjectFlag[] = [
@@ -254,9 +256,14 @@ const INITIAL_RELEASES: ChangelogRelease[] = [
 ];
 
 const INITIAL_INTERNAL_TASKS: InternalTask[] = [
-  { id: "t1", clientId: 1, title: "Optimize transaction indexes", assignedAdminId: "a2", status: "In Progress", originCommentId: "1", internalNotes: ["Index should target revenue columns.", "Verify memory overhead on high volume loads."], createdAt: "1 day ago" },
-  { id: "t2", clientId: 3, title: "Redesign rate details modal", assignedAdminId: "a4", status: "Resolved", originCommentId: "3", internalNotes: ["Client wanted decimal roundups.", "UI layout signed off by Lakshya."], createdAt: "2 days ago" },
-  { id: "t3", productId: "p1", title: "Automate outbound lead email sync", assignedAdminId: "a3", status: "Todo", internalNotes: ["Integrate Resend API key config.", "Draft cold sequences for Muskan to review."], createdAt: "Just now" }
+  { id: "t1", clientId: 1, title: "Build UPKEM app screens", assignedAdminId: "a1", status: "In Progress", internalNotes: ["Dashboard and profile screens in progress."], createdAt: "Today" },
+  { id: "t2", clientId: 2, title: "Prepare SPC Tally dashboard demo", assignedAdminId: "a1", status: "In Progress", internalNotes: ["Demo needs to be ready by end of week."], createdAt: "Today" },
+  { id: "t3", clientId: 2, title: "Draft AI Agents quote for SPC", assignedAdminId: "a1", status: "Todo", internalNotes: ["₹1.75L estimated for AI agent integration."], createdAt: "Today" },
+  { id: "t4", clientId: 3, title: "Finalize NJ Jewellers price board", assignedAdminId: "a1", status: "Todo", internalNotes: ["Waiting on confirmation next week."], createdAt: "Today" },
+  { id: "t5", clientId: 5, title: "Gather Sumati requirements", assignedAdminId: "a2", status: "In Progress", internalNotes: ["Small project, scoping in progress."], createdAt: "Today" },
+  { id: "t6", clientId: 8, title: "Build Techie LinkedIn automation prototype", assignedAdminId: "a2", status: "Todo", internalNotes: ["Personalized LinkedIn for tech professionals."], createdAt: "Today" },
+  { id: "t7", title: "Run outreach campaign batch", assignedAdminId: "a3", status: "In Progress", internalNotes: ["Ankit managing intern for cold outreach."], createdAt: "Today" },
+  { id: "t8", title: "Social media content calendar", assignedAdminId: "a4", status: "In Progress", internalNotes: ["Muskan handling all client social media."], createdAt: "Today" },
 ];
 
 const INITIAL_AUTH_EMAILS: AuthorizedEmail[] = [
@@ -461,6 +468,10 @@ interface CRMContextProps {
   deleteComment: (id: string) => void;
   updateClientStage: (clientId: number, newStage: ClientStage) => void;
   updateClientAdmin: (clientId: number, adminId: string) => void;
+  updateClient: (clientId: number, updates: Partial<CRMClient>) => void;
+  updateLead: (leadId: string, updates: Partial<OutreachLead>) => void;
+  updateInternalTask: (taskId: string, updates: Partial<InternalTask>) => void;
+  updateFlag: (flagId: string, updates: Partial<ProjectFlag>) => void;
   
   // Outreach Pipeline Callbacks
   updateLeadStatus: (leadId: string, status: OutreachStatus) => void;
@@ -786,7 +797,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
   }, [isSupabaseConfigured]);
 
   const updateClientStage = useCallback(async (clientId: number, newStage: ClientStage) => {
-    const category = newStage === "Lead" || newStage === "Proposal" ? "Potential" : "Ongoing";
+    const category: ClientCategory = (newStage === "Lead" || newStage === "Requirements" || newStage === "Demo" || newStage === "Quoted") ? "Potential" : "Ongoing";
     
     if (isSupabaseConfigured) {
       const { error } = await supabase
@@ -825,6 +836,74 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     setClients((prev) =>
       prev.map((c) => (c.id === clientId ? { ...c, assignedAdminId: adminId } : c))
     );
+  }, [isSupabaseConfigured]);
+
+  const updateClient = useCallback(async (clientId: number, updates: Partial<CRMClient>) => {
+    const dbUpdates: Record<string, any> = {};
+    if (updates.name !== undefined) dbUpdates.name = updates.name;
+    if (updates.project !== undefined) dbUpdates.project = updates.project;
+    if (updates.location !== undefined) dbUpdates.location = updates.location;
+    if (updates.category !== undefined) dbUpdates.category = updates.category;
+    if (updates.stage !== undefined) dbUpdates.stage = updates.stage;
+    if (updates.health !== undefined) dbUpdates.health = updates.health;
+    if (updates.revenue !== undefined) dbUpdates.revenue = updates.revenue;
+    if (updates.lastActivity !== undefined) dbUpdates.last_activity = updates.lastActivity;
+    if (updates.assignedAdminId !== undefined) dbUpdates.assigned_admin_id = updates.assignedAdminId;
+
+    if (isSupabaseConfigured && Object.keys(dbUpdates).length > 0) {
+      const { error } = await supabase.from("clients").update(dbUpdates).eq("id", clientId);
+      if (error) console.error("Database update client error:", error);
+    }
+    setClients(prev => prev.map(c => c.id === clientId ? { ...c, ...updates } : c));
+  }, [isSupabaseConfigured]);
+
+  const updateLead = useCallback(async (leadId: string, updates: Partial<OutreachLead>) => {
+    const dbUpdates: Record<string, any> = {};
+    if (updates.companyName !== undefined) dbUpdates.company_name = updates.companyName;
+    if (updates.projectDescription !== undefined) dbUpdates.project_description = updates.projectDescription;
+    if (updates.source !== undefined) dbUpdates.source = updates.source;
+    if (updates.status !== undefined) dbUpdates.status = updates.status;
+    if (updates.estimatedValue !== undefined) dbUpdates.estimated_value = updates.estimatedValue;
+    if (updates.assignedAdminId !== undefined) dbUpdates.assigned_admin_id = updates.assignedAdminId;
+    if (updates.engagementScore !== undefined) dbUpdates.engagement_score = updates.engagementScore;
+    if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
+
+    if (isSupabaseConfigured && Object.keys(dbUpdates).length > 0) {
+      const { error } = await supabase.from("outreach_leads").update(dbUpdates).eq("id", leadId);
+      if (error) console.error("Database update lead error:", error);
+    }
+    setLeads(prev => prev.map(l => l.id === leadId ? { ...l, ...updates } : l));
+  }, [isSupabaseConfigured]);
+
+  const updateInternalTask = useCallback(async (taskId: string, updates: Partial<InternalTask>) => {
+    const dbUpdates: Record<string, any> = {};
+    if (updates.title !== undefined) dbUpdates.title = updates.title;
+    if (updates.assignedAdminId !== undefined) dbUpdates.assigned_admin_id = updates.assignedAdminId;
+    if (updates.status !== undefined) dbUpdates.status = updates.status;
+    if (updates.clientId !== undefined) dbUpdates.client_id = updates.clientId;
+    if (updates.internalNotes !== undefined) dbUpdates.internal_notes = updates.internalNotes;
+
+    if (isSupabaseConfigured && Object.keys(dbUpdates).length > 0) {
+      const { error } = await supabase.from("internal_tasks").update(dbUpdates).eq("id", taskId);
+      if (error) console.error("Database update task error:", error);
+    }
+    setInternalTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...updates } : t));
+  }, [isSupabaseConfigured]);
+
+  const updateFlag = useCallback(async (flagId: string, updates: Partial<ProjectFlag>) => {
+    const dbUpdates: Record<string, any> = {};
+    if (updates.title !== undefined) dbUpdates.title = updates.title;
+    if (updates.description !== undefined) dbUpdates.description = updates.description;
+    if (updates.severity !== undefined) dbUpdates.severity = updates.severity;
+    if (updates.status !== undefined) dbUpdates.status = updates.status;
+    if (updates.assignedAdminId !== undefined) dbUpdates.assigned_admin_id = updates.assignedAdminId;
+    if (updates.resolutionNotes !== undefined) dbUpdates.resolution_notes = updates.resolutionNotes;
+
+    if (isSupabaseConfigured && Object.keys(dbUpdates).length > 0) {
+      const { error } = await supabase.from("project_flags").update(dbUpdates).eq("id", flagId);
+      if (error) console.error("Database update flag error:", error);
+    }
+    setFlags(prev => prev.map(f => f.id === flagId ? { ...f, ...updates } : f));
   }, [isSupabaseConfigured]);
 
   const updateLeadStatus = useCallback(async (leadId: string, status: OutreachStatus) => {
@@ -928,10 +1007,10 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         project: lead.projectDescription,
         location: "India",
         category: "Ongoing",
-        stage: "In Dev",
+        stage: "Confirmed",
         health: 80,
         revenue: lead.estimatedValue,
-        last_activity: "Lead converted into project workspace",
+        last_activity: "Lead converted into project",
         avatar: lead.companyName.split(" ").map(w => w[0]).join("").toUpperCase().substring(0, 2),
         assigned_admin_id: lead.assignedAdminId || null,
       }).select();
@@ -976,10 +1055,10 @@ export function CRMProvider({ children }: { children: ReactNode }) {
       project: lead.projectDescription,
       location: "India",
       category: "Ongoing",
-      stage: "In Dev",
+      stage: "Confirmed",
       health: 80,
       revenue: lead.estimatedValue,
-      lastActivity: "Lead converted into project workspace",
+      lastActivity: "Lead converted into project",
       avatar: lead.companyName.split(" ").map(w => w[0]).join("").toUpperCase().substring(0, 2),
       assignedAdminId: lead.assignedAdminId || "a1"
     };
@@ -1382,6 +1461,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     <CRMContext.Provider value={{ 
       clients, team, products, comments, activities, leads, flags, releases, internalTasks, currentAdminId, selectedClientId, setSelectedClientId,
       addComment, deleteComment, updateClientStage, updateClientAdmin,
+      updateClient, updateLead, updateInternalTask, updateFlag,
       updateLeadStatus, incrementLeadCalls, addLeadNote, convertLeadToClient, addNewLead,
       addFlag, updateFlagStatus, assignFlagAdmin, addFlagSprintLog,
       createRelease, approveRelease,

@@ -1,1739 +1,838 @@
 "use client";
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  useCRM, 
-  CRMClient, 
-  ClientStage, 
-  TeamMember, 
-  InternalProduct, 
-  OutreachLead, 
-  ProjectFlag, 
-  ChangelogRelease, 
-  FlagSeverity, 
-  FlagStatus, 
-  OutreachStatus, 
-  LeadSource,
-  InternalTask,
-  TaskStatus,
-  Comment
-} from "./CRMContext";
+import { useCRM, ClientStage, OutreachStatus, TaskStatus, FlagSeverity, FlagStatus } from "./CRMContext";
 import ClientPortalView from "./ClientPortalView";
 
-// ═══════════════════════════════════════════════════════════════
-//  SUBCOMPONENTS
-// ═══════════════════════════════════════════════════════════════
+// Helpers
+const formatINR = (n: number) => n > 0 ? "₹" + n.toLocaleString("en-IN") : "—";
+const STAGES: ClientStage[] = ["Lead", "Requirements", "Demo", "Quoted", "Confirmed", "Maintenance"];
+const LEAD_STATUSES: OutreachStatus[] = ["Lead", "Contacted", "Responded", "Requirements", "Demo", "Quoted", "Converted", "Lost"];
+const TASK_STATUSES: TaskStatus[] = ["Todo", "In Progress", "In Review", "Resolved"];
+const SEVERITIES: FlagSeverity[] = ["Critical", "High", "Medium", "Low"];
+const FLAG_STATUSES: FlagStatus[] = ["Open", "Investigating", "In Dev", "Resolved"];
 
-function HealthRing({ score, size = 36 }: { score: number; size?: number }) {
-  const radius = (size - 4) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (score / 100) * circumference;
-  const color = score >= 80 ? "#10B981" : score >= 60 ? "#F59E0B" : "#EF4444";
-
-  return (
-    <svg width={size} height={size} className="health-ring" aria-label={`Health score: ${score}`}>
-      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#1F1F1F" strokeWidth="2.5" />
-      <circle 
-        cx={size / 2} 
-        cy={size / 2} 
-        r={radius} 
-        fill="none" 
-        stroke={color} 
-        strokeWidth="2.5" 
-        strokeLinecap="round" 
-        strokeDasharray={circumference} 
-        strokeDashoffset={offset} 
-      />
-      <text 
-        x="50%" 
-        y="52%" 
-        textAnchor="middle" 
-        dy="0.35em" 
-        fill={color} 
-        fontSize="8.5" 
-        fontWeight="800" 
-        fontFamily="var(--font-mono)" 
-        transform={`rotate(90 ${size / 2} ${size / 2})`}
-      >
-        {score}%
-      </text>
-    </svg>
-  );
-}
-
-function StageBadge({ stage }: { stage: ClientStage }) {
-  const styles: Record<ClientStage, string> = {
-    Lead: "border border-[#1F1F1F] text-[#8E8E8E] bg-[#121212]",
-    Proposal: "border border-amber-500/20 text-amber-500 bg-amber-500/5",
-    "In Dev": "border border-[#06B6D4]/20 text-[#06B6D4] bg-[#06B6D4]/5",
-    Active: "border border-emerald-500/20 text-emerald-500 bg-emerald-500/5",
-    Completed: "border border-stone-700 text-stone-500 bg-stone-900/50 line-through",
-  };
-  return (
-    <span className={`inline-flex px-2 py-0.5 rounded text-[0.55rem] uppercase tracking-[0.12em] font-mono font-bold ${styles[stage]}`}>
-      {stage}
-    </span>
-  );
-}
-
-const formatCurrency = (amount: number) => {
-  if (amount === 0) return "—";
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(amount);
+const stageColor = (s: string) => {
+  if (s === "Confirmed" || s === "Maintenance" || s === "Converted" || s === "Resolved" || s === "Approved") return "bg-emerald-50 text-emerald-700 border-emerald-200";
+  if (s === "Quoted" || s === "Demo" || s === "In Review" || s === "Awaiting Review") return "bg-blue-50 text-blue-700 border-blue-200";
+  if (s === "Requirements" || s === "Responded" || s === "In Progress" || s === "Investigating" || s === "In Dev") return "bg-amber-50 text-amber-700 border-amber-200";
+  if (s === "Lead" || s === "Contacted" || s === "Todo" || s === "Open") return "bg-slate-50 text-slate-600 border-slate-200";
+  if (s === "Lost" || s === "Critical") return "bg-red-50 text-red-700 border-red-200";
+  return "bg-slate-50 text-slate-600 border-slate-200";
 };
 
-// ═══════════════════════════════════════════════════════════════
-//  MAIN DASHBOARD
-// ═══════════════════════════════════════════════════════════════
+const severityDot = (s: FlagSeverity) => {
+  if (s === "Critical") return "bg-red-500";
+  if (s === "High") return "bg-amber-500";
+  if (s === "Medium") return "bg-yellow-400";
+  return "bg-slate-300";
+};
+
+type Tab = "projects" | "leads" | "tasks" | "issues" | "team" | "client-view";
 
 export default function AdminDashboard() {
-  const { 
-    clients: allClients, 
-    team, 
-    products, 
-    activities, 
-    comments, 
-    leads, 
-    flags: allFlags, 
-    releases: allReleases, 
-    internalTasks: allInternalTasks,
-    currentAdminId, 
-    updateClientStage, 
-    updateClientAdmin, 
-    deleteComment,
-    updateLeadStatus,
-    incrementLeadCalls,
-    addLeadNote,
-    convertLeadToClient,
-    addNewLead,
-    updateFlagStatus,
-    assignFlagAdmin,
-    addFlagSprintLog,
-    createRelease,
-    approveRelease,
-    addInternalTask,
-    updateInternalTaskStatus,
-    addInternalTaskNote,
-    addNewClient,
-    deleteClient,
-    deleteLead,
-    deleteInternalTask,
-    deleteFlag,
-    deleteRelease,
-    addFlag,
-    userProfile,
-    isSupabaseConfigured,
-    isSupabaseOnline,
-    signOut,
-    authorizedEmails,
-    provisionUser,
-    deprovisionUser,
-    purgeAllMockData,
-    selectedClientId,
-    setSelectedClientId
-  } = useCRM();
+  const crm = useCRM();
+  const { clients, team, leads, internalTasks, flags, comments, activities, userProfile, isSupabaseOnline, signOut } = crm;
+  const [activeTab, setActiveTab] = useState<Tab>("projects");
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [selectedFlagId, setSelectedFlagId] = useState<string | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
 
-  // Consolidated Navigation Tabs: operations, outreach, client_portal_view, staff_invites
-  const [activeTab, setActiveTab] = useState("operations");
-  
-  // Drawer States
-  const [selectedClient, setSelectedClient] = useState<CRMClient | null>(null);
-  const [selectedTask, setSelectedTask] = useState<InternalTask | null>(null);
-  const [selectedFlag, setSelectedFlag] = useState<ProjectFlag | null>(null);
+  const isIntern = userProfile?.role?.toLowerCase().includes("intern") || false;
+  const isCorePartner = ["a1", "a2", "a3", "a4"].includes(crm.currentAdminId) || 
+    ["lakshbetala15@gmail.com", "gandhimouriyan1234@gmail.com", "monarchankit25@gmail.com", "muskanabani01@gmail.com"]
+      .includes(userProfile?.email?.toLowerCase() || "");
 
-  // Quick-log helper state
-  const [newLeadNotes, setNewLeadNotes] = useState<Record<string, string>>({});
-  const [newInternalTaskNotes, setNewInternalTaskNotes] = useState<Record<string, string>>({});
-  const [newSupportSprintNotes, setNewSupportSprintNotes] = useState<Record<string, string>>({});
+  // Stats
+  const confirmedProjects = clients.filter(c => c.stage === "Confirmed" || c.stage === "Maintenance").length;
+  const pipelineValue = clients.reduce((sum, c) => sum + c.revenue, 0) + leads.reduce((sum, l) => sum + l.estimatedValue, 0);
+  const openIssues = flags.filter(f => f.status !== "Resolved").length;
+  const activeTasks = internalTasks.filter(t => t.status !== "Resolved").length;
 
-  // Manual Creation Modal/Forms Toggles
-  const [showClientForm, setShowClientForm] = useState(false);
-  const [showTaskForm, setShowTaskForm] = useState(false);
-  const [showFlagForm, setShowFlagForm] = useState(false);
-  const [showLeadForm, setShowLeadForm] = useState(false);
+  const tabs: { id: Tab; label: string; count?: number }[] = [
+    { id: "projects", label: "Projects", count: clients.length },
+    { id: "leads", label: "Leads", count: leads.length },
+    { id: "tasks", label: "Tasks", count: activeTasks },
+    { id: "issues", label: "Issues", count: openIssues },
+    { id: "team", label: "Team", count: team.length },
+    { id: "client-view", label: "Client View" },
+  ];
 
-  // Forms Fields States
-  const [newClientName, setNewClientName] = useState("");
-  const [newClientProject, setNewClientProject] = useState("");
-  const [newClientRevenue, setNewClientRevenue] = useState("250000");
-  const [newClientCategory, setNewClientCategory] = useState<"Ongoing" | "Potential">("Ongoing");
-  const [newClientStage, setNewClientStage] = useState<ClientStage>("In Dev");
-  const [newClientAssigned, setNewClientAssigned] = useState("a1");
-
-  const [newTaskTitle, setNewTaskTitle] = useState("");
-  const [newTaskClient, setNewTaskClient] = useState("");
-  const [newTaskProduct, setNewTaskProduct] = useState("");
-  const [newTaskAssignee, setNewTaskAssignee] = useState("a2");
-
-  const [newFlagTitle, setNewFlagTitle] = useState("");
-  const [newFlagDesc, setNewFlagDesc] = useState("");
-  const [newFlagSeverity, setNewFlagSeverity] = useState<FlagSeverity>("High");
-  const [newFlagClient, setNewFlagClient] = useState("1");
-  const [newFlagAssignee, setNewFlagAssignee] = useState("a2");
-
-  const [newLeadCompany, setNewLeadCompany] = useState("");
-  const [newLeadDesc, setNewLeadDesc] = useState("");
-  const [newLeadVal, setNewLeadVal] = useState("200000");
-  const [newLeadSource, setNewLeadSource] = useState<LeadSource>("LinkedIn");
-  const [newLeadSourcedBy, setNewLeadSourcedBy] = useState("a3");
-  const [newLeadAssigned, setNewLeadAssigned] = useState("a3");
-  const [newLeadScore, setNewLeadScore] = useState("75");
-
-  // Staff Pre-auth invite states
-  const [provEmail, setProvEmail] = useState("");
-  const [provName, setProvName] = useState("");
-  const [provRole, setProvRole] = useState("Dev Intern");
-  const [provCategory, setProvCategory] = useState<"admin" | "client">("admin");
-  const [provFocus, setProvFocus] = useState<"Client Delivery" | "Outreach & Marketing">("Client Delivery");
-  const [provResponsibilities, setProvResponsibilities] = useState<string[]>([]);
-  const [provClientId, setProvClientId] = useState<string>("");
-  const [provIsSubmitting, setProvIsSubmitting] = useState(false);
-
-  // Expandable work Balancer checklist states
-  const [expandedMembers, setExpandedMembers] = useState<Record<string, boolean>>({});
-
-  // Auth Category & Security Checks
-  const isCorePartner = useMemo(() => {
-    if (!userProfile?.email) return false;
-    const coreEmails = [
-      "lakshbetala15@gmail.com",
-      "gandhimouriyan1234@gmail.com",
-      "monarchankit25@gmail.com",
-      "muskanabani01@gmail.com"
-    ];
-    return coreEmails.includes(userProfile.email.toLowerCase());
-  }, [userProfile]);
-
-  const isIntern = useMemo(() => {
-    if (!userProfile?.role) return false;
-    return userProfile.role.toLowerCase().includes("intern");
-  }, [userProfile]);
-
-  // Telemetry Lists safe type-casted fallbacks
-  const clients = useMemo(() => {
-    if (isCorePartner || isIntern) return allClients;
-    return allClients.filter(c => c.assignedAdminId === currentAdminId);
-  }, [allClients, isCorePartner, isIntern, currentAdminId]);
-
-  const flags = useMemo(() => {
-    if (isCorePartner || isIntern) return allFlags;
-    return allFlags.filter(f => f.assignedAdminId === currentAdminId);
-  }, [allFlags, isCorePartner, isIntern, currentAdminId]);
-
-  const internalTasks = useMemo(() => {
-    if (isCorePartner || isIntern) return allInternalTasks;
-    return allInternalTasks.filter(t => t.assignedAdminId === currentAdminId);
-  }, [allInternalTasks, isCorePartner, isIntern, currentAdminId]);
-
-  const potentialClients = useMemo(() => clients.filter(c => c.category === "Potential"), [clients]);
-  const ongoingClients = useMemo(() => clients.filter(c => c.category === "Ongoing"), [clients]);
-  const currentAdmin = team.find(t => t.id === currentAdminId) || team[0];
-
-  // Sourcing pipeline stats
-  const outreachAnalytics = useMemo(() => {
-    const totalPipeline = leads.reduce((acc, l) => acc + l.estimatedValue, 0);
-    const avgScore = leads.length > 0 ? Math.round(leads.reduce((acc, l) => acc + l.engagementScore, 0) / leads.length) : 0;
-    return { totalPipeline, avgScore };
-  }, [leads]);
-
-  // Custom Form handlers
-  const handleAddClientSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newClientName.trim() || !newClientProject.trim()) return;
-    addNewClient({
-      name: newClientName.trim(),
-      project: newClientProject.trim(),
-      location: "Chennai",
-      category: newClientCategory,
-      stage: newClientStage,
-      revenue: Number(newClientRevenue),
-      assignedAdminId: newClientAssigned,
-    });
-    setNewClientName("");
-    setNewClientProject("");
-    setShowClientForm(false);
-  };
-
-  const handleAddTaskSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTaskTitle.trim()) return;
-    addInternalTask({
-      title: newTaskTitle.trim(),
-      clientId: newTaskClient ? Number(newTaskClient) : undefined,
-      productId: newTaskProduct || undefined,
-      assignedAdminId: newTaskAssignee,
-    });
-    setNewTaskTitle("");
-    setShowTaskForm(false);
-  };
-
-  const handleAddFlagSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newFlagTitle.trim() || !newFlagDesc.trim()) return;
-    addFlag({
-      title: newFlagTitle.trim(),
-      description: newFlagDesc.trim(),
-      clientId: Number(newFlagClient),
-      severity: newFlagSeverity,
-      assignedAdminId: newFlagAssignee || undefined,
-    });
-    setNewFlagTitle("");
-    setNewFlagDesc("");
-    setShowFlagForm(false);
-  };
-
-  const handleAddLeadSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newLeadCompany.trim() || !newLeadDesc.trim()) return;
-    addNewLead({
-      companyName: newLeadCompany.trim(),
-      projectDescription: newLeadDesc.trim(),
-      estimatedValue: Number(newLeadVal),
-      source: newLeadSource,
-      status: "Lead",
-      assignedAdminId: newLeadAssigned,
-      sourcedById: newLeadSourcedBy,
-      engagementScore: Number(newLeadScore)
-    });
-    setNewLeadCompany("");
-    setNewLeadDesc("");
-    setShowLeadForm(false);
-  };
-
-  const handleProvisionSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!provEmail.trim() || !provName.trim()) return;
-    setProvIsSubmitting(true);
-    const success = await provisionUser({
-      email: provEmail.trim().toLowerCase(),
-      name: provName.trim(),
-      role: provRole.trim(),
-      category: provCategory,
-      avatar: provName.split(" ").map(w => w[0]).join("").toUpperCase().substring(0, 2),
-      colorVar: provCategory === "admin" 
-        ? (provFocus === "Client Delivery" ? "var(--color-admin-mouriyan)" : "var(--color-admin-muskan)")
-        : "var(--color-neutral)",
-      primaryFocus: provCategory === "admin" ? provFocus : "Product Sandbox",
-      responsibilities: provResponsibilities,
-      activeTasks: provCategory === "admin" ? ["Complete operational system onboarding"] : [],
-      clientId: provCategory === "client" && provClientId ? Number(provClientId) : undefined
-    });
-    setProvIsSubmitting(false);
-    if (success) {
-      setProvEmail("");
-      setProvName("");
-      setProvResponsibilities([]);
-      alert("🎉 Invited email successfully added to registry!");
-    } else {
-      alert("❌ Error pre-authorizing credentials.");
-    }
-  };
-
-  // Close all drawers on background click
-  const closeAllDrawers = () => {
-    setSelectedClient(null);
-    setSelectedTask(null);
-    setSelectedFlag(null);
-  };
-
-  const stagger = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.05 } } };
-  const fadeUp = { hidden: { opacity: 0, y: 12, filter: "blur(2px)" }, show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] as const } } };
+  const closeDrawer = () => { setSelectedProjectId(null); setSelectedLeadId(null); setSelectedTaskId(null); setSelectedFlagId(null); };
+  const drawerOpen = selectedProjectId !== null || selectedLeadId !== null || selectedTaskId !== null || selectedFlagId !== null;
 
   return (
-    <div className="flex min-h-screen bg-[#0A0A0A] text-[#F5F5F5] font-sans antialiased selection:bg-[#06B6D4]/20 selection:text-[#06B6D4] relative overflow-hidden">
-      
-      {/* ──── FIXED LEFT SIDEBAR (OBSIDIAN CONSOLE FRAME) ──── */}
-      <aside className="w-64 border-r border-[#1F1F1F] bg-[#121212] flex flex-col justify-between h-screen sticky top-0 shrink-0 z-30 select-none">
-        <div className="flex flex-col">
-          {/* Brand/Console Identity */}
-          <div className="p-6 border-b border-[#1F1F1F] flex items-center gap-3">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#06B6D4] animate-pulse" />
-            <h1 className="text-sm font-bold tracking-widest font-mono text-[#FAF9F6]">ALMMATIX OS</h1>
-          </div>
-
-          {/* Navigation Consolidated Tabs */}
-          <nav className="p-4 flex flex-col gap-1.5">
-            {[
-              { id: "operations", label: "Operations Desk", icon: "🛠️", count: ongoingClients.length + internalTasks.filter(t => t.status !== "Resolved").length },
-              { id: "outreach", label: "Outreach Funnel", icon: "🎯", count: leads.length },
-              { id: "client_portal_view", label: "Client Portal View", icon: "👥", count: null },
-              { id: "staff_invites", label: "Staff Invites", icon: "🔒", count: null },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => {
-                  setActiveTab(tab.id);
-                  closeAllDrawers();
-                }}
-                className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-mono tracking-wider transition-all duration-150 focus:outline-none ${
-                  activeTab === tab.id
-                    ? "bg-[#1F1F1F] text-[#06B6D4] border border-[#06B6D4]/30"
-                    : "text-[#8E8E8E] hover:text-[#FAF9F6] hover:bg-[#1C1917]"
-                }`}
-              >
-                <span className="uppercase text-left truncate flex items-center gap-2">
-                  <span className="text-sm">{tab.icon}</span>
-                  {tab.label}
-                </span>
-                {tab.count !== null && tab.count > 0 && (
-                  <span className={`text-[0.625rem] px-2 py-0.5 rounded-full font-mono ${
-                    activeTab === tab.id ? "bg-[#06B6D4]/20 text-[#06B6D4]" : "bg-[#1C1917] text-[#8E8E8E] border border-[#1F1F1F]"
-                  }`}>
-                    {tab.count}
-                  </span>
-                )}
-              </button>
-            ))}
-          </nav>
+    <div className="flex h-screen bg-[var(--color-bg)] text-[var(--color-text)] font-sans overflow-hidden">
+      {/* Sidebar */}
+      <aside className="w-56 flex-shrink-0 bg-[var(--color-surface)] border-r border-[var(--color-border)] flex flex-col">
+        <div className="p-5 pb-4">
+          <h1 className="text-base font-bold tracking-tight">almmatix</h1>
+          <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">Management Console</p>
         </div>
 
-        {/* Sync telemetry indicator */}
-        <div className="mx-4 my-2 border-t border-[#1F1F1F] pt-3 pb-1 flex flex-col gap-1">
-          <div className="flex items-center gap-1.5 font-mono text-[0.58rem] tracking-widest">
-            {isSupabaseOnline ? (
-              <>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 animate-pulse" />
-                <span className="text-emerald-400 font-bold uppercase">🟢 LIVE DATABASE SYNC</span>
-              </>
-            ) : (
-              <>
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 animate-pulse" />
-                <span className="text-amber-500 font-bold uppercase">🟡 LOCAL SANDBOX FALLBACK</span>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Active Logged Partner Card */}
-        <div className="p-4 border-t border-[#1F1F1F] bg-[#0E0E0E] flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div 
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-[0.65rem] font-bold text-white shrink-0 shadow-sm border border-white/5" 
-              style={{ backgroundColor: currentAdmin.colorVar || "#06B6D4" }}
+        <nav className="flex-1 px-3 space-y-0.5">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => { setActiveTab(tab.id); closeDrawer(); setShowAddForm(false); }}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ${
+                activeTab === tab.id
+                  ? "bg-[var(--color-accent)] text-white"
+                  : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]"
+              }`}
             >
-              {currentAdmin.avatar}
-            </div>
-            <div className="text-left min-w-0">
-              <div className="text-xs font-bold text-[#FAF9F6] truncate leading-snug">{currentAdmin.name}</div>
-              <div className="text-[0.58rem] font-mono uppercase text-[#8E8E8E] truncate mt-0.5">{currentAdmin.role}</div>
-            </div>
+              <span>{tab.label}</span>
+              {tab.count !== undefined && (
+                <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${
+                  activeTab === tab.id ? "bg-white/20" : "bg-[var(--color-border-light)]"
+                }`}>{tab.count}</span>
+              )}
+            </button>
+          ))}
+        </nav>
+
+        <div className="p-4 border-t border-[var(--color-border)] space-y-3">
+          <div className="flex items-center gap-2">
+            <span className={`w-1.5 h-1.5 rounded-full ${isSupabaseOnline ? "bg-emerald-500" : "bg-amber-500 animate-pulse"}`} />
+            <span className="text-[11px] text-[var(--color-text-muted)]">{isSupabaseOnline ? "Connected" : "Offline"}</span>
           </div>
-          <button 
-            onClick={signOut}
-            className="p-1.5 rounded-md hover:bg-[#1F1F1F] text-[#8E8E8E] hover:text-[#EF4444] transition-all focus:outline-none shrink-0" 
-            title="Sign Out"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-          </button>
+          <div className="flex items-center justify-between">
+            <span className="text-[13px] font-medium">{userProfile?.name || "Admin"}</span>
+            <button onClick={signOut} className="text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-danger)] transition-colors">Sign out</button>
+          </div>
         </div>
       </aside>
 
-      {/* ──── RIGHT SCROLLABLE WORKSPACE ──── */}
-      <main className="flex-1 min-h-screen overflow-y-auto px-12 py-10 z-10 bg-[#0A0A0A]">
-        <AnimatePresence mode="wait">
-          
-          {/* ═══ TAB 1: OPERATIONS DESK ═══ */}
-          {activeTab === "operations" && (
-            <motion.div key="operations" initial="hidden" animate="show" exit="hidden" variants={stagger} className="flex flex-col gap-8">
-              
-              {/* Top: Workload Allocation Matrix */}
-              <motion.div variants={fadeUp} className="border border-[#1F1F1F] bg-[#121212] p-5 rounded-2xl">
-                <div className="flex justify-between items-center mb-4 border-b border-[#1F1F1F] pb-3">
-                  <h2 className="text-xs font-bold uppercase tracking-[0.2em] font-mono text-[#06B6D4]">Core Four & Staff Workload Allocation</h2>
-                  <span className="text-[0.625rem] text-[#8E8E8E] font-mono uppercase">Live resource analytics</span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {team.map((member) => {
-                    const memberClients = allClients.filter(c => c.assignedAdminId === member.id && c.category === "Ongoing");
-                    const memberSprintTasks = internalTasks.filter(t => t.assignedAdminId === member.id && t.status !== "Resolved");
-                    const memberFlags = flags.filter(f => f.assignedAdminId === member.id && f.status !== "Resolved");
-                    
-                    // Capacity math
-                    const capacityLoad = Math.min(100, (memberClients.length * 25) + (memberSprintTasks.length * 15) + (memberFlags.length * 20));
-                    const isExpanded = !!expandedMembers[member.id];
-
-                    return (
-                      <div key={member.id} className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-xl p-4 hover:border-[#06B6D4]/35 transition-all duration-200 relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-[2.5px]" style={{ backgroundColor: member.colorVar || "#06B6D4" }} />
-                        
-                        <div className="flex items-start justify-between mb-3 mt-1">
-                          <div className="flex items-center gap-2.5">
-                            <div 
-                              className="w-7 h-7 rounded flex items-center justify-center text-[0.6rem] font-bold text-white shrink-0 border border-white/5" 
-                              style={{ backgroundColor: member.colorVar || "#06B6D4" }}
-                            >
-                              {member.avatar}
-                            </div>
-                            <div className="min-w-0">
-                              <div className="font-semibold text-xs text-[#FAF9F6] truncate leading-tight">{member.name}</div>
-                              <div className="text-[0.55rem] uppercase tracking-wider font-mono font-bold mt-0.5 text-[#8E8E8E]" style={{ color: member.colorVar }}>
-                                {member.role}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="text-right shrink-0">
-                            <div className="text-[0.5rem] font-mono text-[#8E8E8E] uppercase">LOAD</div>
-                            <div className="text-xs font-mono font-bold text-[#FAF9F6] mt-0.5">{capacityLoad}%</div>
-                          </div>
-                        </div>
-
-                        {/* Capacity Progress Bar */}
-                        <div className="mb-3">
-                          <div className="h-1 w-full bg-[#1F1F1F] rounded-full overflow-hidden">
-                            <div 
-                              style={{ width: `${capacityLoad}%`, backgroundColor: member.colorVar || "#06B6D4" }} 
-                              className="h-full rounded-full transition-all duration-500" 
-                            />
-                          </div>
-                        </div>
-
-                        {/* Minimal Metrics Grid */}
-                        <div className="grid grid-cols-3 gap-1 py-1.5 border-y border-[#1F1F1F] mb-3 text-center font-mono text-[0.6rem]">
-                          <div>
-                            <div className="text-[0.45rem] text-[#8E8E8E] uppercase">Clients</div>
-                            <div className="font-bold text-[#FAF9F6] mt-0.5">{memberClients.length}</div>
-                          </div>
-                          <div>
-                            <div className="text-[0.45rem] text-[#8E8E8E] uppercase">Tasks</div>
-                            <div className="font-bold text-[#FAF9F6] mt-0.5">{memberSprintTasks.length}</div>
-                          </div>
-                          <div>
-                            <div className="text-[0.45rem] text-[#8E8E8E] uppercase">Flags</div>
-                            <div className="font-bold text-[#EF4444] mt-0.5">{memberFlags.length}</div>
-                          </div>
-                        </div>
-
-                        {/* Expandable tasks check-list trigger */}
-                        <button
-                          onClick={() => setExpandedMembers(prev => ({ ...prev, [member.id]: !prev[member.id] }))}
-                          className="flex items-center justify-between w-full text-[0.55rem] font-mono uppercase tracking-wider text-[#8E8E8E] hover:text-[#FAF9F6] transition-colors pt-1"
-                        >
-                          <span>Checklist ({member.activeTasks.length})</span>
-                          <span className="font-bold text-[0.7rem]">{isExpanded ? "−" : "+"}</span>
-                        </button>
-                        
-                        <AnimatePresence>
-                          {isExpanded && (
-                            <motion.div
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: "auto", opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              className="overflow-hidden"
-                            >
-                              <ul className="text-[0.58rem] text-[#8E8E8E] space-y-1.5 mt-3 pl-0 list-none font-mono">
-                                {member.activeTasks.map((t, idx) => (
-                                  <li key={idx} className="flex items-start gap-1.5 leading-normal bg-[#121212] border border-[#1F1F1F] p-2 rounded-lg">
-                                    <span className="w-1 h-1 rounded-full mt-1 shrink-0 bg-[#06B6D4]" />
-                                    <span>{t}</span>
-                                  </li>
-                                ))}
-                                {member.activeTasks.length === 0 && (
-                                  <li className="text-[#8E8E8E]/40 italic text-center py-1">No active sprint tasks.</li>
-                                )}
-                              </ul>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    );
-                  })}
-                </div>
-              </motion.div>
-
-              {/* 3-Column Operations Desk Layout */}
-              <motion.div variants={fadeUp} className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-                
-                {/* COLUMN 1: Client Sprints Desk */}
-                <div className="border border-[#1F1F1F] bg-[#121212] rounded-2xl p-5 min-h-[580px] flex flex-col justify-between">
-                  <div>
-                    <div className="flex justify-between items-center mb-4 border-b border-[#1F1F1F] pb-3">
-                      <h3 className="text-xs font-bold uppercase tracking-[0.15em] font-mono text-[#06B6D4] flex items-center gap-1.5">
-                        <span className="text-[#06B6D4]">🏢</span> Client Projects
-                      </h3>
-                      <button 
-                        onClick={() => setShowClientForm(true)}
-                        className="bg-[#1F1F1F] hover:bg-[#06B6D4] text-[#FAF9F6] hover:text-[#0A0A0A] border border-[#1F1F1F] text-[0.6rem] font-mono uppercase px-2 py-1 rounded transition-colors"
-                      >
-                        + Add Project
-                      </button>
-                    </div>
-
-                    <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1 dark-scrollbar">
-                      {ongoingClients.map((client) => {
-                        const assignedAdmin = team.find(t => t.id === client.assignedAdminId);
-                        return (
-                          <div 
-                            key={client.id}
-                            onClick={() => setSelectedClient(client)}
-                            className="bg-[#0A0A0A] border border-[#1F1F1F] p-4 rounded-xl cursor-pointer hover:border-[#06B6D4]/35 transition-all group relative"
-                          >
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (confirm(`Delete workspace for ${client.name}?`)) {
-                                  deleteClient(client.id);
-                                }
-                              }}
-                              className="absolute top-3 right-3 text-[#8E8E8E] hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 text-xs font-mono"
-                              title="Delete Client"
-                            >
-                              ✕
-                            </button>
-
-                            <div className="flex justify-between items-start mb-3 pr-4">
-                              <div className="flex items-center gap-2.5">
-                                <div className="w-8 h-8 rounded bg-[#121212] border border-[#1F1F1F] text-[#FAF9F6] flex items-center justify-center text-[0.625rem] font-bold tracking-wider font-mono">{client.avatar}</div>
-                                <div className="min-w-0">
-                                  <div className="font-bold text-xs text-[#FAF9F6] truncate leading-tight">{client.name}</div>
-                                  <div className="text-[0.65rem] text-[#8E8E8E] mt-0.5 truncate">{client.project}</div>
-                                </div>
-                              </div>
-                              <HealthRing score={client.health} size={30} />
-                            </div>
-
-                            <div className="flex items-center justify-between border-t border-[#1F1F1F] pt-2 text-[0.625rem] font-mono">
-                              <StageBadge stage={client.stage} />
-                              <div className="flex items-center gap-1.5">
-                                {assignedAdmin && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: assignedAdmin.colorVar }} />}
-                                <span className="font-semibold text-[0.625rem] text-[#FAF9F6]">{assignedAdmin?.name || "Unassigned"}</span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                      {ongoingClients.length === 0 && (
-                        <div className="text-xs text-[#8E8E8E] font-mono italic text-center py-10">No ongoing clients currently logged.</div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Inline Client creation Modal */}
-                  <AnimatePresence>
-                    {showClientForm && (
-                      <div className="fixed inset-0 bg-[#0A0A0A]/70 backdrop-blur-md z-50 flex items-center justify-center p-4 select-none">
-                        <motion.form 
-                          onSubmit={handleAddClientSubmit}
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.95 }}
-                          className="bg-[#121212] border border-[#1F1F1F] p-6 rounded-2xl w-full max-w-sm space-y-4 shadow-2xl relative"
-                        >
-                          <button 
-                            type="button" 
-                            onClick={() => setShowClientForm(false)}
-                            className="absolute top-4 right-4 text-[#8E8E8E] hover:text-[#FAF9F6] transition-colors"
-                          >
-                            ✕
-                          </button>
-                          <h3 className="text-xs font-mono uppercase tracking-widest font-bold text-[#06B6D4]">🏢 Provision New Client Project</h3>
-                          
-                          <div className="space-y-3 text-xs font-mono">
-                            <div>
-                              <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Client Corporate Name</label>
-                              <input 
-                                type="text" 
-                                required 
-                                value={newClientName} 
-                                onChange={(e) => setNewClientName(e.target.value)} 
-                                placeholder="NJ Jewellers" 
-                                className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
-                              />
-                            </div>
-                            <div>
-                              <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Deliverable Title / Project</label>
-                              <input 
-                                type="text" 
-                                required 
-                                value={newClientProject} 
-                                onChange={(e) => setNewClientProject(e.target.value)} 
-                                placeholder="Gold Rate Analytics Polish" 
-                                className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
-                              />
-                            </div>
-                            <div>
-                              <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Contract Revenue Value (INR)</label>
-                              <input 
-                                type="number" 
-                                required 
-                                value={newClientRevenue} 
-                                onChange={(e) => setNewClientRevenue(e.target.value)} 
-                                className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
-                              />
-                            </div>
-                            <div>
-                              <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Delivery Sprint Director</label>
-                              <select
-                                value={newClientAssigned}
-                                onChange={(e) => setNewClientAssigned(e.target.value)}
-                                className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
-                              >
-                                {team.map(t => <option key={t.id} value={t.id}>{t.name} ({t.role})</option>)}
-                              </select>
-                            </div>
-                          </div>
-                          
-                          <button 
-                            type="submit" 
-                            className="w-full bg-[#06B6D4] hover:bg-[#0891B2] text-[#0A0A0A] font-mono text-xs uppercase tracking-[0.15em] font-bold py-2.5 rounded-lg transition-colors"
-                          >
-                            Create Active Project
-                          </button>
-                        </motion.form>
-                      </div>
-                    )}
-                  </AnimatePresence>
-                </div>
-
-                {/* COLUMN 2: Sprints Checklist Kanban */}
-                <div className="border border-[#1F1F1F] bg-[#121212] rounded-2xl p-5 min-h-[580px] flex flex-col justify-between">
-                  <div>
-                    <div className="flex justify-between items-center mb-4 border-b border-[#1F1F1F] pb-3">
-                      <h3 className="text-xs font-bold uppercase tracking-[0.15em] font-mono text-[#06B6D4] flex items-center gap-1.5">
-                        <span className="text-[#06B6D4]">📋</span> Active Sprints
-                      </h3>
-                      <button 
-                        onClick={() => setShowTaskForm(true)}
-                        className="bg-[#1F1F1F] hover:bg-[#06B6D4] text-[#FAF9F6] hover:text-[#0A0A0A] border border-[#1F1F1F] text-[0.6rem] font-mono uppercase px-2 py-1 rounded transition-colors"
-                      >
-                        + Create Task
-                      </button>
-                    </div>
-
-                    <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1 dark-scrollbar">
-                      {internalTasks.filter(t => t.status !== "Resolved").map((task) => {
-                        const assignee = team.find(t => t.id === task.assignedAdminId) || team[0];
-                        const client = allClients.find(c => c.id === task.clientId);
-                        
-                        return (
-                          <div 
-                            key={task.id}
-                            onClick={() => setSelectedTask(task)}
-                            className="bg-[#0A0A0A] border border-[#1F1F1F] p-4 rounded-xl cursor-pointer hover:border-[#06B6D4]/35 transition-all relative group"
-                          >
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (confirm(`Delete task: ${task.title}?`)) {
-                                  deleteInternalTask(task.id);
-                                }
-                              }}
-                              className="absolute top-3 right-3 text-[#8E8E8E] hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 text-xs font-mono"
-                            >
-                              ✕
-                            </button>
-                            <div className="absolute top-0 right-0 w-[3px] h-full rounded-r-xl" style={{ backgroundColor: assignee.colorVar || "#06B6D4" }} />
-                            
-                            <div className="text-xs font-bold text-[#FAF9F6] mb-1.5 leading-snug pr-4">{task.title}</div>
-                            {client && (
-                              <div className="text-[0.55rem] font-mono text-[#06B6D4] uppercase mb-1">CLIENT: {client.name}</div>
-                            )}
-
-                            {/* Sprint logs preview */}
-                            <div className="space-y-1 bg-[#121212] border border-[#1F1F1F] p-2 rounded-lg text-[0.58rem] text-[#8E8E8E] font-mono mb-2">
-                              <div className="max-h-[60px] overflow-y-auto space-y-1">
-                                {task.internalNotes && task.internalNotes.length > 0 ? (
-                                  task.internalNotes.map((note, idx) => (
-                                    <div key={idx} className="border-l border-[#1F1F1F] pl-1.5 italic">"{note}"</div>
-                                  ))
-                                ) : (
-                                  <div className="text-[#8E8E8E]/40 italic">No notes logged yet.</div>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="flex justify-between items-center border-t border-[#1F1F1F] pt-2 text-[0.58rem] font-mono">
-                              <span className="text-[#8E8E8E]">Owner: <strong style={{ color: assignee.colorVar }}>{assignee.name}</strong></span>
-                              <span className="text-[#06B6D4] uppercase font-bold">{task.status}</span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                      {internalTasks.filter(t => t.status !== "Resolved").length === 0 && (
-                        <div className="text-xs text-[#8E8E8E] font-mono italic text-center py-10">No pending sprint tasks.</div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Inline Task creation Modal */}
-                  <AnimatePresence>
-                    {showTaskForm && (
-                      <div className="fixed inset-0 bg-[#0A0A0A]/70 backdrop-blur-md z-50 flex items-center justify-center p-4 select-none">
-                        <motion.form 
-                          onSubmit={handleAddTaskSubmit}
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.95 }}
-                          className="bg-[#121212] border border-[#1F1F1F] p-6 rounded-2xl w-full max-w-sm space-y-4 shadow-2xl relative"
-                        >
-                          <button 
-                            type="button" 
-                            onClick={() => setShowTaskForm(false)}
-                            className="absolute top-4 right-4 text-[#8E8E8E] hover:text-[#FAF9F6] transition-colors"
-                          >
-                            ✕
-                          </button>
-                          <h3 className="text-xs font-mono uppercase tracking-widest font-bold text-[#06B6D4]">📋 Log New Sprint Task</h3>
-                          
-                          <div className="space-y-3 text-xs font-mono">
-                            <div>
-                              <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Task Title</label>
-                              <input 
-                                type="text" 
-                                required 
-                                value={newTaskTitle} 
-                                onChange={(e) => setNewTaskTitle(e.target.value)} 
-                                placeholder="Refactor rate columns mobile wrapping" 
-                                className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
-                              />
-                            </div>
-                            <div>
-                              <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Linked Client Account (Optional)</label>
-                              <select
-                                value={newTaskClient}
-                                onChange={(e) => setNewTaskClient(e.target.value)}
-                                className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
-                              >
-                                <option value="">Internal Core Development</option>
-                                {allClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                              </select>
-                            </div>
-                            <div>
-                              <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Specialist Owner</label>
-                              <select
-                                value={newTaskAssignee}
-                                onChange={(e) => setNewTaskAssignee(e.target.value)}
-                                className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
-                              >
-                                {team.map(t => <option key={t.id} value={t.id}>{t.name} ({t.role})</option>)}
-                              </select>
-                            </div>
-                          </div>
-                          
-                          <button 
-                            type="submit" 
-                            className="w-full bg-[#06B6D4] hover:bg-[#0891B2] text-[#0A0A0A] font-mono text-xs uppercase tracking-[0.15em] font-bold py-2.5 rounded-lg transition-colors"
-                          >
-                            Push Sprint Task
-                          </button>
-                        </motion.form>
-                      </div>
-                    )}
-                  </AnimatePresence>
-                </div>
-
-                {/* COLUMN 3: Support Incident Desk */}
-                <div className="border border-[#1F1F1F] bg-[#121212] rounded-2xl p-5 min-h-[580px] flex flex-col justify-between">
-                  <div>
-                    <div className="flex justify-between items-center mb-4 border-b border-[#1F1F1F] pb-3">
-                      <h3 className="text-xs font-bold uppercase tracking-[0.15em] font-mono text-[#06B6D4] flex items-center gap-1.5">
-                        <span className="text-[#06B6D4]">🚨</span> Incident Support
-                      </h3>
-                      <button 
-                        onClick={() => setShowFlagForm(true)}
-                        className="bg-[#1F1F1F] hover:bg-[#06B6D4] text-[#FAF9F6] hover:text-[#0A0A0A] border border-[#1F1F1F] text-[0.6rem] font-mono uppercase px-2 py-1 rounded transition-colors"
-                      >
-                        + Raise Ticket
-                      </button>
-                    </div>
-
-                    <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1 dark-scrollbar">
-                      {flags.filter(f => f.status !== "Resolved").map((flag) => {
-                        const assignee = team.find(t => t.id === flag.assignedAdminId);
-                        const client = allClients.find(c => c.id === flag.clientId);
-                        
-                        return (
-                          <div 
-                            key={flag.id}
-                            onClick={() => setSelectedFlag(flag)}
-                            className="bg-[#0A0A0A] border border-[#1F1F1F] p-4 rounded-xl cursor-pointer hover:border-[#06B6D4]/35 transition-all relative group"
-                          >
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (confirm(`Remove support flag ticket?`)) {
-                                  deleteFlag(flag.id);
-                                }
-                              }}
-                              className="absolute top-3 right-3 text-[#8E8E8E] hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 text-xs font-mono"
-                            >
-                              ✕
-                            </button>
-
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className={`inline-flex px-1.5 py-0.5 rounded text-[0.5rem] uppercase font-mono font-bold ${
-                                flag.severity === "Critical" ? "bg-red-500/10 text-red-500 border border-red-500/30 animate-pulse" :
-                                flag.severity === "High" ? "bg-amber-500/10 text-amber-500 border border-amber-500/30" :
-                                "bg-stone-800 text-[#8E8E8E]"
-                              }`}>
-                                {flag.severity}
-                              </span>
-                              {client && (
-                                <span className="text-[0.55rem] font-mono text-[#06B6D4] truncate font-semibold uppercase">{client.name}</span>
-                              )}
-                            </div>
-
-                            <div className="text-xs font-bold text-[#FAF9F6] mb-2 leading-snug truncate pr-4">{flag.title}</div>
-                            
-                            <div className="flex justify-between items-center border-t border-[#1F1F1F] pt-2 text-[0.58rem] font-mono">
-                              <span className="text-[#8E8E8E]">Lead: <strong style={{ color: assignee?.colorVar }}>{assignee?.name || "Unassigned"}</strong></span>
-                              <span className="text-[#06B6D4] font-bold uppercase">{flag.status}</span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                      {flags.filter(f => f.status !== "Resolved").length === 0 && (
-                        <div className="text-xs text-[#8E8E8E] font-mono italic text-center py-10">No active support tickets. All stable!</div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Inline Support Flag creation Modal */}
-                  <AnimatePresence>
-                    {showFlagForm && (
-                      <div className="fixed inset-0 bg-[#0A0A0A]/70 backdrop-blur-md z-50 flex items-center justify-center p-4 select-none">
-                        <motion.form 
-                          onSubmit={handleAddFlagSubmit}
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.95 }}
-                          className="bg-[#121212] border border-[#1F1F1F] p-6 rounded-2xl w-full max-w-sm space-y-4 shadow-2xl relative"
-                        >
-                          <button 
-                            type="button" 
-                            onClick={() => setShowFlagForm(false)}
-                            className="absolute top-4 right-4 text-[#8E8E8E] hover:text-[#FAF9F6] transition-colors"
-                          >
-                            ✕
-                          </button>
-                          <h3 className="text-xs font-mono uppercase tracking-widest font-bold text-[#EF4444]">🚨 File Post-Service Escalation Ticket</h3>
-                          
-                          <div className="space-y-3 text-xs font-mono">
-                            <div>
-                              <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Issue Title</label>
-                              <input 
-                                type="text" 
-                                required 
-                                value={newFlagTitle} 
-                                onChange={(e) => setNewFlagTitle(e.target.value)} 
-                                placeholder="Rate limit API timeout" 
-                                className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
-                              />
-                            </div>
-                            <div>
-                              <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Escalation Details</label>
-                              <textarea 
-                                required 
-                                value={newFlagDesc} 
-                                onChange={(e) => setNewFlagDesc(e.target.value)} 
-                                placeholder="API crashes exactly at 23:00 daily." 
-                                rows={3}
-                                className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6] resize-none"
-                              />
-                            </div>
-                            <div>
-                              <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Escalated Client Account</label>
-                              <select
-                                value={newFlagClient}
-                                onChange={(e) => setNewFlagClient(e.target.value)}
-                                className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
-                              >
-                                {allClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                              </select>
-                            </div>
-                            <div>
-                              <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Severity</label>
-                              <select
-                                value={newFlagSeverity}
-                                onChange={(e) => setNewFlagSeverity(e.target.value as FlagSeverity)}
-                                className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
-                              >
-                                <option value="Critical">Critical Outage</option>
-                                <option value="High">High Glitch</option>
-                                <option value="Medium">Medium Enhancement</option>
-                                <option value="Low">Low QA Polish</option>
-                              </select>
-                            </div>
-                            <div>
-                              <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Assigned Lead</label>
-                              <select
-                                value={newFlagAssignee}
-                                onChange={(e) => setNewFlagAssignee(e.target.value)}
-                                className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
-                              >
-                                {team.map(t => <option key={t.id} value={t.id}>{t.name} ({t.role})</option>)}
-                              </select>
-                            </div>
-                          </div>
-                          
-                          <button 
-                            type="submit" 
-                            className="w-full bg-[#EF4444] text-[#FAF9F6] font-mono text-xs uppercase tracking-[0.15em] font-bold py-2.5 rounded-lg transition-colors"
-                          >
-                            Raise Incident Ticket
-                          </button>
-                        </motion.form>
-                      </div>
-                    )}
-                  </AnimatePresence>
-                </div>
-
-              </motion.div>
-
-            </motion.div>
+      {/* Main content */}
+      <main className="flex-1 flex flex-col overflow-hidden">
+        {/* Top bar */}
+        <header className="h-14 flex-shrink-0 border-b border-[var(--color-border)] flex items-center justify-between px-6 bg-[var(--color-surface)]">
+          <h2 className="text-[15px] font-semibold">{tabs.find(t => t.id === activeTab)?.label}</h2>
+          {activeTab !== "client-view" && activeTab !== "team" && (
+            <button
+              onClick={() => setShowAddForm(!showAddForm)}
+              className="px-3 py-1.5 bg-[var(--color-accent)] text-white text-[12px] font-medium rounded-lg hover:bg-[var(--color-accent-hover)] transition-colors"
+            >
+              + New
+            </button>
           )}
+        </header>
 
-          {/* ═══ TAB 2: OUTREACH FUNNEL ═══ */}
-          {activeTab === "outreach" && (
-            <motion.div key="outreach" initial="hidden" animate="show" exit="hidden" variants={stagger} className="flex flex-col gap-6">
-              
-              {/* Sourcing funnel analytics */}
-              <motion.div variants={fadeUp} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {[
-                  { label: "Total Lead Pipeline", value: formatCurrency(outreachAnalytics.totalPipeline) },
-                  { label: "Deal Quality score", value: `${outreachAnalytics.avgScore}%`, accent: true },
-                  { label: "Active Lead Targets", value: `${leads.length} contacts` },
-                  { label: "Converted Success Rate", value: "85%", accent: false },
-                ].map((m, idx) => (
-                  <div key={idx} className="bg-[#121212] border border-[#1F1F1F] rounded-2xl p-5 shadow-xs flex flex-col justify-between">
-                    <div className="portal-label text-[0.55rem] mb-2">{m.label}</div>
-                    <div className={`text-xl font-bold font-mono ${m.accent ? "text-[#06B6D4]" : "text-[#FAF9F6]"}`}>{m.value}</div>
+        <div className="flex-1 flex overflow-hidden">
+          {/* Content area */}
+          <div className="flex-1 overflow-y-auto crm-scrollbar p-6">
+            <AnimatePresence mode="wait">
+              <motion.div key={activeTab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+                {activeTab === "projects" && <ProjectsTab crm={crm} isIntern={isIntern} onSelect={setSelectedProjectId} selectedId={selectedProjectId} showAdd={showAddForm} onCloseAdd={() => setShowAddForm(false)} stats={{ confirmedProjects, pipelineValue, openIssues, activeTasks }} />}
+                {activeTab === "leads" && <LeadsTab crm={crm} onSelect={setSelectedLeadId} selectedId={selectedLeadId} showAdd={showAddForm} onCloseAdd={() => setShowAddForm(false)} />}
+                {activeTab === "tasks" && <TasksTab crm={crm} onSelect={setSelectedTaskId} showAdd={showAddForm} onCloseAdd={() => setShowAddForm(false)} />}
+                {activeTab === "issues" && <IssuesTab crm={crm} onSelect={setSelectedFlagId} showAdd={showAddForm} onCloseAdd={() => setShowAddForm(false)} />}
+                {activeTab === "team" && <TeamTab crm={crm} isCorePartner={isCorePartner} />}
+                {activeTab === "client-view" && <div className="bg-[var(--color-dark-bg)] rounded-xl overflow-hidden -m-6 min-h-full"><ClientPortalView /></div>}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          {/* Drawer */}
+          <AnimatePresence>
+            {drawerOpen && (
+              <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: 420, opacity: 1 }} exit={{ width: 0, opacity: 0 }} transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] as const }} className="flex-shrink-0 border-l border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
+                <div className="w-[420px] h-full overflow-y-auto crm-scrollbar">
+                  {selectedProjectId !== null && <ProjectDrawer crm={crm} clientId={selectedProjectId} isIntern={isIntern} onClose={closeDrawer} />}
+                  {selectedLeadId !== null && <LeadDrawer crm={crm} leadId={selectedLeadId} onClose={closeDrawer} />}
+                  {selectedTaskId !== null && <TaskDrawer crm={crm} taskId={selectedTaskId} onClose={closeDrawer} />}
+                  {selectedFlagId !== null && <FlagDrawer crm={crm} flagId={selectedFlagId} onClose={closeDrawer} />}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+// ===== PROJECTS TAB =====
+function ProjectsTab({ crm, isIntern, onSelect, selectedId, showAdd, onCloseAdd, stats }: any) {
+  const { clients, team } = crm;
+  return (
+    <div className="space-y-6">
+      {/* Stats row */}
+      <div className="grid grid-cols-4 gap-4">
+        {[
+          { label: "Confirmed", value: stats.confirmedProjects, color: "text-emerald-600" },
+          { label: "Pipeline", value: formatINR(stats.pipelineValue), color: "text-blue-600" },
+          { label: "Open issues", value: stats.openIssues, color: stats.openIssues > 0 ? "text-amber-600" : "text-slate-500" },
+          { label: "Active tasks", value: stats.activeTasks, color: "text-slate-700" },
+        ].map(s => (
+          <div key={s.label} className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4">
+            <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase tracking-wide">{s.label}</p>
+            <p className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Add form */}
+      {showAdd && <AddClientForm crm={crm} onClose={onCloseAdd} />}
+
+      {/* Project list */}
+      <div className="space-y-2">
+        {clients.map((c: any) => {
+          const owner = team.find((t: any) => t.id === c.assignedAdminId);
+          return (
+            <button
+              key={c.id}
+              onClick={() => onSelect(c.id)}
+              className={`w-full text-left p-4 rounded-xl border transition-all duration-150 ${
+                selectedId === c.id
+                  ? "border-[var(--color-accent)] bg-[var(--color-accent-light)]/30"
+                  : "border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-accent)]/40 hover:shadow-sm"
+              }`}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[11px] font-bold text-slate-500 flex-shrink-0">{c.avatar}</span>
+                    <div className="min-w-0">
+                      <h3 className="text-[14px] font-semibold truncate">{c.name}</h3>
+                      <p className="text-[12px] text-[var(--color-text-secondary)] truncate">{c.project} · {c.location}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 flex-shrink-0 ml-4">
+                  {!isIntern && c.revenue > 0 && <span className="text-[12px] font-semibold text-[var(--color-text)]">{formatINR(c.revenue)}</span>}
+                  <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${stageColor(c.stage)}`}>{c.stage}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 mt-2.5 ml-10">
+                <span className="text-[11px] text-[var(--color-text-muted)]">{owner?.name || "Unassigned"}</span>
+                <span className="text-[11px] text-[var(--color-text-muted)]">·</span>
+                <span className="text-[11px] text-[var(--color-text-muted)] truncate">{c.lastActivity}</span>
+                <span className="text-[11px] text-[var(--color-text-muted)]">·</span>
+                <span className="text-[11px] text-[var(--color-text-muted)]">Health {c.health}%</span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ===== ADD CLIENT FORM =====
+function AddClientForm({ crm, onClose }: any) {
+  const [name, setName] = useState(""); const [project, setProject] = useState(""); const [location, setLocation] = useState("India");
+  const [stage, setStage] = useState<ClientStage>("Lead"); const [revenue, setRevenue] = useState(0); const [admin, setAdmin] = useState("a1");
+  const submit = () => {
+    if (!name || !project) return;
+    crm.addNewClient({ name, project, location, category: (stage === "Lead" || stage === "Requirements" || stage === "Demo" || stage === "Quoted") ? "Potential" as const : "Ongoing" as const, stage, revenue, assignedAdminId: admin });
+    onClose();
+  };
+  return (
+    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-3">
+      <div className="flex items-center justify-between"><h3 className="text-[13px] font-semibold">Add Project</h3><button onClick={onClose} className="text-[var(--color-text-muted)] text-lg">×</button></div>
+      <div className="grid grid-cols-2 gap-3">
+        <input placeholder="Client name" value={name} onChange={e => setName(e.target.value)} className="col-span-2 border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none focus:border-[var(--color-accent)]" />
+        <input placeholder="Project name" value={project} onChange={e => setProject(e.target.value)} className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none focus:border-[var(--color-accent)]" />
+        <input placeholder="Location" value={location} onChange={e => setLocation(e.target.value)} className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none focus:border-[var(--color-accent)]" />
+        <select value={stage} onChange={e => setStage(e.target.value as ClientStage)} className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none">
+          {STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <input type="number" placeholder="Revenue (₹)" value={revenue || ""} onChange={e => setRevenue(Number(e.target.value))} className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none focus:border-[var(--color-accent)]" />
+        <select value={admin} onChange={e => setAdmin(e.target.value)} className="col-span-2 border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none">
+          {crm.team.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
+        </select>
+      </div>
+      <button onClick={submit} className="w-full bg-[var(--color-accent)] text-white text-[12px] font-medium py-2 rounded-lg hover:bg-[var(--color-accent-hover)] transition-colors">Add Project</button>
+    </div>
+  );
+}
+
+// ===== PROJECT DRAWER =====
+function ProjectDrawer({ crm, clientId, isIntern, onClose }: any) {
+  const client = crm.clients.find((c: any) => c.id === clientId);
+  if (!client) return null;
+  const owner = crm.team.find((t: any) => t.id === client.assignedAdminId);
+  const projectComments = crm.comments.filter((c: any) => c.clientId === clientId);
+  const projectFlags = crm.flags.filter((f: any) => f.clientId === clientId);
+  const projectTasks = crm.internalTasks.filter((t: any) => t.clientId === clientId);
+
+  return (
+    <div className="p-5 space-y-5">
+      <div className="flex items-center justify-between">
+        <h3 className="text-[15px] font-bold">{client.name}</h3>
+        <button onClick={onClose} className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] text-lg">×</button>
+      </div>
+
+      {/* Editable fields */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Project</span>
+          <span className="text-[13px]">{client.project}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Location</span>
+          <span className="text-[13px]">{client.location}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Stage</span>
+          <select value={client.stage} onChange={e => crm.updateClientStage(clientId, e.target.value as ClientStage)} className="text-[12px] border border-[var(--color-border)] rounded-lg px-2 py-1 bg-transparent outline-none">
+            {STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Assigned to</span>
+          <select value={client.assignedAdminId || ""} onChange={e => crm.updateClientAdmin(clientId, e.target.value)} className="text-[12px] border border-[var(--color-border)] rounded-lg px-2 py-1 bg-transparent outline-none">
+            {crm.team.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Health</span>
+          <span className="text-[13px] font-semibold">{client.health}%</span>
+        </div>
+      </div>
+
+      {/* Financials - hidden from interns */}
+      {!isIntern && (
+        <div className="border-t border-[var(--color-border)] pt-4">
+          <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase mb-2">Financials</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-slate-50 rounded-lg p-3">
+              <p className="text-[10px] text-[var(--color-text-muted)]">Revenue</p>
+              <p className="text-[15px] font-bold">{formatINR(client.revenue)}</p>
+            </div>
+            <div className="bg-slate-50 rounded-lg p-3">
+              <p className="text-[10px] text-[var(--color-text-muted)]">Spent (est.)</p>
+              <p className="text-[15px] font-bold">{formatINR(Math.round(client.revenue * 0.45))}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tasks */}
+      {projectTasks.length > 0 && (
+        <div className="border-t border-[var(--color-border)] pt-4">
+          <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase mb-2">Tasks ({projectTasks.length})</p>
+          <div className="space-y-1.5">
+            {projectTasks.map((t: any) => (
+              <div key={t.id} className="flex items-center justify-between p-2 rounded-lg bg-slate-50">
+                <span className="text-[12px] truncate flex-1">{t.title}</span>
+                <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full border ${stageColor(t.status)}`}>{t.status}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Issues */}
+      {projectFlags.length > 0 && (
+        <div className="border-t border-[var(--color-border)] pt-4">
+          <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase mb-2">Issues ({projectFlags.length})</p>
+          <div className="space-y-1.5">
+            {projectFlags.map((f: any) => (
+              <div key={f.id} className="flex items-center gap-2 p-2 rounded-lg bg-slate-50">
+                <span className={`w-2 h-2 rounded-full ${severityDot(f.severity)}`} />
+                <span className="text-[12px] truncate flex-1">{f.title}</span>
+                <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full border ${stageColor(f.status)}`}>{f.status}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recent comments */}
+      {projectComments.length > 0 && (
+        <div className="border-t border-[var(--color-border)] pt-4">
+          <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase mb-2">Recent feedback</p>
+          <div className="space-y-2">
+            {projectComments.slice(0, 5).map((c: any) => (
+              <div key={c.id} className="p-2.5 rounded-lg bg-slate-50">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[11px] font-semibold">{c.author}</span>
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${c.role === "admin" ? "bg-blue-100 text-blue-600" : "bg-slate-200 text-slate-600"}`}>{c.role}</span>
+                  <span className="text-[10px] text-[var(--color-text-muted)] ml-auto">{c.timeElapsed}</span>
+                </div>
+                <p className="text-[12px] text-[var(--color-text-secondary)]">{c.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Delete */}
+      <div className="border-t border-[var(--color-border)] pt-4">
+        <button onClick={() => { crm.deleteClient(clientId); onClose(); }} className="text-[11px] text-[var(--color-danger)] hover:underline">Delete project</button>
+      </div>
+    </div>
+  );
+}
+
+// ===== LEADS TAB =====
+function LeadsTab({ crm, onSelect, selectedId, showAdd, onCloseAdd }: any) {
+  const { leads, team } = crm;
+  return (
+    <div className="space-y-4">
+      {showAdd && <AddLeadForm crm={crm} onClose={onCloseAdd} />}
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
+        <table className="w-full text-[13px]">
+          <thead><tr className="border-b border-[var(--color-border)] text-[11px] font-medium text-[var(--color-text-muted)] uppercase">
+            <th className="text-left p-3">Company</th><th className="text-left p-3">Project</th><th className="text-left p-3">Source</th><th className="text-left p-3">Value</th><th className="text-left p-3">Status</th><th className="text-left p-3">Owner</th>
+          </tr></thead>
+          <tbody>
+            {leads.map((l: any) => {
+              const owner = team.find((t: any) => t.id === l.assignedAdminId);
+              return (
+                <tr key={l.id} onClick={() => onSelect(l.id)} className={`border-b border-[var(--color-border-light)] cursor-pointer transition-colors ${selectedId === l.id ? "bg-[var(--color-accent-light)]/30" : "hover:bg-[var(--color-surface-hover)]"}`}>
+                  <td className="p-3 font-medium">{l.companyName}</td>
+                  <td className="p-3 text-[var(--color-text-secondary)] max-w-[200px] truncate">{l.projectDescription}</td>
+                  <td className="p-3 text-[var(--color-text-secondary)]">{l.source}</td>
+                  <td className="p-3 font-medium">{formatINR(l.estimatedValue)}</td>
+                  <td className="p-3"><span className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${stageColor(l.status)}`}>{l.status}</span></td>
+                  <td className="p-3 text-[var(--color-text-secondary)]">{owner?.name || "—"}</td>
+                </tr>
+              );
+            })}
+            {leads.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-[var(--color-text-muted)]">No leads yet. Click + New to add one.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function AddLeadForm({ crm, onClose }: any) {
+  const [company, setCompany] = useState(""); const [desc, setDesc] = useState(""); const [source, setSource] = useState<any>("LinkedIn"); const [value, setValue] = useState(0); const [admin, setAdmin] = useState("a3");
+  const submit = () => {
+    if (!company) return;
+    crm.addNewLead({ companyName: company, projectDescription: desc, source, status: "Lead" as const, estimatedValue: value, assignedAdminId: admin, sourcedById: admin, engagementScore: 10 });
+    onClose();
+  };
+  return (
+    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-3">
+      <div className="flex items-center justify-between"><h3 className="text-[13px] font-semibold">Add Lead</h3><button onClick={onClose} className="text-[var(--color-text-muted)] text-lg">×</button></div>
+      <div className="grid grid-cols-2 gap-3">
+        <input placeholder="Company name" value={company} onChange={e => setCompany(e.target.value)} className="col-span-2 border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none focus:border-[var(--color-accent)]" />
+        <input placeholder="Project description" value={desc} onChange={e => setDesc(e.target.value)} className="col-span-2 border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none focus:border-[var(--color-accent)]" />
+        <select value={source} onChange={e => setSource(e.target.value)} className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none">
+          {["Cold Call", "LinkedIn", "Twitter", "Email", "Referral", "Instagram", "Social Media"].map(s => <option key={s}>{s}</option>)}
+        </select>
+        <input type="number" placeholder="Est. value (₹)" value={value || ""} onChange={e => setValue(Number(e.target.value))} className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none focus:border-[var(--color-accent)]" />
+        <select value={admin} onChange={e => setAdmin(e.target.value)} className="col-span-2 border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none">
+          {crm.team.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
+        </select>
+      </div>
+      <button onClick={submit} className="w-full bg-[var(--color-accent)] text-white text-[12px] font-medium py-2 rounded-lg hover:bg-[var(--color-accent-hover)] transition-colors">Add Lead</button>
+    </div>
+  );
+}
+
+// ===== LEAD DRAWER =====
+function LeadDrawer({ crm, leadId, onClose }: any) {
+  const lead = crm.leads.find((l: any) => l.id === leadId);
+  if (!lead) return null;
+  const [noteText, setNoteText] = useState("");
+  const owner = crm.team.find((t: any) => t.id === lead.assignedAdminId);
+
+  return (
+    <div className="p-5 space-y-5">
+      <div className="flex items-center justify-between">
+        <h3 className="text-[15px] font-bold">{lead.companyName}</h3>
+        <button onClick={onClose} className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] text-lg">×</button>
+      </div>
+      <p className="text-[13px] text-[var(--color-text-secondary)]">{lead.projectDescription}</p>
+
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Status</span>
+          <select value={lead.status} onChange={e => crm.updateLeadStatus(leadId, e.target.value)} className="text-[12px] border border-[var(--color-border)] rounded-lg px-2 py-1 bg-transparent outline-none">
+            {LEAD_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Source</span>
+          <span className="text-[13px]">{lead.source}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Value</span>
+          <span className="text-[13px] font-semibold">{formatINR(lead.estimatedValue)}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Calls made</span>
+          <div className="flex items-center gap-2">
+            <span className="text-[13px]">{lead.callsMade}</span>
+            <button onClick={() => crm.incrementLeadCalls(leadId)} className="text-[11px] px-2 py-0.5 bg-slate-100 rounded hover:bg-slate-200 transition-colors">+1</button>
+          </div>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Owner</span>
+          <span className="text-[13px]">{owner?.name || "—"}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Last contacted</span>
+          <span className="text-[13px]">{lead.lastContacted}</span>
+        </div>
+      </div>
+
+      {/* Notes */}
+      <div className="border-t border-[var(--color-border)] pt-4">
+        <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase mb-2">Notes</p>
+        <div className="space-y-1.5 mb-3">
+          {lead.notes.map((n: string, i: number) => (
+            <div key={i} className="p-2 rounded-lg bg-slate-50 text-[12px]">{n}</div>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <input value={noteText} onChange={e => setNoteText(e.target.value)} placeholder="Add a note..." className="flex-1 border border-[var(--color-border)] rounded-lg px-3 py-1.5 text-[12px] bg-transparent outline-none focus:border-[var(--color-accent)]" onKeyDown={e => { if (e.key === "Enter" && noteText.trim()) { crm.addLeadNote(leadId, noteText.trim()); setNoteText(""); } }} />
+          <button onClick={() => { if (noteText.trim()) { crm.addLeadNote(leadId, noteText.trim()); setNoteText(""); } }} className="px-3 py-1.5 bg-[var(--color-accent)] text-white text-[11px] rounded-lg hover:bg-[var(--color-accent-hover)]">Add</button>
+        </div>
+      </div>
+
+      {/* Convert */}
+      {lead.status !== "Converted" && lead.status !== "Lost" && (
+        <div className="border-t border-[var(--color-border)] pt-4 space-y-2">
+          <button onClick={() => { crm.convertLeadToClient(leadId); onClose(); }} className="w-full bg-emerald-600 text-white text-[12px] font-medium py-2 rounded-lg hover:bg-emerald-700 transition-colors">Convert to Project</button>
+          <button onClick={() => { crm.deleteLead(leadId); onClose(); }} className="text-[11px] text-[var(--color-danger)] hover:underline">Delete lead</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ===== TASKS TAB (KANBAN) =====
+function TasksTab({ crm, onSelect, showAdd, onCloseAdd }: any) {
+  const { internalTasks, team, clients } = crm;
+
+  const columns: { status: TaskStatus; label: string }[] = [
+    { status: "Todo", label: "To Do" },
+    { status: "In Progress", label: "In Progress" },
+    { status: "In Review", label: "Review" },
+    { status: "Resolved", label: "Done" },
+  ];
+
+  return (
+    <div className="space-y-4">
+      {showAdd && <AddTaskForm crm={crm} onClose={onCloseAdd} />}
+      <div className="grid grid-cols-4 gap-4 min-h-[400px]">
+        {columns.map(col => {
+          const tasks = internalTasks.filter((t: any) => t.status === col.status);
+          return (
+            <div key={col.status} className="space-y-2">
+              <div className="flex items-center justify-between px-1 mb-1">
+                <h4 className="text-[12px] font-semibold text-[var(--color-text-secondary)]">{col.label}</h4>
+                <span className="text-[11px] text-[var(--color-text-muted)] bg-slate-100 px-1.5 py-0.5 rounded-full">{tasks.length}</span>
+              </div>
+              <div className="space-y-2">
+                {tasks.map((t: any) => {
+                  const owner = team.find((m: any) => m.id === t.assignedAdminId);
+                  const client = clients.find((c: any) => c.id === t.clientId);
+                  return (
+                    <div key={t.id} className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-3 hover:shadow-sm transition-shadow cursor-pointer" onClick={() => onSelect(t.id)}>
+                      <p className="text-[13px] font-medium leading-snug">{t.title}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        {client && <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 rounded text-[var(--color-text-secondary)]">{client.name}</span>}
+                        {owner && <span className="text-[10px] text-[var(--color-text-muted)] ml-auto">{owner.name}</span>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function AddTaskForm({ crm, onClose }: any) {
+  const [title, setTitle] = useState(""); const [admin, setAdmin] = useState("a1"); const [clientId, setClientId] = useState<number | undefined>(undefined);
+  const submit = () => {
+    if (!title) return;
+    crm.addInternalTask({ title, assignedAdminId: admin, clientId, productId: undefined, originCommentId: undefined });
+    onClose();
+  };
+  return (
+    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-3">
+      <div className="flex items-center justify-between"><h3 className="text-[13px] font-semibold">Add Task</h3><button onClick={onClose} className="text-[var(--color-text-muted)] text-lg">×</button></div>
+      <input placeholder="Task title" value={title} onChange={e => setTitle(e.target.value)} className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none focus:border-[var(--color-accent)]" />
+      <div className="grid grid-cols-2 gap-3">
+        <select value={admin} onChange={e => setAdmin(e.target.value)} className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none">
+          {crm.team.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
+        </select>
+        <select value={clientId ?? ""} onChange={e => setClientId(e.target.value ? Number(e.target.value) : undefined)} className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none">
+          <option value="">No project</option>
+          {crm.clients.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      </div>
+      <button onClick={submit} className="w-full bg-[var(--color-accent)] text-white text-[12px] font-medium py-2 rounded-lg hover:bg-[var(--color-accent-hover)] transition-colors">Add Task</button>
+    </div>
+  );
+}
+
+// ===== TASK DRAWER =====
+function TaskDrawer({ crm, taskId, onClose }: any) {
+  const task = crm.internalTasks.find((t: any) => t.id === taskId);
+  if (!task) return null;
+  const owner = crm.team.find((t: any) => t.id === task.assignedAdminId);
+  const client = crm.clients.find((c: any) => c.id === task.clientId);
+  const [noteText, setNoteText] = useState("");
+
+  return (
+    <div className="p-5 space-y-5">
+      <div className="flex items-center justify-between">
+        <h3 className="text-[15px] font-bold">{task.title}</h3>
+        <button onClick={onClose} className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] text-lg">×</button>
+      </div>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Status</span>
+          <select value={task.status} onChange={e => crm.updateInternalTaskStatus(taskId, e.target.value)} className="text-[12px] border border-[var(--color-border)] rounded-lg px-2 py-1 bg-transparent outline-none">
+            {TASK_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Assigned to</span>
+          <select value={task.assignedAdminId} onChange={e => crm.updateInternalTask(taskId, { assignedAdminId: e.target.value })} className="text-[12px] border border-[var(--color-border)] rounded-lg px-2 py-1 bg-transparent outline-none">
+            {crm.team.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+        </div>
+        {client && <div className="flex items-center justify-between"><span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Project</span><span className="text-[13px]">{client.name}</span></div>}
+        <div className="flex items-center justify-between"><span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Created</span><span className="text-[13px]">{task.createdAt}</span></div>
+      </div>
+
+      <div className="border-t border-[var(--color-border)] pt-4">
+        <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase mb-2">Internal notes</p>
+        <div className="space-y-1.5 mb-3">
+          {task.internalNotes.map((n: string, i: number) => <div key={i} className="p-2 rounded-lg bg-slate-50 text-[12px]">{n}</div>)}
+        </div>
+        <div className="flex gap-2">
+          <input value={noteText} onChange={e => setNoteText(e.target.value)} placeholder="Add a note..." className="flex-1 border border-[var(--color-border)] rounded-lg px-3 py-1.5 text-[12px] bg-transparent outline-none focus:border-[var(--color-accent)]" onKeyDown={e => { if (e.key === "Enter" && noteText.trim()) { crm.addInternalTaskNote(taskId, noteText.trim()); setNoteText(""); } }} />
+          <button onClick={() => { if (noteText.trim()) { crm.addInternalTaskNote(taskId, noteText.trim()); setNoteText(""); } }} className="px-3 py-1.5 bg-[var(--color-accent)] text-white text-[11px] rounded-lg">Add</button>
+        </div>
+      </div>
+
+      <div className="border-t border-[var(--color-border)] pt-4">
+        <button onClick={() => { crm.deleteInternalTask(taskId); onClose(); }} className="text-[11px] text-[var(--color-danger)] hover:underline">Delete task</button>
+      </div>
+    </div>
+  );
+}
+
+// ===== ISSUES TAB =====
+function IssuesTab({ crm, onSelect, showAdd, onCloseAdd }: any) {
+  const { flags, clients, team } = crm;
+  return (
+    <div className="space-y-4">
+      {showAdd && <AddIssueForm crm={crm} onClose={onCloseAdd} />}
+      <div className="space-y-2">
+        {flags.map((f: any) => {
+          const client = clients.find((c: any) => c.id === f.clientId);
+          const owner = team.find((t: any) => t.id === f.assignedAdminId);
+          return (
+            <button key={f.id} onClick={() => onSelect(f.id)} className="w-full text-left p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-accent)]/40 hover:shadow-sm transition-all">
+              <div className="flex items-center gap-3">
+                <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${severityDot(f.severity)}`} />
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-[13px] font-semibold truncate">{f.title}</h4>
+                  <p className="text-[11px] text-[var(--color-text-muted)]">{client?.name || "Unknown"} · {owner?.name || "Unassigned"}</p>
+                </div>
+                <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${stageColor(f.status)}`}>{f.status}</span>
+              </div>
+            </button>
+          );
+        })}
+        {flags.length === 0 && <div className="text-center py-12 text-[var(--color-text-muted)]">No issues. Looking good!</div>}
+      </div>
+    </div>
+  );
+}
+
+function AddIssueForm({ crm, onClose }: any) {
+  const [title, setTitle] = useState(""); const [desc, setDesc] = useState(""); const [severity, setSeverity] = useState<FlagSeverity>("Medium");
+  const [clientId, setClientId] = useState(crm.clients[0]?.id || 1); const [admin, setAdmin] = useState("a1");
+  const submit = () => {
+    if (!title) return;
+    crm.addFlag({ clientId, title, description: desc, severity, assignedAdminId: admin });
+    onClose();
+  };
+  return (
+    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-3">
+      <div className="flex items-center justify-between"><h3 className="text-[13px] font-semibold">Report Issue</h3><button onClick={onClose} className="text-[var(--color-text-muted)] text-lg">×</button></div>
+      <input placeholder="Issue title" value={title} onChange={e => setTitle(e.target.value)} className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none focus:border-[var(--color-accent)]" />
+      <textarea placeholder="Description" value={desc} onChange={e => setDesc(e.target.value)} rows={2} className="w-full border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none focus:border-[var(--color-accent)] resize-none" />
+      <div className="grid grid-cols-3 gap-3">
+        <select value={severity} onChange={e => setSeverity(e.target.value as FlagSeverity)} className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none">
+          {SEVERITIES.map(s => <option key={s}>{s}</option>)}
+        </select>
+        <select value={clientId} onChange={e => setClientId(Number(e.target.value))} className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none">
+          {crm.clients.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+        <select value={admin} onChange={e => setAdmin(e.target.value)} className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none">
+          {crm.team.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
+        </select>
+      </div>
+      <button onClick={submit} className="w-full bg-[var(--color-accent)] text-white text-[12px] font-medium py-2 rounded-lg hover:bg-[var(--color-accent-hover)] transition-colors">Report Issue</button>
+    </div>
+  );
+}
+
+// ===== FLAG DRAWER =====
+function FlagDrawer({ crm, flagId, onClose }: any) {
+  const flag = crm.flags.find((f: any) => f.id === flagId);
+  if (!flag) return null;
+  const client = crm.clients.find((c: any) => c.id === flag.clientId);
+  const owner = crm.team.find((t: any) => t.id === flag.assignedAdminId);
+  const [logText, setLogText] = useState("");
+
+  return (
+    <div className="p-5 space-y-5">
+      <div className="flex items-center justify-between">
+        <h3 className="text-[15px] font-bold">{flag.title}</h3>
+        <button onClick={onClose} className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] text-lg">×</button>
+      </div>
+      <p className="text-[13px] text-[var(--color-text-secondary)]">{flag.description}</p>
+
+      <div className="space-y-3">
+        <div className="flex items-center justify-between"><span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Project</span><span className="text-[13px]">{client?.name || "—"}</span></div>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Severity</span>
+          <div className="flex items-center gap-1.5"><span className={`w-2 h-2 rounded-full ${severityDot(flag.severity)}`} /><span className="text-[13px]">{flag.severity}</span></div>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Status</span>
+          <select value={flag.status} onChange={e => crm.updateFlagStatus(flagId, e.target.value)} className="text-[12px] border border-[var(--color-border)] rounded-lg px-2 py-1 bg-transparent outline-none">
+            {FLAG_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase">Assigned to</span>
+          <select value={flag.assignedAdminId || ""} onChange={e => crm.assignFlagAdmin(flagId, e.target.value)} className="text-[12px] border border-[var(--color-border)] rounded-lg px-2 py-1 bg-transparent outline-none">
+            {crm.team.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {/* Dev logs */}
+      <div className="border-t border-[var(--color-border)] pt-4">
+        <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase mb-2">Developer log</p>
+        <div className="space-y-1.5 mb-3">
+          {flag.sprintLogs.map((l: any) => (
+            <div key={l.id} className="p-2 rounded-lg bg-slate-50">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-[11px] font-semibold">{l.author}</span>
+                <span className="text-[10px] text-[var(--color-text-muted)]">{l.timestamp}</span>
+              </div>
+              <p className="text-[12px] text-[var(--color-text-secondary)]">{l.text}</p>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <input value={logText} onChange={e => setLogText(e.target.value)} placeholder="Add update..." className="flex-1 border border-[var(--color-border)] rounded-lg px-3 py-1.5 text-[12px] bg-transparent outline-none focus:border-[var(--color-accent)]" onKeyDown={e => { if (e.key === "Enter" && logText.trim()) { crm.addFlagSprintLog(flagId, crm.userProfile?.name || "Admin", logText.trim()); setLogText(""); } }} />
+          <button onClick={() => { if (logText.trim()) { crm.addFlagSprintLog(flagId, crm.userProfile?.name || "Admin", logText.trim()); setLogText(""); } }} className="px-3 py-1.5 bg-[var(--color-accent)] text-white text-[11px] rounded-lg">Add</button>
+        </div>
+      </div>
+
+      <div className="border-t border-[var(--color-border)] pt-4">
+        <button onClick={() => { crm.deleteFlag(flagId); onClose(); }} className="text-[11px] text-[var(--color-danger)] hover:underline">Delete issue</button>
+      </div>
+    </div>
+  );
+}
+
+// ===== TEAM TAB =====
+function TeamTab({ crm, isCorePartner }: any) {
+  const { team, clients, internalTasks, leads, authorizedEmails } = crm;
+  const [showInvite, setShowInvite] = useState(false);
+
+  return (
+    <div className="space-y-6">
+      {/* Team grid */}
+      <div className="grid grid-cols-2 gap-4">
+        {team.map((m: any) => {
+          const memberProjects = clients.filter((c: any) => c.assignedAdminId === m.id).length;
+          const memberTasks = internalTasks.filter((t: any) => t.assignedAdminId === m.id && t.status !== "Resolved").length;
+          const memberLeads = leads.filter((l: any) => l.assignedAdminId === m.id).length;
+          return (
+            <div key={m.id} className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <span className="w-10 h-10 rounded-full flex items-center justify-center text-[13px] font-bold text-white" style={{ backgroundColor: m.colorVar?.replace("var(", "").replace(")", "") || "#64748B" }}>{m.avatar}</span>
+                <div>
+                  <h4 className="text-[14px] font-semibold">{m.name}</h4>
+                  <p className="text-[11px] text-[var(--color-text-secondary)]">{m.role}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 text-[11px] text-[var(--color-text-muted)]">
+                <span>{memberProjects} projects</span>
+                <span>{memberTasks} tasks</span>
+                <span>{memberLeads} leads</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Invite form */}
+      {isCorePartner && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-[13px] font-semibold">Invite Team Member</h3>
+            <button onClick={() => setShowInvite(!showInvite)} className="text-[12px] text-[var(--color-accent)] hover:underline">{showInvite ? "Cancel" : "+ Invite"}</button>
+          </div>
+          {showInvite && <InviteForm crm={crm} onClose={() => setShowInvite(false)} />}
+
+          {/* Authorized emails */}
+          {authorizedEmails.length > 0 && (
+            <div className="border-t border-[var(--color-border)] pt-4">
+              <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase mb-2">Authorized accounts ({authorizedEmails.length})</p>
+              <div className="space-y-1.5">
+                {authorizedEmails.map((ae: any) => (
+                  <div key={ae.email} className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50">
+                    <div>
+                      <p className="text-[12px] font-medium">{ae.name}</p>
+                      <p className="text-[11px] text-[var(--color-text-muted)]">{ae.email} · {ae.role} · {ae.category}</p>
+                    </div>
+                    <button onClick={() => crm.deprovisionUser(ae.email)} className="text-[10px] text-[var(--color-danger)] hover:underline">Remove</button>
                   </div>
                 ))}
-              </motion.div>
-
-              <motion.div variants={fadeUp}>
-                <div className="flex justify-between items-center mb-6">
-                  <div>
-                    <h2 className="text-sm font-bold uppercase tracking-[0.2em] font-mono text-[#06B6D4]">Sales Outreach Sourcing Desk</h2>
-                    <p className="text-xs text-[#8E8E8E] mt-1 font-mono">Cold Calling records, social media pipelines (LinkedIn/Twitter), and conversion triggers.</p>
-                  </div>
-                  <button 
-                    onClick={() => setShowLeadForm(prev => !prev)}
-                    className="bg-[#121212] hover:bg-[#06B6D4] text-[#06B6D4] hover:text-[#0A0A0A] border border-[#06B6D4]/30 text-[0.6rem] font-bold font-mono uppercase px-4 py-2.5 rounded-lg transition-all"
-                  >
-                    {showLeadForm ? "✕ Close Form" : "🎯 Add Sourced Lead"}
-                  </button>
-                </div>
-
-                {/* Inline Lead Sourcing form */}
-                <AnimatePresence>
-                  {showLeadForm && (
-                    <motion.form 
-                      onSubmit={handleAddLeadSubmit}
-                      initial={{ opacity: 0, height: 0 }} 
-                      animate={{ opacity: 1, height: "auto" }} 
-                      exit={{ opacity: 0, height: 0 }} 
-                      className="bg-[#121212] border border-[#1F1F1F] rounded-2xl p-5 mb-6 shadow-xl overflow-hidden grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono"
-                    >
-                      <div>
-                        <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Corporate Target</label>
-                        <input 
-                          type="text" 
-                          required
-                          value={newLeadCompany}
-                          onChange={(e) => setNewLeadCompany(e.target.value)}
-                          placeholder="UPKEM Labs Inc"
-                          className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs text-[#FAF9F6] outline-none focus:border-[#06B6D4]"
-                        />
-                      </div>
-                      <div>
-                        <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Project Focus</label>
-                        <input 
-                          type="text" 
-                          required
-                          value={newLeadDesc}
-                          onChange={(e) => setNewLeadDesc(e.target.value)}
-                          placeholder="Website polish & CRM Dashboard"
-                          className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs text-[#FAF9F6] outline-none focus:border-[#06B6D4]"
-                        />
-                      </div>
-                      <div>
-                        <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Est Val (INR)</label>
-                        <input 
-                          type="number" 
-                          required
-                          value={newLeadVal}
-                          onChange={(e) => setNewLeadVal(e.target.value)}
-                          className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs text-[#FAF9F6] outline-none focus:border-[#06B6D4]"
-                        />
-                      </div>
-                      <div>
-                        <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Sourced Channel</label>
-                        <select
-                          value={newLeadSource}
-                          onChange={(e) => setNewLeadSource(e.target.value as LeadSource)}
-                          className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs text-[#FAF9F6] outline-none focus:border-[#06B6D4]"
-                        >
-                          <option value="LinkedIn">LinkedIn Outreach</option>
-                          <option value="Twitter">Twitter Sprints</option>
-                          <option value="Cold Call">Cold Calling</option>
-                          <option value="Email">Cold Emailing</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Sourced By</label>
-                        <select
-                          value={newLeadSourcedBy}
-                          onChange={(e) => setNewLeadSourcedBy(e.target.value)}
-                          className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs text-[#FAF9F6] outline-none focus:border-[#06B6D4]"
-                        >
-                          {team.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                        </select>
-                      </div>
-                      <div className="flex items-end">
-                        <button 
-                          type="submit"
-                          className="w-full bg-[#06B6D4] text-[#0A0A0A] uppercase font-bold py-2.5 rounded-lg text-xs"
-                        >
-                          Log Outreach Lead
-                        </button>
-                      </div>
-                    </motion.form>
-                  )}
-                </AnimatePresence>
-
-                {/* Sourcing leads calling pipeline grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {leads.map((lead) => {
-                    const assignee = team.find(t => t.id === lead.assignedAdminId);
-                    const sourcer = team.find(t => t.id === lead.sourcedById);
-
-                    return (
-                      <div key={lead.id} className="bg-[#121212] border border-[#1F1F1F] p-5 rounded-2xl relative group font-mono text-xs">
-                        <button
-                          onClick={() => {
-                            if (confirm(`Remove lead ${lead.companyName}?`)) {
-                              deleteLead(lead.id);
-                            }
-                          }}
-                          className="absolute top-3 right-3 text-[#8E8E8E] hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-0.5"
-                        >
-                          ✕
-                        </button>
-
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <span className="text-[0.55rem] bg-[#1F1F1F] text-[#06B6D4] px-2 py-0.5 rounded font-bold uppercase tracking-widest">{lead.source}</span>
-                            <h3 className="text-sm font-bold text-[#FAF9F6] mt-2 leading-tight">{lead.companyName}</h3>
-                          </div>
-                          <div className="text-right">
-                            <span className="text-[0.5rem] text-[#8E8E8E] block uppercase">Est Val</span>
-                            <span className="font-extrabold text-[#FAF9F6]">{formatCurrency(lead.estimatedValue)}</span>
-                          </div>
-                        </div>
-
-                        <p className="text-[#8E8E8E] text-[0.68rem] leading-relaxed mb-4">"{lead.projectDescription}"</p>
-
-                        <div className="bg-[#0A0A0A] border border-[#1F1F1F] p-3 rounded-xl mb-4 space-y-1.5">
-                          <div className="text-[0.5rem] uppercase text-[#8E8E8E] border-b border-[#1F1F1F] pb-1 flex justify-between items-center">
-                            <span>Outreach log notes ({lead.callsMade} dials)</span>
-                            <button 
-                              onClick={() => incrementLeadCalls(lead.id)}
-                              className="text-[#06B6D4] hover:underline uppercase text-[0.48rem] font-bold"
-                            >
-                              📞 Dial pinger (+1)
-                            </button>
-                          </div>
-                          <div className="max-h-[60px] overflow-y-auto space-y-1 text-[0.625rem] text-[#8E8E8E] pr-1">
-                            {lead.notes.map((note, idx) => (
-                              <div key={idx} className="border-l border-[#1F1F1F] pl-2 italic">"{note}"</div>
-                            ))}
-                          </div>
-                          <div className="flex gap-1.5 mt-2 pt-1 border-t border-[#1F1F1F]">
-                            <input 
-                              type="text" 
-                              placeholder="Log conversation details..." 
-                              value={newLeadNotes[lead.id] || ""}
-                              onChange={(e) => setNewLeadNotes(prev => ({ ...prev, [lead.id]: e.target.value }))}
-                              className="flex-1 bg-[#121212] border border-[#1F1F1F] rounded px-2 py-1 text-[0.625rem] text-[#FAF9F6] outline-none"
-                            />
-                            <button 
-                              onClick={() => {
-                                if (!newLeadNotes[lead.id]?.trim()) return;
-                                addLeadNote(lead.id, newLeadNotes[lead.id].trim());
-                                setNewLeadNotes(prev => ({ ...prev, [lead.id]: "" }));
-                              }}
-                              className="bg-[#06B6D4] hover:bg-[#0891B2] text-[#0A0A0A] font-bold px-2 rounded"
-                            >
-                              +
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap gap-3 items-center justify-between border-t border-[#1F1F1F] pt-3 text-[0.58rem]">
-                          <div className="flex gap-4">
-                            <span>Sourced: <strong className="text-[#FAF9F6]">{sourcer?.name || "Muskan"}</strong></span>
-                            <span>Pipeline Lead: <strong className="text-[#FAF9F6]">{assignee?.name || "Ankit"}</strong></span>
-                          </div>
-                          
-                          <button 
-                            onClick={() => {
-                              if (confirm(`Convert ${lead.companyName} to Ongoing Client? This will provision their active project.`)) {
-                                convertLeadToClient(lead.id);
-                                alert("🎉 Lead converted! Staging playground sandbox and timeline are provisioned.");
-                              }
-                            }}
-                            className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg font-mono uppercase font-bold"
-                          >
-                            🚀 Convert to Client
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </motion.div>
-
-            </motion.div>
+              </div>
+            </div>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
 
-          {/* ═══ TAB 3: CLIENT PORTAL PREVIEW VIEW ═══ */}
-          {activeTab === "client_portal_view" && (
-            <motion.div key="client_portal_view" initial="hidden" animate="show" exit="hidden" variants={stagger} className="w-full">
-              <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-[#1F1F1F] pb-4">
-                <div>
-                  <h2 className="text-sm font-bold uppercase tracking-wider font-mono text-[#06B6D4]">Client Portal Preview Simulator</h2>
-                  <p className="text-xs text-[#8E8E8E] mt-1 font-mono">Live customer dashboard viewport. Test visual isolation and timeline status feeds.</p>
-                </div>
-                
-                <div className="flex items-center gap-3">
-                  <span className="text-[0.6rem] font-mono uppercase text-[#8E8E8E] tracking-widest select-none">Active Viewport Profile:</span>
-                  <select
-                    value={selectedClientId}
-                    onChange={(e) => setSelectedClientId(Number(e.target.value))}
-                    className="bg-[#121212] border border-[#1F1F1F] text-xs text-[#FAF9F6] px-3 py-1.5 rounded-lg font-mono uppercase focus:outline-none focus:border-[#06B6D4]"
-                  >
-                    {allClients.filter(c => c.category === "Ongoing").map(cl => (
-                      <option key={cl.id} value={cl.id}>{cl.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              
-              {/* Mount the actual client view component directly inside the viewport frame */}
-              <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-2xl overflow-hidden relative shadow-2xl">
-                <div className="bg-[#121212] border-b border-[#1F1F1F] px-4 py-2 text-[0.55rem] font-mono text-[#8E8E8E] flex justify-between items-center select-none">
-                  <span>🖥️ PREVIEW VIEWPORT FRAME — CLIENT ISOLATED SPACE</span>
-                  <span className="text-[#06B6D4] font-bold">● VISUAL SIMULATOR MODE</span>
-                </div>
-                <ClientPortalView />
-              </div>
-            </motion.div>
-          )}
-
-          {/* ═══ TAB 4: STAFF INVITES / ACCESS PROVISIONING ═══ */}
-          {activeTab === "staff_invites" && (
-            <motion.div key="staff_invites" initial="hidden" animate="show" exit="hidden" variants={stagger} className="grid grid-cols-1 lg:grid-cols-3 gap-6 font-mono text-xs">
-              
-              {/* Invite Provisioner Form */}
-              <div className="lg:col-span-1 border border-[#1F1F1F] bg-[#121212] p-5 rounded-2xl space-y-4">
-                <div>
-                  <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-[#06B6D4] mb-1">Invite Employee / Client</h3>
-                  <p className="text-[0.625rem] text-[#8E8E8E] leading-normal font-sans">Pre-authorize secure email addresses. Only listed emails are allowed to bypass cryptographical signup barriers.</p>
-                </div>
-
-                {!isCorePartner ? (
-                  <div className="bg-red-500/5 border border-red-500/20 p-4 rounded-xl text-center">
-                    <span className="text-[0.65rem] text-red-400 font-bold uppercase block">🔒 Core Partner Restricted</span>
-                    <span className="text-[0.58rem] text-[#8E8E8E] block mt-1 font-sans">Only Lakshya, Mouriyan, Ankit, or Muskan can authorize staff registry.</span>
-                  </div>
-                ) : (
-                  <form onSubmit={handleProvisionSubmit} className="space-y-4 text-xs font-mono">
-                    <div>
-                      <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Authorized Email</label>
-                      <input 
-                        type="email" 
-                        required
-                        value={provEmail}
-                        onChange={(e) => setProvEmail(e.target.value)}
-                        placeholder="intern.outreach@almmatix.com"
-                        className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Employee Name</label>
-                      <input 
-                        type="text" 
-                        required
-                        value={provName}
-                        onChange={(e) => setProvName(e.target.value)}
-                        placeholder="Muskan Sourcing Intern"
-                        className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Operational Role</label>
-                      <input 
-                        type="text" 
-                        required
-                        value={provRole}
-                        onChange={(e) => setProvRole(e.target.value)}
-                        placeholder="Outreach Intern"
-                        className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Permissions Category</label>
-                      <select
-                        value={provCategory}
-                        onChange={(e) => setProvCategory(e.target.value as any)}
-                        className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
-                      >
-                        <option value="admin">Internal Admin console</option>
-                        <option value="client">Client Portal dashboard</option>
-                      </select>
-                    </div>
-
-                    {provCategory === "admin" ? (
-                      <div>
-                        <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Operational Focus</label>
-                        <select
-                          value={provFocus}
-                          onChange={(e) => setProvFocus(e.target.value as any)}
-                          className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
-                        >
-                          <option value="Client Delivery">Client Delivery (PM / Dev)</option>
-                          <option value="Outreach & Marketing">Outreach & Marketing (Sales)</option>
-                        </select>
-                      </div>
-                    ) : (
-                      <div>
-                        <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Linked Client Portal Workspace</label>
-                        <select
-                          value={provClientId}
-                          onChange={(e) => setProvClientId(e.target.value)}
-                          className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
-                        >
-                          <option value="">Awaiting Assignment</option>
-                          {allClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        </select>
-                      </div>
-                    )}
-
-                    <button 
-                      type="submit" 
-                      disabled={provIsSubmitting}
-                      className="w-full bg-[#06B6D4] hover:bg-[#0891B2] text-[#0A0A0A] font-bold uppercase py-2.5 rounded-lg text-xs transition-colors disabled:opacity-50"
-                    >
-                      Authorize & Register Email
-                    </button>
-                  </form>
-                )}
-              </div>
-
-              {/* Authorized Staff registry list */}
-              <div className="lg:col-span-2 border border-[#1F1F1F] bg-[#121212] p-5 rounded-2xl">
-                <div className="flex justify-between items-center mb-4 border-b border-[#1F1F1F] pb-3">
-                  <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-[#06B6D4]">Pre-Authorized Credentials Registry</h3>
-                  <span className="text-[#8E8E8E] text-[0.58rem] font-mono">{authorizedEmails.length} accounts verified</span>
-                </div>
-
-                <div className="space-y-2.5 max-h-[480px] overflow-y-auto pr-1 dark-scrollbar">
-                  {authorizedEmails.map((item) => (
-                    <div key={item.email} className="bg-[#0A0A0A] border border-[#1F1F1F] p-4 rounded-xl flex items-center justify-between gap-4 relative group">
-                      <div className="flex items-center gap-3">
-                        <div 
-                          className="w-7 h-7 rounded flex items-center justify-center font-bold text-white shrink-0 text-[0.6rem] border border-white/5"
-                          style={{ backgroundColor: item.colorVar || "#06B6D4" }}
-                        >
-                          {item.avatar || "AL"}
-                        </div>
-                        <div>
-                          <div className="font-bold text-xs text-[#FAF9F6]">{item.name} <span className="text-[0.55rem] text-[#8E8E8E] font-normal font-sans">({item.role})</span></div>
-                          <div className="text-[0.625rem] text-[#8E8E8E] mt-0.5">{item.email}</div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-3 text-[0.58rem]">
-                        <span className={`px-2 py-0.5 rounded font-bold uppercase tracking-widest ${
-                          item.category === "admin" ? "bg-[#06B6D4]/10 text-[#06B6D4] border border-[#06B6D4]/20" : "bg-purple-500/10 text-purple-400 border border-purple-500/20"
-                        }`}>
-                          {item.category}
-                        </span>
-
-                        {/* Deprovision email trigger */}
-                        {isCorePartner && (
-                          <button 
-                            onClick={async () => {
-                              if (confirm(`Deprovision email permissions for: ${item.name}?`)) {
-                                const success = await deprovisionUser(item.email);
-                                if (success) alert("✓ Revoked permissions successfully.");
-                              }
-                            }}
-                            className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-2 py-1 rounded transition-colors uppercase font-bold"
-                          >
-                            Revoke
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-            </motion.div>
-          )}
-
-        </AnimatePresence>
-      </main>
-
-      {/* ═══════════════════════════════════════════════════════════════
-       SLIDE-OUT RIGHT SHEET DETAILS DRAWERS (AnimatePresence)
-      ═══════════════════════════════════════════════════════════════ */}
-      <AnimatePresence>
-        
-        {/* Drawer backdrop overlay */}
-        {(selectedClient || selectedTask || selectedFlag) && (
-          <motion.div 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            exit={{ opacity: 0 }} 
-            onClick={closeAllDrawers}
-            className="fixed inset-0 bg-[#0A0A0A]/60 backdrop-blur-sm z-[98]"
-          />
+function InviteForm({ crm, onClose }: any) {
+  const [email, setEmail] = useState(""); const [name, setName] = useState(""); const [role, setRole] = useState("");
+  const [category, setCategory] = useState<"admin" | "client">("admin"); const [clientId, setClientId] = useState<number | undefined>(undefined);
+  const submit = async () => {
+    if (!email || !name || !role) return;
+    const avatar = name.split(" ").map(w => w[0]).join("").toUpperCase().substring(0, 2);
+    await crm.provisionUser({ email, name, role, category, avatar, colorVar: "var(--color-admin-ankit)", primaryFocus: category === "admin" ? "Client Delivery" : "Product Sandbox", responsibilities: [], activeTasks: [], clientId });
+    onClose();
+  };
+  return (
+    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <input placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="col-span-2 border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none focus:border-[var(--color-accent)]" />
+        <input placeholder="Full name" value={name} onChange={e => setName(e.target.value)} className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none focus:border-[var(--color-accent)]" />
+        <input placeholder="Role title" value={role} onChange={e => setRole(e.target.value)} className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none focus:border-[var(--color-accent)]" />
+        <select value={category} onChange={e => setCategory(e.target.value as any)} className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none">
+          <option value="admin">Admin / Intern</option>
+          <option value="client">Client</option>
+        </select>
+        {category === "client" && (
+          <select value={clientId ?? ""} onChange={e => setClientId(e.target.value ? Number(e.target.value) : undefined)} className="border border-[var(--color-border)] rounded-lg px-3 py-2 text-[13px] bg-transparent outline-none">
+            <option value="">Link to project...</option>
+            {crm.clients.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
         )}
-
-        {/* 1. Client Sprints Details drawer */}
-        {selectedClient && (
-          <motion.div 
-            initial={{ x: "100%" }} 
-            animate={{ x: 0 }} 
-            exit={{ x: "100%" }} 
-            transition={{ type: "spring", damping: 25, stiffness: 220 }}
-            className="fixed top-0 right-0 w-[460px] h-full bg-[#121212] border-l border-[#1F1F1F] shadow-2xl z-[99] p-6 overflow-y-auto select-none"
-          >
-            <div className="flex justify-between items-center border-b border-[#1F1F1F] pb-4 mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded bg-[#0A0A0A] border border-[#1F1F1F] text-[#FAF9F6] flex items-center justify-center text-xs font-bold tracking-widest font-mono">
-                  {selectedClient.avatar}
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-[#FAF9F6]">{selectedClient.name}</h3>
-                  <div className="text-[0.65rem] text-[#8E8E8E] mt-0.5">{selectedClient.project}</div>
-                </div>
-              </div>
-              <button onClick={closeAllDrawers} className="p-1 hover:bg-[#1F1F1F] rounded text-[#8E8E8E] hover:text-[#FAF9F6]">✕</button>
-            </div>
-
-            <div className="space-y-6 text-xs font-mono">
-              
-              {/* Dynamic stage selectors */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[0.55rem] uppercase text-[#8E8E8E] mb-1.5">Project Stage</label>
-                  <select 
-                    value={selectedClient.stage} 
-                    onChange={(e) => updateClientStage(selectedClient.id, e.target.value as ClientStage)}
-                    className="w-full bg-[#0A0A0A] border border-[#1F1F1F] text-xs text-[#FAF9F6] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#06B6D4]"
-                  >
-                    {(["Lead", "Proposal", "In Dev", "Active", "Completed"] as ClientStage[]).map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[0.55rem] uppercase text-[#8E8E8E] mb-1.5">Delivery Lead</label>
-                  <select 
-                    value={selectedClient.assignedAdminId || ""} 
-                    onChange={(e) => updateClientAdmin(selectedClient.id, e.target.value)}
-                    className="w-full bg-[#0A0A0A] border border-[#1F1F1F] text-xs text-[#FAF9F6] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#06B6D4]"
-                  >
-                    <option value="">Unassigned</option>
-                    {team.map(t => <option key={t.id} value={t.id}>{t.name} ({t.role})</option>)}
-                  </select>
-                </div>
-              </div>
-
-              {/* Premium Staging and Playground Info */}
-              <div className="bg-[#0A0A0A] border border-[#1F1F1F] p-4 rounded-xl space-y-3">
-                <div className="text-[0.55rem] uppercase text-[#8E8E8E] border-b border-[#1F1F1F] pb-1 font-bold">Staging & Production links</div>
-                <div className="space-y-2 text-[0.625rem]">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[#8E8E8E]">Playground Sandbox:</span>
-                    <a href="https://almmatix.com/sandbox/demo" target="_blank" rel="noreferrer" className="text-[#06B6D4] hover:underline font-bold">
-                      sandbox.almmatix.com ↗
-                    </a>
-                  </div>
-                  
-                  {/* GitHub Repo links hidden strictly from standard Interns */}
-                  {!isIntern ? (
-                    <div className="flex justify-between items-center">
-                      <span className="text-[#8E8E8E]">GitHub Repository:</span>
-                      <span className="text-[#FAF9F6] font-bold">github.com/almmatix/{selectedClient.avatar.toLowerCase()}-core</span>
-                    </div>
-                  ) : (
-                    <div className="flex justify-between items-center text-[#EF4444] border-t border-[#1F1F1F] pt-1.5">
-                      <span>🔒 Code Vault Restricted</span>
-                      <span className="text-[0.5rem] uppercase text-[#8E8E8E]">Partner access only</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* SECURE FINANCIAL LEDGER (Restricted strictly to Partners, hidden from standard Interns) */}
-              <div className="border border-[#1F1F1F] bg-[#0E0E0E] rounded-xl p-4 space-y-3">
-                <div className="flex justify-between items-center border-b border-[#1F1F1F] pb-1.5">
-                  <div className="text-[0.55rem] uppercase text-[#06B6D4] font-bold">🔒 Secure Financial Ledger</div>
-                  <span className="text-[#8E8E8E] text-[0.5rem] uppercase font-bold tracking-widest">Calculated Margins</span>
-                </div>
-
-                {!isIntern ? (
-                  <div className="space-y-2 text-[0.65rem] font-mono font-medium">
-                    {/* Est Cost spent and calculatedExpected revenue mathematically calculated */}
-                    {(() => {
-                      const estimated = selectedClient.revenue;
-                      const spent = Math.round(estimated * 0.45);
-                      const expectedRemaining = estimated - spent;
-
-                      return (
-                        <>
-                          <div className="flex justify-between items-center text-[#FAF9F6]">
-                            <span className="text-[#8E8E8E]">Estimated project Cost:</span>
-                            <span style={{ fontVariantNumeric: "tabular-nums" }}>{formatCurrency(estimated)}</span>
-                          </div>
-                          <div className="flex justify-between items-center text-[#FAF9F6]">
-                            <span className="text-[#8E8E8E]">Total Cost spent:</span>
-                            <span style={{ fontVariantNumeric: "tabular-nums" }}>{formatCurrency(spent)}</span>
-                          </div>
-                          <div className="flex justify-between items-center border-t border-[#1F1F1F] pt-2 font-bold text-[#06B6D4] text-xs">
-                            <span>Remaining Expected Revenue:</span>
-                            <span style={{ fontVariantNumeric: "tabular-nums" }}>{formatCurrency(expectedRemaining)}</span>
-                          </div>
-                        </>
-                      );
-                    })()}
-                  </div>
-                ) : (
-                  <div className="bg-[#121212] border border-[#1F1F1F] p-4 rounded-lg text-center select-none">
-                    <div className="text-xs font-mono uppercase text-[#EF4444] font-bold">🔒 Secure Ledger Locked</div>
-                    <div className="text-[0.58rem] text-[#8E8E8E] mt-1 font-sans">Financial margins are locked to Core Four partners.</div>
-                  </div>
-                )}
-              </div>
-
-              {/* Active project Sprints Checklist */}
-              <div className="bg-[#0A0A0A] border border-[#1F1F1F] p-4 rounded-xl space-y-2">
-                <div className="text-[0.55rem] uppercase text-[#8E8E8E] border-b border-[#1F1F1F] pb-1 font-bold">Linked Sprint Tasks</div>
-                <div className="space-y-2 max-h-[140px] overflow-y-auto pr-1 dark-scrollbar">
-                  {internalTasks.filter(t => t.clientId === selectedClient.id).map(task => (
-                    <div key={task.id} className="bg-[#121212] border border-[#1F1F1F] p-2.5 rounded-lg flex justify-between items-center">
-                      <span className="font-semibold text-[#FAF9F6] text-[0.625rem] truncate leading-tight flex-1 pr-3">{task.title}</span>
-                      <span className={`px-1.5 py-0.5 rounded text-[0.5rem] font-bold uppercase ${
-                        task.status === "Resolved" ? "bg-emerald-500/10 text-emerald-400" : "bg-[#1F1F1F] text-[#8E8E8E]"
-                      }`}>{task.status}</span>
-                    </div>
-                  ))}
-                  {internalTasks.filter(t => t.clientId === selectedClient.id).length === 0 && (
-                    <div className="text-[0.58rem] text-[#8E8E8E]/40 italic text-center py-4">No linked sprint tasks logged.</div>
-                  )}
-                </div>
-              </div>
-
-            </div>
-          </motion.div>
-        )}
-
-        {/* 2. Sprint Task Detail drawer */}
-        {selectedTask && (
-          <motion.div 
-            initial={{ x: "100%" }} 
-            animate={{ x: 0 }} 
-            exit={{ x: "100%" }} 
-            transition={{ type: "spring", damping: 25, stiffness: 220 }}
-            className="fixed top-0 right-0 w-[460px] h-full bg-[#121212] border-l border-[#1F1F1F] shadow-2xl z-[99] p-6 overflow-y-auto select-none"
-          >
-            <div className="flex justify-between items-center border-b border-[#1F1F1F] pb-4 mb-6">
-              <div>
-                <span className="text-[0.525rem] bg-[#1F1F1F] text-[#06B6D4] px-2 py-0.5 rounded font-bold uppercase font-mono">SPRINT CHECKLIST TICKET</span>
-                <h3 className="text-sm font-bold text-[#FAF9F6] mt-2 truncate leading-tight pr-8">{selectedTask.title}</h3>
-              </div>
-              <button onClick={closeAllDrawers} className="p-1 hover:bg-[#1F1F1F] rounded text-[#8E8E8E] hover:text-[#FAF9F6]">✕</button>
-            </div>
-
-            <div className="space-y-6 text-xs font-mono">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[0.55rem] uppercase text-[#8E8E8E] mb-1.5">Specialist Assigned</label>
-                  <select 
-                    value={selectedTask.assignedAdminId || ""} 
-                    onChange={(e) => {
-                      updateClientAdmin(selectedTask.clientId || 0, e.target.value); // Syncs context
-                    }}
-                    className="w-full bg-[#0A0A0A] border border-[#1F1F1F] text-xs text-[#FAF9F6] rounded-lg px-2.5 py-1.5 focus:outline-none"
-                  >
-                    {team.map(t => <option key={t.id} value={t.id}>{t.name} ({t.role})</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[0.55rem] uppercase text-[#8E8E8E] mb-1.5">Sprint Status</label>
-                  <select 
-                    value={selectedTask.status} 
-                    onChange={(e) => {
-                      updateInternalTaskStatus(selectedTask.id, e.target.value as TaskStatus);
-                      setSelectedTask(prev => prev ? { ...prev, status: e.target.value as TaskStatus } : null);
-                    }}
-                    className="w-full bg-[#0A0A0A] border border-[#1F1F1F] text-xs text-[#FAF9F6] rounded-lg px-2.5 py-1.5 focus:outline-none"
-                  >
-                    {(["Todo", "In Progress", "In Review", "Resolved"] as TaskStatus[]).map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              {/* Developer private logs inside task */}
-              <div className="bg-[#0A0A0A] border border-[#1F1F1F] p-4 rounded-xl space-y-3">
-                <div className="text-[0.55rem] uppercase text-[#8E8E8E] border-b border-[#1F1F1F] pb-1 font-bold">Internal Sprints Checklist Logs</div>
-                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 dark-scrollbar leading-relaxed">
-                  {selectedTask.internalNotes && selectedTask.internalNotes.length > 0 ? (
-                    selectedTask.internalNotes.map((note, idx) => (
-                      <div key={idx} className="bg-[#121212] border border-[#1F1F1F] p-2.5 rounded-lg text-[0.625rem] text-[#8E8E8E] italic">
-                        "{note}"
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-[#8E8E8E]/40 italic py-4 text-center">No logs recorded. Log notes below.</div>
-                  )}
-                </div>
-
-                <div className="flex gap-2 border-t border-[#1F1F1F] pt-3">
-                  <input 
-                    type="text" 
-                    placeholder="Log technical progress..." 
-                    value={newInternalTaskNotes[selectedTask.id] || ""}
-                    onChange={(e) => setNewInternalTaskNotes(prev => ({ ...prev, [selectedTask.id]: e.target.value }))}
-                    className="flex-1 bg-[#121212] border border-[#1F1F1F] rounded px-3 py-1.5 text-xs text-[#FAF9F6] outline-none"
-                  />
-                  <button 
-                    onClick={() => {
-                      if (!newInternalTaskNotes[selectedTask.id]?.trim()) return;
-                      addInternalTaskNote(selectedTask.id, newInternalTaskNotes[selectedTask.id].trim());
-                      // Local visual sync
-                      setSelectedTask(prev => prev ? { ...prev, internalNotes: [...(prev.internalNotes || []), newInternalTaskNotes[selectedTask.id].trim()] } : null);
-                      setNewInternalTaskNotes(prev => ({ ...prev, [selectedTask.id]: "" }));
-                    }}
-                    className="bg-[#06B6D4] hover:bg-[#0891B2] text-[#0A0A0A] font-bold px-3.5 rounded text-xs"
-                  >
-                    + Add
-                  </button>
-                </div>
-              </div>
-
-            </div>
-          </motion.div>
-        )}
-
-        {/* 3. Support incident details and sprint logs drawer */}
-        {selectedFlag && (
-          <motion.div 
-            initial={{ x: "100%" }} 
-            animate={{ x: 0 }} 
-            exit={{ x: "100%" }} 
-            transition={{ type: "spring", damping: 25, stiffness: 220 }}
-            className="fixed top-0 right-0 w-[460px] h-full bg-[#121212] border-l border-[#1F1F1F] shadow-2xl z-[99] p-6 overflow-y-auto select-none"
-          >
-            <div className="flex justify-between items-center border-b border-[#1F1F1F] pb-4 mb-6">
-              <div>
-                <span className={`inline-flex px-1.5 py-0.5 rounded text-[0.5rem] uppercase font-mono font-bold ${
-                  selectedFlag.severity === "Critical" ? "bg-red-500/10 text-red-500 border border-red-500/30" : "bg-[#1F1F1F] text-[#8E8E8E]"
-                }`}>
-                  {selectedFlag.severity} SEVERITY ESCALATION
-                </span>
-                <h3 className="text-sm font-bold text-[#FAF9F6] mt-2 truncate leading-tight pr-8">{selectedFlag.title}</h3>
-              </div>
-              <button onClick={closeAllDrawers} className="p-1 hover:bg-[#1F1F1F] rounded text-[#8E8E8E] hover:text-[#FAF9F6]">✕</button>
-            </div>
-
-            <div className="space-y-6 text-xs font-mono">
-              <div className="bg-[#0A0A0A] border border-[#1F1F1F] p-4 rounded-xl">
-                <span className="text-[0.55rem] uppercase text-[#8E8E8E] block mb-1">Escalated incident summary:</span>
-                <p className="text-xs text-[#FAF9F6] leading-relaxed">"{selectedFlag.description}"</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[0.55rem] uppercase text-[#8E8E8E] mb-1.5">Sprint status</label>
-                  <select 
-                    value={selectedFlag.status} 
-                    onChange={(e) => {
-                      updateFlagStatus(selectedFlag.id, e.target.value as FlagStatus);
-                      setSelectedFlag(prev => prev ? { ...prev, status: e.target.value as FlagStatus } : null);
-                    }}
-                    className="w-full bg-[#0A0A0A] border border-[#1F1F1F] text-xs text-[#FAF9F6] rounded-lg px-2.5 py-1.5 focus:outline-none"
-                  >
-                    {(["Open", "Investigating", "In Dev", "Resolved"] as FlagStatus[]).map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[0.55rem] uppercase text-[#8E8E8E] mb-1.5">Assignee</label>
-                  <select 
-                    value={selectedFlag.assignedAdminId || ""} 
-                    onChange={(e) => {
-                      assignFlagAdmin(selectedFlag.id, e.target.value);
-                      setSelectedFlag(prev => prev ? { ...prev, assignedAdminId: e.target.value } : null);
-                    }}
-                    className="w-full bg-[#0A0A0A] border border-[#1F1F1F] text-xs text-[#FAF9F6] rounded-lg px-2.5 py-1.5 focus:outline-none"
-                  >
-                    <option value="">Unassigned</option>
-                    {team.map(t => <option key={t.id} value={t.id}>{t.name} ({t.role})</option>)}
-                  </select>
-                </div>
-              </div>
-
-              {/* Developer incident logs */}
-              <div className="bg-[#0A0A0A] border border-[#1F1F1F] p-4 rounded-xl space-y-3">
-                <div className="text-[0.55rem] uppercase text-[#8E8E8E] border-b border-[#1F1F1F] pb-1 font-bold">Developer Incident Sprints logs</div>
-                <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1 dark-scrollbar leading-relaxed">
-                  {selectedFlag.sprintLogs && selectedFlag.sprintLogs.length > 0 ? (
-                    selectedFlag.sprintLogs.map((log) => (
-                      <div key={log.id} className="bg-[#121212] border border-[#1F1F1F] p-2.5 rounded-lg text-[0.625rem]">
-                        <div className="flex justify-between items-center text-[0.525rem] text-[#8E8E8E] mb-1 border-b border-[#1F1F1F] pb-0.5">
-                          <span>{log.author}</span>
-                          <span>{log.timestamp}</span>
-                        </div>
-                        <p className="text-[#8E8E8E] italic">"{log.text}"</p>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-[#8E8E8E]/40 italic py-4 text-center">No sprint progress logs registered.</div>
-                  )}
-                </div>
-
-                <div className="flex gap-2 border-t border-[#1F1F1F] pt-3">
-                  <input 
-                    type="text" 
-                    placeholder="Log progress check details..." 
-                    value={newSupportSprintNotes[selectedFlag.id] || ""}
-                    onChange={(e) => setNewSupportSprintNotes(prev => ({ ...prev, [selectedFlag.id]: e.target.value }))}
-                    className="flex-1 bg-[#121212] border border-[#1F1F1F] rounded px-3 py-1.5 text-xs text-[#FAF9F6] outline-none"
-                  />
-                  <button 
-                    onClick={() => {
-                      if (!newSupportSprintNotes[selectedFlag.id]?.trim()) return;
-                      addFlagSprintLog(selectedFlag.id, currentAdmin.name, newSupportSprintNotes[selectedFlag.id].trim());
-                      // Local sync
-                      setSelectedFlag(prev => prev ? { 
-                        ...prev, 
-                        sprintLogs: [...(prev.sprintLogs || []), {
-                          id: Date.now().toString(),
-                          author: currentAdmin.name,
-                          text: newSupportSprintNotes[selectedFlag.id].trim(),
-                          timestamp: "Just now"
-                        }]
-                      } : null);
-                      setNewSupportSprintNotes(prev => ({ ...prev, [selectedFlag.id]: "" }));
-                    }}
-                    className="bg-[#06B6D4] hover:bg-[#0891B2] text-[#0A0A0A] font-bold px-3.5 rounded text-xs"
-                  >
-                    + Log
-                  </button>
-                </div>
-              </div>
-
-            </div>
-          </motion.div>
-        )}
-
-      </AnimatePresence>
-
+      </div>
+      <button onClick={submit} className="w-full bg-[var(--color-accent)] text-white text-[12px] font-medium py-2 rounded-lg hover:bg-[var(--color-accent-hover)] transition-colors">Invite</button>
     </div>
   );
 }
