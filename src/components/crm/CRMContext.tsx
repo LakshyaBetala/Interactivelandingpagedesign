@@ -484,15 +484,25 @@ interface CRMContextProps {
   updateInternalTaskStatus: (taskId: string, status: TaskStatus) => void;
   addInternalTaskNote: (taskId: string, note: string) => void;
 
+  // Direct CRUD operations
+  addNewClient: (client: Omit<CRMClient, "id" | "health" | "lastActivity" | "avatar">) => void;
+  deleteClient: (clientId: number) => void;
+  deleteLead: (leadId: string) => void;
+  deleteInternalTask: (taskId: string) => void;
+  deleteFlag: (flagId: string) => void;
+  deleteRelease: (releaseId: string) => void;
+
   // Real auth properties
   userProfile: UserProfile | null;
   setUserProfile: React.Dispatch<React.SetStateAction<UserProfile | null>>;
   loading: boolean;
   isSupabaseConfigured: boolean;
+  isSupabaseOnline: boolean;
   signOut: () => Promise<void>;
   authorizedEmails: AuthorizedEmail[];
   provisionUser: (emailData: Omit<AuthorizedEmail, "createdAt">) => Promise<boolean>;
   deprovisionUser: (email: string) => Promise<boolean>;
+  purgeAllMockData: () => Promise<void>;
 }
 
 const CRMContext = createContext<CRMContextProps | undefined>(undefined);
@@ -501,6 +511,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isSupabaseConfigured, setIsSupabaseConfigured] = useState<boolean>(false);
+  const [isSupabaseOnline, setIsSupabaseOnline] = useState<boolean>(false);
 
   // Database application states
   const [clients, setClients] = useState<CRMClient[]>(INITIAL_CLIENTS);
@@ -528,6 +539,25 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     setIsSupabaseConfigured(isConfigured);
     return isConfigured;
   }, []);
+
+  // Async connection checker
+  useEffect(() => {
+    const pingSupabase = async () => {
+      if (checkSupabaseStatus()) {
+        try {
+          const { error } = await supabase.from("profiles").select("count", { count: "exact", head: true });
+          if (!error) {
+            setIsSupabaseOnline(true);
+            return;
+          }
+        } catch (e) {
+          console.warn("Real-time database network connection ping failed:", e);
+        }
+      }
+      setIsSupabaseOnline(false);
+    };
+    pingSupabase();
+  }, [checkSupabaseStatus]);
 
   // Fetch complete operational schema or client isolated records
   const fetchOperationalData = useCallback(async (profile: UserProfile) => {
@@ -1231,6 +1261,123 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     setInternalTasks(prev => prev.map(t => t.id === taskId ? { ...t, internalNotes: notes } : t));
   }, [internalTasks, isSupabaseConfigured]);
 
+  const addNewClient = useCallback(async (client: Omit<CRMClient, "id" | "health" | "lastActivity" | "avatar">) => {
+    const avatar = client.name.split(" ").map(w => w[0]).join("").toUpperCase().substring(0, 2);
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase.from("clients").insert({
+        name: client.name,
+        project: client.project,
+        location: client.location,
+        category: client.category,
+        stage: client.stage,
+        health: 100,
+        revenue: client.revenue,
+        last_activity: "Client workspace initialized",
+        avatar,
+        assigned_admin_id: client.assignedAdminId || null,
+      }).select();
+
+      if (error) {
+        console.error("Database add client error:", error);
+        return;
+      }
+      if (data && data.length > 0) {
+        setClients(prev => [...prev, mapClientToTS(data[0])]);
+        return;
+      }
+    }
+    setClients(prev => [
+      ...prev,
+      {
+        ...client,
+        id: prev.length > 0 ? Math.max(...prev.map(c => c.id)) + 1 : 1,
+        health: 100,
+        lastActivity: "Client workspace initialized",
+        avatar
+      }
+    ]);
+  }, [isSupabaseConfigured]);
+
+  const deleteClient = useCallback(async (clientId: number) => {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.from("clients").delete().eq("id", clientId);
+      if (error) {
+        console.error("Database delete client error:", error);
+        return;
+      }
+    }
+    setClients(prev => prev.filter(c => c.id !== clientId));
+  }, [isSupabaseConfigured]);
+
+  const deleteLead = useCallback(async (leadId: string) => {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.from("outreach_leads").delete().eq("id", leadId);
+      if (error) {
+        console.error("Database delete lead error:", error);
+        return;
+      }
+    }
+    setLeads(prev => prev.filter(l => l.id !== leadId));
+  }, [isSupabaseConfigured]);
+
+  const deleteInternalTask = useCallback(async (taskId: string) => {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.from("internal_tasks").delete().eq("id", taskId);
+      if (error) {
+        console.error("Database delete task error:", error);
+        return;
+      }
+    }
+    setInternalTasks(prev => prev.filter(t => t.id !== taskId));
+  }, [isSupabaseConfigured]);
+
+  const deleteFlag = useCallback(async (flagId: string) => {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.from("project_flags").delete().eq("id", flagId);
+      if (error) {
+        console.error("Database delete flag error:", error);
+        return;
+      }
+    }
+    setFlags(prev => prev.filter(f => f.id !== flagId));
+  }, [isSupabaseConfigured]);
+
+  const deleteRelease = useCallback(async (releaseId: string) => {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.from("releases").delete().eq("id", releaseId);
+      if (error) {
+        console.error("Database delete release error:", error);
+        return;
+      }
+    }
+    setReleases(prev => prev.filter(r => r.id !== releaseId));
+  }, [isSupabaseConfigured]);
+
+  const purgeAllMockData = useCallback(async () => {
+    if (isSupabaseConfigured) {
+      try {
+        await Promise.all([
+          supabase.from("clients").delete().neq("id", 0),
+          supabase.from("outreach_leads").delete().neq("id", "00000000-0000-0000-0000-000000000000"),
+          supabase.from("internal_tasks").delete().neq("id", "00000000-0000-0000-0000-000000000000"),
+          supabase.from("project_flags").delete().neq("id", "00000000-0000-0000-0000-000000000000"),
+          supabase.from("releases").delete().neq("id", "00000000-0000-0000-0000-000000000000"),
+          supabase.from("comments").delete().neq("id", "00000000-0000-0000-0000-000000000000")
+        ]);
+      } catch (err) {
+        console.error("Error purging Supabase database data:", err);
+      }
+    }
+    // Reset local/sandbox states
+    setClients([]);
+    setLeads([]);
+    setInternalTasks([]);
+    setFlags([]);
+    setReleases([]);
+    setComments([]);
+    setActivities([]);
+  }, [isSupabaseConfigured]);
+
   return (
     <CRMContext.Provider value={{ 
       clients, team, products, comments, activities, leads, flags, releases, internalTasks, currentAdminId, selectedClientId, setSelectedClientId,
@@ -1239,8 +1386,9 @@ export function CRMProvider({ children }: { children: ReactNode }) {
       addFlag, updateFlagStatus, assignFlagAdmin, addFlagSprintLog,
       createRelease, approveRelease,
       addInternalTask, updateInternalTaskStatus, addInternalTaskNote,
-      userProfile, setUserProfile, loading, isSupabaseConfigured, signOut,
-      authorizedEmails, provisionUser, deprovisionUser
+      addNewClient, deleteClient, deleteLead, deleteInternalTask, deleteFlag, deleteRelease,
+      userProfile, setUserProfile, loading, isSupabaseConfigured, isSupabaseOnline, signOut,
+      authorizedEmails, provisionUser, deprovisionUser, purgeAllMockData
     }}>
       {children}
     </CRMContext.Provider>

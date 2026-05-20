@@ -28,10 +28,10 @@ function PortalContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-sand font-mono flex flex-col items-center justify-center p-6 select-none">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(40,40,40,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(40,40,40,0.03)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
-        <div className="w-16 h-16 border-4 border-charcoal border-t-ember animate-spin mb-4" />
-        <p className="text-[0.65rem] uppercase tracking-[0.2em] text-charcoal/60 animate-pulse">
+      <div className="min-h-screen bg-[#0A0A0A] text-[#F5F5F5] font-mono flex flex-col items-center justify-center p-6 select-none">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
+        <div className="w-12 h-12 border-2 border-[#1F1F1F] border-t-[#06B6D4] rounded-full animate-spin mb-4" />
+        <p className="text-[0.65rem] uppercase tracking-[0.2em] text-[#8E8E8E] animate-pulse">
           Connecting to Almmatix OS Sync Matrix...
         </p>
       </div>
@@ -43,17 +43,17 @@ function PortalContent() {
   const showSwitcher = !isSupabaseConfigured || (userProfile && userProfile.category === "admin");
 
   return (
-    <div className="min-h-screen bg-sand font-sans">
+    <div className="min-h-screen bg-[#0A0A0A] text-[#F5F5F5] font-sans">
       {/* Dynamic Header Auth Controls */}
       {userProfile && (
-        <div className="fixed top-4 right-4 z-[99] flex items-center gap-3 bg-white border-2 border-charcoal px-3 py-1.5 shadow-[4px_4px_0px_0px_#282828] font-mono text-[0.65rem]">
-          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          <span className="text-charcoal/60 uppercase tracking-wider">
-            User: <strong className="text-charcoal font-bold">{userProfile.name}</strong> ({userProfile.role})
+        <div className="fixed top-4 right-4 z-[99] flex items-center gap-3 bg-[#121212]/80 backdrop-blur-md border border-[#1F1F1F] px-4 py-2 rounded-xl shadow-2xl font-mono text-[0.625rem]">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#06B6D4] animate-pulse" />
+          <span className="text-[#8E8E8E] uppercase tracking-wider">
+            User: <strong className="text-[#FAF9F6] font-bold">{userProfile.name}</strong> ({userProfile.role})
           </span>
           <button
             onClick={signOut}
-            className="text-ember hover:underline font-bold uppercase tracking-wider border-l border-charcoal/20 pl-3 ml-1"
+            className="text-[#EF4444] hover:underline font-bold uppercase tracking-wider border-l border-[#1F1F1F] pl-3 ml-1"
           >
             Sign Out
           </button>
@@ -62,13 +62,13 @@ function PortalContent() {
 
       {/* Floating Switcher Widget */}
       {showSwitcher && (
-        <div className="fixed bottom-5 right-5 z-[999] flex gap-1 bg-charcoal p-1 rounded-lg shadow-2xl">
+        <div className="fixed bottom-5 right-5 z-[999] flex gap-1 bg-[#121212] border border-[#1F1F1F] p-1 rounded-xl shadow-2xl">
           {(["admin", "client"] as const).map((r) => (
             <button
               key={r}
               onClick={() => setActiveView(r)}
-              className={`px-4 py-2 rounded-md text-[0.6rem] uppercase tracking-[0.15em] font-mono font-medium transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-ember ${
-                activeView === r ? "bg-ember text-white" : "text-taupe-light hover:text-sand"
+              className={`px-3 py-1.5 rounded-lg text-[0.55rem] uppercase tracking-[0.15em] font-mono font-medium transition-colors duration-200 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#06B6D4] ${
+                activeView === r ? "bg-[#06B6D4] text-[#0A0A0A]" : "text-[#8E8E8E] hover:text-[#F5F5F5]"
               }`}
             >
               {r === "admin" ? "Admin CRM" : "Client Portal"}

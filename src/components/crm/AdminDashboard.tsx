@@ -19,6 +19,7 @@ import {
   TaskStatus,
   Comment
 } from "./CRMContext";
+import ClientPortalView from "./ClientPortalView";
 
 // ═══════════════════════════════════════════════════════════════
 //  SUBCOMPONENTS
@@ -28,38 +29,49 @@ function HealthRing({ score, size = 36 }: { score: number; size?: number }) {
   const radius = (size - 4) / 2;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (score / 100) * circumference;
-  const color = score >= 80 ? "#10B981" : score >= 60 ? "#FF5A1F" : "#EF4444";
+  const color = score >= 80 ? "#10B981" : score >= 60 ? "#F59E0B" : "#EF4444";
 
   return (
     <svg width={size} height={size} className="health-ring" aria-label={`Health score: ${score}`}>
-      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="rgba(135,128,116,0.12)" strokeWidth="3" />
-      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset} />
-      <text x="50%" y="50%" textAnchor="middle" dy="0.35em" fill={color} fontSize="9" fontWeight="800" fontFamily="var(--font-mono)" transform={`rotate(90 ${size / 2} ${size / 2})`}>{score}%</text>
+      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#1F1F1F" strokeWidth="2.5" />
+      <circle 
+        cx={size / 2} 
+        cy={size / 2} 
+        r={radius} 
+        fill="none" 
+        stroke={color} 
+        strokeWidth="2.5" 
+        strokeLinecap="round" 
+        strokeDasharray={circumference} 
+        strokeDashoffset={offset} 
+      />
+      <text 
+        x="50%" 
+        y="52%" 
+        textAnchor="middle" 
+        dy="0.35em" 
+        fill={color} 
+        fontSize="8.5" 
+        fontWeight="800" 
+        fontFamily="var(--font-mono)" 
+        transform={`rotate(90 ${size / 2} ${size / 2})`}
+      >
+        {score}%
+      </text>
     </svg>
   );
 }
 
-function ActivityIcon({ type }: { type: string }) {
-  const base = "w-7 h-7 rounded-full flex items-center justify-center text-xs shrink-0";
-  switch (type) {
-    case "milestone": return <div className={`${base} bg-emerald-500/10 text-emerald-600`} aria-hidden="true">✓</div>;
-    case "comment": return <div className={`${base} bg-ember/10 text-ember`} aria-hidden="true">💬</div>;
-    case "invoice": return <div className={`${base} bg-blue-500/10 text-blue-600`} aria-hidden="true">₹</div>;
-    case "alert": return <div className={`${base} bg-rose-500/10 text-rose-600`} aria-hidden="true">🚨</div>;
-    default: return null;
-  }
-}
-
 function StageBadge({ stage }: { stage: ClientStage }) {
   const styles: Record<ClientStage, string> = {
-    Lead: "border border-taupe/30 text-taupe bg-taupe/5",
-    Proposal: "bg-amber-100 text-amber-800 border border-amber-200",
-    "In Dev": "bg-charcoal text-sand border border-charcoal/20",
-    Active: "bg-ember text-white shadow-xs",
-    Completed: "bg-emerald-100 text-emerald-800 border border-emerald-200",
+    Lead: "border border-[#1F1F1F] text-[#8E8E8E] bg-[#121212]",
+    Proposal: "border border-amber-500/20 text-amber-500 bg-amber-500/5",
+    "In Dev": "border border-[#06B6D4]/20 text-[#06B6D4] bg-[#06B6D4]/5",
+    Active: "border border-emerald-500/20 text-emerald-500 bg-emerald-500/5",
+    Completed: "border border-stone-700 text-stone-500 bg-stone-900/50 line-through",
   };
   return (
-    <span className={`inline-flex px-2 py-0.5 rounded text-[0.6rem] uppercase tracking-[0.12em] font-mono font-medium ${styles[stage]}`}>
+    <span className={`inline-flex px-2 py-0.5 rounded text-[0.55rem] uppercase tracking-[0.12em] font-mono font-bold ${styles[stage]}`}>
       {stage}
     </span>
   );
@@ -102,61 +114,87 @@ export default function AdminDashboard() {
     addInternalTask,
     updateInternalTaskStatus,
     addInternalTaskNote,
+    addNewClient,
+    deleteClient,
+    deleteLead,
+    deleteInternalTask,
+    deleteFlag,
+    deleteRelease,
+    addFlag,
     userProfile,
-    setUserProfile,
     isSupabaseConfigured,
+    isSupabaseOnline,
     signOut,
     authorizedEmails,
     provisionUser,
-    deprovisionUser
+    deprovisionUser,
+    purgeAllMockData,
+    selectedClientId,
+    setSelectedClientId
   } = useCRM();
 
-  const [activeTab, setActiveTab] = useState("overview");
+  // Consolidated Navigation Tabs: operations, outreach, client_portal_view, staff_invites
+  const [activeTab, setActiveTab] = useState("operations");
+  
+  // Drawer States
   const [selectedClient, setSelectedClient] = useState<CRMClient | null>(null);
+  const [selectedTask, setSelectedTask] = useState<InternalTask | null>(null);
+  const [selectedFlag, setSelectedFlag] = useState<ProjectFlag | null>(null);
 
-  // Changelog Composer local state
-  const [composerClientId, setComposerClientId] = useState<string>("1");
-  const [composerVersion, setComposerVersion] = useState<string>("v1.2.0");
-  const [composerTitle, setComposerTitle] = useState<string>("Performance Polishing & Indexing Sprints");
-  const [composerItemText, setComposerItemText] = useState<string>("");
-  const [composerItems, setComposerItems] = useState<string[]>([
-    "Optimized index parameters in transactions backend for Supreme Petro",
-    "Decreased layout shift on Safaris mobile viewport",
-    "Added client verification gate for release checks"
-  ]);
-
-  // Outreach quick log notes
+  // Quick-log helper state
   const [newLeadNotes, setNewLeadNotes] = useState<Record<string, string>>({});
+  const [newInternalTaskNotes, setNewInternalTaskNotes] = useState<Record<string, string>>({});
+  const [newSupportSprintNotes, setNewSupportSprintNotes] = useState<Record<string, string>>({});
 
-  // Manual Lead Creation Form states
+  // Manual Creation Modal/Forms Toggles
+  const [showClientForm, setShowClientForm] = useState(false);
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const [showFlagForm, setShowFlagForm] = useState(false);
   const [showLeadForm, setShowLeadForm] = useState(false);
+
+  // Forms Fields States
+  const [newClientName, setNewClientName] = useState("");
+  const [newClientProject, setNewClientProject] = useState("");
+  const [newClientRevenue, setNewClientRevenue] = useState("250000");
+  const [newClientCategory, setNewClientCategory] = useState<"Ongoing" | "Potential">("Ongoing");
+  const [newClientStage, setNewClientStage] = useState<ClientStage>("In Dev");
+  const [newClientAssigned, setNewClientAssigned] = useState("a1");
+
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskClient, setNewTaskClient] = useState("");
+  const [newTaskProduct, setNewTaskProduct] = useState("");
+  const [newTaskAssignee, setNewTaskAssignee] = useState("a2");
+
+  const [newFlagTitle, setNewFlagTitle] = useState("");
+  const [newFlagDesc, setNewFlagDesc] = useState("");
+  const [newFlagSeverity, setNewFlagSeverity] = useState<FlagSeverity>("High");
+  const [newFlagClient, setNewFlagClient] = useState("1");
+  const [newFlagAssignee, setNewFlagAssignee] = useState("a2");
+
   const [newLeadCompany, setNewLeadCompany] = useState("");
   const [newLeadDesc, setNewLeadDesc] = useState("");
   const [newLeadVal, setNewLeadVal] = useState("200000");
   const [newLeadSource, setNewLeadSource] = useState<LeadSource>("LinkedIn");
-  const [newLeadSourcedBy, setNewLeadSourcedBy] = useState("a3"); // Ankit default
+  const [newLeadSourcedBy, setNewLeadSourcedBy] = useState("a3");
   const [newLeadAssigned, setNewLeadAssigned] = useState("a3");
   const [newLeadScore, setNewLeadScore] = useState("75");
 
-  // Private task compilation details
-  const [taskComposerComment, setTaskComposerComment] = useState<Comment | null>(null);
-  const [taskComposerTitle, setTaskComposerTitle] = useState("");
-  const [taskComposerAssignee, setTaskComposerAssignee] = useState("a2"); // Mouriyan tech default
+  // Staff Pre-auth invite states
+  const [provEmail, setProvEmail] = useState("");
+  const [provName, setProvName] = useState("");
+  const [provRole, setProvRole] = useState("Dev Intern");
+  const [provCategory, setProvCategory] = useState<"admin" | "client">("admin");
+  const [provFocus, setProvFocus] = useState<"Client Delivery" | "Outreach & Marketing">("Client Delivery");
+  const [provResponsibilities, setProvResponsibilities] = useState<string[]>([]);
+  const [provClientId, setProvClientId] = useState<string>("");
+  const [provIsSubmitting, setProvIsSubmitting] = useState(false);
 
-  // Private task inline comment states
-  const [newInternalTaskNotes, setNewInternalTaskNotes] = useState<Record<string, string>>({});
+  // Expandable work Balancer checklist states
+  const [expandedMembers, setExpandedMembers] = useState<Record<string, boolean>>({});
 
-  // Support Flag Sprint notes state
-  const [newSupportSprintNotes, setNewSupportSprintNotes] = useState<Record<string, string>>({});
-
-  const handleTabChange = useCallback((tab: string) => {
-    setActiveTab(tab);
-    setSelectedClient(null);
-    setTaskComposerComment(null);
-  }, []);
-
+  // Auth Category & Security Checks
   const isCorePartner = useMemo(() => {
-    if (!userProfile?.email) return true;
+    if (!userProfile?.email) return false;
     const coreEmails = [
       "lakshbetala15@gmail.com",
       "gandhimouriyan1234@gmail.com",
@@ -166,130 +204,101 @@ export default function AdminDashboard() {
     return coreEmails.includes(userProfile.email.toLowerCase());
   }, [userProfile]);
 
+  const isIntern = useMemo(() => {
+    if (!userProfile?.role) return false;
+    return userProfile.role.toLowerCase().includes("intern");
+  }, [userProfile]);
+
+  // Telemetry Lists safe type-casted fallbacks
   const clients = useMemo(() => {
-    if (isCorePartner) return allClients;
-    if (userProfile?.primaryFocus === "Outreach & Marketing") return [];
+    if (isCorePartner || isIntern) return allClients;
     return allClients.filter(c => c.assignedAdminId === currentAdminId);
-  }, [allClients, isCorePartner, userProfile, currentAdminId]);
+  }, [allClients, isCorePartner, isIntern, currentAdminId]);
 
   const flags = useMemo(() => {
-    if (isCorePartner) return allFlags;
-    if (userProfile?.primaryFocus === "Outreach & Marketing") return [];
+    if (isCorePartner || isIntern) return allFlags;
     return allFlags.filter(f => f.assignedAdminId === currentAdminId);
-  }, [allFlags, isCorePartner, userProfile, currentAdminId]);
-
-  const releases = useMemo(() => {
-    if (isCorePartner) return allReleases;
-    if (userProfile?.primaryFocus === "Outreach & Marketing") return [];
-    const clientIds = clients.map(c => c.id);
-    return allReleases.filter(r => clientIds.includes(r.clientId));
-  }, [allReleases, isCorePartner, userProfile, clients]);
+  }, [allFlags, isCorePartner, isIntern, currentAdminId]);
 
   const internalTasks = useMemo(() => {
-    if (isCorePartner) return allInternalTasks;
-    if (userProfile?.primaryFocus === "Outreach & Marketing") return [];
+    if (isCorePartner || isIntern) return allInternalTasks;
     return allInternalTasks.filter(t => t.assignedAdminId === currentAdminId);
-  }, [allInternalTasks, isCorePartner, userProfile, currentAdminId]);
+  }, [allInternalTasks, isCorePartner, isIntern, currentAdminId]);
 
   const potentialClients = useMemo(() => clients.filter(c => c.category === "Potential"), [clients]);
   const ongoingClients = useMemo(() => clients.filter(c => c.category === "Ongoing"), [clients]);
-  
-  // Current logged in admin
   const currentAdmin = team.find(t => t.id === currentAdminId) || team[0];
 
-  const visibleTabs = useMemo(() => {
-    const tabs = [
-      { id: "overview", label: "Overview" },
-    ];
-
-    if (isCorePartner) {
-      tabs.push(
-        { id: "clients", label: `Client Desk (${allClients.filter(c => c.category === "Ongoing").length})` },
-        { id: "internal tasks", label: `Sprint Tasks (${allInternalTasks.filter(t => t.status !== "Resolved").length})` },
-        { id: "outreach", label: `Outreach Funnel (${leads.length})` },
-        { id: "support queue", label: `Support Queue (${allFlags.filter(f => f.status !== "Resolved").length})` },
-        { id: "releases", label: "Changelogs Composer" },
-        { id: "products", label: "The Lab (SaaS)" },
-        { id: "provisioning", label: "Access & Provisioning" }
-      );
-    } else {
-      const isOutreach = userProfile?.primaryFocus === "Outreach & Marketing";
-      if (isOutreach) {
-        tabs.push(
-          { id: "outreach", label: `Outreach Funnel (${leads.length})` }
-        );
-      } else {
-        const assignedClientsCount = allClients.filter(c => c.category === "Ongoing" && c.assignedAdminId === currentAdminId).length;
-        const assignedTasksCount = allInternalTasks.filter(t => t.status !== "Resolved" && t.assignedAdminId === currentAdminId).length;
-        const assignedFlagsCount = allFlags.filter(f => f.status !== "Resolved" && f.assignedAdminId === currentAdminId).length;
-        
-        tabs.push(
-          { id: "clients", label: `My Clients (${assignedClientsCount})` },
-          { id: "internal tasks", label: `My Sprints (${assignedTasksCount})` },
-          { id: "support queue", label: `My Support Queue (${assignedFlagsCount})` },
-          { id: "releases", label: "My Changelogs" }
-        );
-      }
-    }
-    return tabs;
-  }, [isCorePartner, userProfile, allClients, allInternalTasks, leads, allFlags, currentAdminId]);
-
-  // Outreach Analytics Metrics Sourced By muskan & ankit
+  // Sourcing pipeline stats
   const outreachAnalytics = useMemo(() => {
     const totalPipeline = leads.reduce((acc, l) => acc + l.estimatedValue, 0);
     const avgScore = leads.length > 0 ? Math.round(leads.reduce((acc, l) => acc + l.engagementScore, 0) / leads.length) : 0;
-    const ankitLeads = leads.filter(l => l.sourcedById === "a3").length;
-    const muskanLeads = leads.filter(l => l.sourcedById === "a4").length;
-    return { totalPipeline, avgScore, ankitLeads, muskanLeads };
+    return { totalPipeline, avgScore };
   }, [leads]);
 
-  const overviewStats = useMemo(() => {
-    if (isCorePartner) {
-      return [
-        { label: "Ongoing Accounts Managed", value: allClients.filter(c => c.category === "Ongoing").length, color: "text-charcoal" },
-        { label: "Active Team Sprint Tasks", value: allInternalTasks.filter(t => t.status !== "Resolved").length, color: "text-indigo-600" },
-        { label: "Support Escalation Tickets", value: allFlags.filter(f => f.status !== "Resolved").length, color: "text-rose-500" },
-        { label: "Outreach Lead pipeline", value: formatCurrency(outreachAnalytics.totalPipeline), color: "text-emerald-700" }
-      ];
-    } else {
-      const isOutreach = userProfile?.primaryFocus === "Outreach & Marketing";
-      if (isOutreach) {
-        return [
-          { label: "Outreach Leads Sourced", value: leads.length, color: "text-charcoal" },
-          { label: "Total Lead Pipeline", value: formatCurrency(outreachAnalytics.totalPipeline), color: "text-emerald-700" },
-          { label: "Average Lead Score", value: `${outreachAnalytics.avgScore}%`, color: "text-indigo-600" }
-        ];
-      } else {
-        const assignedClientsCount = allClients.filter(c => c.category === "Ongoing" && c.assignedAdminId === currentAdminId).length;
-        const assignedTasksCount = allInternalTasks.filter(t => t.status !== "Resolved" && t.assignedAdminId === currentAdminId).length;
-        const assignedFlagsCount = allFlags.filter(f => f.status !== "Resolved" && f.assignedAdminId === currentAdminId).length;
-        
-        return [
-          { label: "My Assigned Clients", value: assignedClientsCount, color: "text-charcoal" },
-          { label: "My Active Sprints", value: assignedTasksCount, color: "text-indigo-600" },
-          { label: "My Support Tickets", value: assignedFlagsCount, color: "text-rose-500" }
-        ];
-      }
-    }
-  }, [isCorePartner, allClients, allInternalTasks, allFlags, outreachAnalytics, leads, userProfile, currentAdminId]);
+  // Custom Form handlers
+  const handleAddClientSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newClientName.trim() || !newClientProject.trim()) return;
+    addNewClient({
+      name: newClientName.trim(),
+      project: newClientProject.trim(),
+      location: "Chennai",
+      category: newClientCategory,
+      stage: newClientStage,
+      revenue: Number(newClientRevenue),
+      assignedAdminId: newClientAssigned,
+    });
+    setNewClientName("");
+    setNewClientProject("");
+    setShowClientForm(false);
+  };
 
-  // Tab safety gate
-  useEffect(() => {
-    const isValid = visibleTabs.some(t => t.id === activeTab);
-    if (!isValid && visibleTabs.length > 0) {
-      setActiveTab("overview");
-    }
-  }, [activeTab, visibleTabs]);
+  const handleAddTaskSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTaskTitle.trim()) return;
+    addInternalTask({
+      title: newTaskTitle.trim(),
+      clientId: newTaskClient ? Number(newTaskClient) : undefined,
+      productId: newTaskProduct || undefined,
+      assignedAdminId: newTaskAssignee,
+    });
+    setNewTaskTitle("");
+    setShowTaskForm(false);
+  };
 
-  // Pre-authorization provisioner form states
-  const [provEmail, setProvEmail] = useState("");
-  const [provName, setProvName] = useState("");
-  const [provRole, setProvRole] = useState("Dev Intern");
-  const [provCategory, setProvCategory] = useState<"admin" | "client">("admin");
-  const [provFocus, setProvFocus] = useState<"Client Delivery" | "Outreach & Marketing">("Client Delivery");
-  const [provResponsibilities, setProvResponsibilities] = useState<string[]>([]);
-  const [provClientId, setProvClientId] = useState<string>("");
-  const [provIsSubmitting, setProvIsSubmitting] = useState(false);
+  const handleAddFlagSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newFlagTitle.trim() || !newFlagDesc.trim()) return;
+    addFlag({
+      title: newFlagTitle.trim(),
+      description: newFlagDesc.trim(),
+      clientId: Number(newFlagClient),
+      severity: newFlagSeverity,
+      assignedAdminId: newFlagAssignee || undefined,
+    });
+    setNewFlagTitle("");
+    setNewFlagDesc("");
+    setShowFlagForm(false);
+  };
+
+  const handleAddLeadSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newLeadCompany.trim() || !newLeadDesc.trim()) return;
+    addNewLead({
+      companyName: newLeadCompany.trim(),
+      projectDescription: newLeadDesc.trim(),
+      estimatedValue: Number(newLeadVal),
+      source: newLeadSource,
+      status: "Lead",
+      assignedAdminId: newLeadAssigned,
+      sourcedById: newLeadSourcedBy,
+      engagementScore: Number(newLeadScore)
+    });
+    setNewLeadCompany("");
+    setNewLeadDesc("");
+    setShowLeadForm(false);
+  };
 
   const handleProvisionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -314,656 +323,701 @@ export default function AdminDashboard() {
       setProvEmail("");
       setProvName("");
       setProvResponsibilities([]);
-      alert("🎉 Invited email successfully added to authorization registry! They can now sign up using this email and set their secret password.");
+      alert("🎉 Invited email successfully added to registry!");
     } else {
-      alert("❌ Error pre-authorizing credentials. Please try again.");
+      alert("❌ Error pre-authorizing credentials.");
     }
   };
 
+  // Close all drawers on background click
+  const closeAllDrawers = () => {
+    setSelectedClient(null);
+    setSelectedTask(null);
+    setSelectedFlag(null);
+  };
+
   const stagger = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.05 } } };
-  const fadeUp = { hidden: { opacity: 0, y: 12, filter: "blur(3px)" }, show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] as const } } };
-
-  // Helper to add dynamic checklist item in changelog composer
-  const handleAddComposerItem = () => {
-    if (!composerItemText.trim()) return;
-    setComposerItems(prev => [...prev, composerItemText.trim()]);
-    setComposerItemText("");
-  };
-
-  const handleRemoveComposerItem = (index: number) => {
-    setComposerItems(prev => prev.filter((_, idx) => idx !== index));
-  };
-
-  const handlePublishRelease = () => {
-    if (!composerVersion || !composerTitle || composerItems.length === 0) return;
-    createRelease({
-      clientId: Number(composerClientId),
-      version: composerVersion,
-      title: composerTitle,
-      whatWasImproved: composerItems
-    });
-    setComposerVersion(`v1.2.${Date.now().toString().slice(-2)}`);
-    setComposerItems([]);
-    alert("📢 Changelog published successfully! The client will review the checklist in their portal before release goes live.");
-  };
-
-  // Convert client feedback comment directly to internal private task
-  const triggerCommentToTask = (comment: Comment) => {
-    setTaskComposerComment(comment);
-    setTaskComposerTitle(`Resolve feedback: "${comment.text.slice(0, 35)}..."`);
-    // Route UI-related comments to Muskan, database/tech to Mouriyan
-    const isUI = comment.text.toLowerCase().includes("size") || comment.text.toLowerCase().includes("theme") || comment.text.toLowerCase().includes("color") || comment.text.toLowerCase().includes("layout");
-    setTaskComposerAssignee(isUI ? "a4" : "a2");
-  };
-
-  const submitCommentToTask = () => {
-    if (!taskComposerTitle.trim() || !taskComposerComment) return;
-    addInternalTask({
-      clientId: taskComposerComment.clientId,
-      title: taskComposerTitle.trim(),
-      assignedAdminId: taskComposerAssignee,
-      originCommentId: taskComposerComment.id
-    });
-    setTaskComposerComment(null);
-    alert("🛠️ Feedback successfully converted to a private team Sprint Task! The ticket is assigned.");
-  };
-
-  // Manual Lead Creation
-  const handleAddLeadSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newLeadCompany.trim() || !newLeadDesc.trim()) return;
-
-    addNewLead({
-      companyName: newLeadCompany.trim(),
-      projectDescription: newLeadDesc.trim(),
-      estimatedValue: Number(newLeadVal),
-      source: newLeadSource,
-      status: "Lead",
-      assignedAdminId: newLeadAssigned,
-      sourcedById: newLeadSourcedBy,
-      engagementScore: Number(newLeadScore)
-    });
-
-    setNewLeadCompany("");
-    setNewLeadDesc("");
-    setShowLeadForm(false);
-    alert("🎯 Sourced outreach target successfully logged into calling pipeline!");
-  };
-
+  const fadeUp = { hidden: { opacity: 0, y: 12, filter: "blur(2px)" }, show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] as const } } };
 
   return (
-    <div className="flex flex-col min-h-screen bg-sand relative noise-overlay pb-10">
-      {/* ──── TOP BAR ──── */}
-      <header className="sticky top-0 z-40 bg-sand/85 backdrop-blur-xl border-b border-taupe/15">
-        <div className="flex justify-between items-center py-4 px-8 lg:px-12">
-          <div className="flex items-center gap-6">
-            <h1 className="text-xl font-bold tracking-[-0.04em] font-display">ALMMATIX <span className="text-ember">OS</span></h1>
-            <div className="h-5 w-px bg-taupe/20" />
-            <span className="portal-label text-taupe-light flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Startup Core Console
-            </span>
+    <div className="flex min-h-screen bg-[#0A0A0A] text-[#F5F5F5] font-sans antialiased selection:bg-[#06B6D4]/20 selection:text-[#06B6D4] relative overflow-hidden">
+      
+      {/* ──── FIXED LEFT SIDEBAR (OBSIDIAN CONSOLE FRAME) ──── */}
+      <aside className="w-64 border-r border-[#1F1F1F] bg-[#121212] flex flex-col justify-between h-screen sticky top-0 shrink-0 z-30 select-none">
+        <div className="flex flex-col">
+          {/* Brand/Console Identity */}
+          <div className="p-6 border-b border-[#1F1F1F] flex items-center gap-3">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#06B6D4] animate-pulse" />
+            <h1 className="text-sm font-bold tracking-widest font-mono text-[#FAF9F6]">ALMMATIX OS</h1>
           </div>
 
-          <nav className="hidden xl:flex gap-1">
-            {visibleTabs.map((tab) => (
+          {/* Navigation Consolidated Tabs */}
+          <nav className="p-4 flex flex-col gap-1.5">
+            {[
+              { id: "operations", label: "Operations Desk", icon: "🛠️", count: ongoingClients.length + internalTasks.filter(t => t.status !== "Resolved").length },
+              { id: "outreach", label: "Outreach Funnel", icon: "🎯", count: leads.length },
+              { id: "client_portal_view", label: "Client Portal View", icon: "👥", count: null },
+              { id: "staff_invites", label: "Staff Invites", icon: "🔒", count: null },
+            ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => handleTabChange(tab.id)}
-                className={`px-3 py-1.5 rounded text-[0.65rem] uppercase tracking-[0.14em] font-mono font-medium transition-all duration-200 focus:outline-none ${
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  closeAllDrawers();
+                }}
+                className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-mono tracking-wider transition-all duration-150 focus:outline-none ${
                   activeTab === tab.id
-                    ? "bg-charcoal text-sand shadow-sm"
-                    : "text-taupe hover:text-charcoal hover:bg-sand-warm/60"
+                    ? "bg-[#1F1F1F] text-[#06B6D4] border border-[#06B6D4]/30"
+                    : "text-[#8E8E8E] hover:text-[#FAF9F6] hover:bg-[#1C1917]"
                 }`}
               >
-                {tab.label}
+                <span className="uppercase text-left truncate flex items-center gap-2">
+                  <span className="text-sm">{tab.icon}</span>
+                  {tab.label}
+                </span>
+                {tab.count !== null && tab.count > 0 && (
+                  <span className={`text-[0.625rem] px-2 py-0.5 rounded-full font-mono ${
+                    activeTab === tab.id ? "bg-[#06B6D4]/20 text-[#06B6D4]" : "bg-[#1C1917] text-[#8E8E8E] border border-[#1F1F1F]"
+                  }`}>
+                    {tab.count}
+                  </span>
+                )}
               </button>
             ))}
           </nav>
+        </div>
 
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-[0.625rem] font-bold tracking-wider text-white" style={{ backgroundColor: currentAdmin.colorVar }}>
-              {currentAdmin.avatar}
-            </div>
-            <div className="hidden md:block text-left">
-              <div className="text-xs font-semibold text-charcoal">{currentAdmin.name}</div>
-              <div className="text-[0.58rem] font-mono uppercase text-taupe" style={{ color: currentAdmin.colorVar }}>{currentAdmin.role}</div>
-            </div>
+        {/* Sync telemetry indicator */}
+        <div className="mx-4 my-2 border-t border-[#1F1F1F] pt-3 pb-1 flex flex-col gap-1">
+          <div className="flex items-center gap-1.5 font-mono text-[0.58rem] tracking-widest">
+            {isSupabaseOnline ? (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 animate-pulse" />
+                <span className="text-emerald-400 font-bold uppercase">🟢 LIVE DATABASE SYNC</span>
+              </>
+            ) : (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 animate-pulse" />
+                <span className="text-amber-500 font-bold uppercase">🟡 LOCAL SANDBOX FALLBACK</span>
+              </>
+            )}
           </div>
         </div>
-      </header>
 
-      {/* ──── MAIN CONTENT ──── */}
-      <main className="flex-1 px-8 lg:px-12 py-8 relative z-10">
+        {/* Active Logged Partner Card */}
+        <div className="p-4 border-t border-[#1F1F1F] bg-[#0E0E0E] flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div 
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-[0.65rem] font-bold text-white shrink-0 shadow-sm border border-white/5" 
+              style={{ backgroundColor: currentAdmin.colorVar || "#06B6D4" }}
+            >
+              {currentAdmin.avatar}
+            </div>
+            <div className="text-left min-w-0">
+              <div className="text-xs font-bold text-[#FAF9F6] truncate leading-snug">{currentAdmin.name}</div>
+              <div className="text-[0.58rem] font-mono uppercase text-[#8E8E8E] truncate mt-0.5">{currentAdmin.role}</div>
+            </div>
+          </div>
+          <button 
+            onClick={signOut}
+            className="p-1.5 rounded-md hover:bg-[#1F1F1F] text-[#8E8E8E] hover:text-[#EF4444] transition-all focus:outline-none shrink-0" 
+            title="Sign Out"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+          </button>
+        </div>
+      </aside>
+
+      {/* ──── RIGHT SCROLLABLE WORKSPACE ──── */}
+      <main className="flex-1 min-h-screen overflow-y-auto px-12 py-10 z-10 bg-[#0A0A0A]">
         <AnimatePresence mode="wait">
           
-          {/* ═══ TAB 1: OVERVIEW & WORKLOAD BALANCER ═══ */}
-          {activeTab === "overview" && (
-            <motion.div key="overview" initial="hidden" animate="show" exit="hidden" variants={stagger} className="flex flex-col gap-10">
-
-              {/* Dynamic OS Stats Grid */}
-              <motion.div variants={fadeUp} className={`grid grid-cols-2 lg:grid-cols-${overviewStats.length} gap-4`}>
-                {overviewStats.map((s, idx) => (
-                  <div key={idx} className="bg-sand-light/60 border border-taupe/10 rounded-xl p-5 hover:border-taupe/20 transition-all flex flex-col justify-between shadow-xs">
-                    <div className="portal-label text-[0.625rem] mb-2">{s.label}</div>
-                    <div className={`text-2xl font-extrabold font-display ${s.color}`}>{s.value}</div>
-                  </div>
-                ))}
-              </motion.div>
-
-              {/* Startup Cross-Functional Workload Allocation Matrix */}
-              <motion.div variants={fadeUp}>
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xs font-bold uppercase tracking-[0.15em] font-mono text-charcoal">Startup Allocation & Workload Balancer</h2>
-                  <span className="text-[0.65rem] text-taupe italic font-mono">Cross-functional responsibilities. Sprints monitored live.</span>
+          {/* ═══ TAB 1: OPERATIONS DESK ═══ */}
+          {activeTab === "operations" && (
+            <motion.div key="operations" initial="hidden" animate="show" exit="hidden" variants={stagger} className="flex flex-col gap-8">
+              
+              {/* Top: Workload Allocation Matrix */}
+              <motion.div variants={fadeUp} className="border border-[#1F1F1F] bg-[#121212] p-5 rounded-2xl">
+                <div className="flex justify-between items-center mb-4 border-b border-[#1F1F1F] pb-3">
+                  <h2 className="text-xs font-bold uppercase tracking-[0.2em] font-mono text-[#06B6D4]">Core Four & Staff Workload Allocation</h2>
+                  <span className="text-[0.625rem] text-[#8E8E8E] font-mono uppercase">Live resource analytics</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {team.map((member) => {
-                    const memberClients = clients.filter(c => c.assignedAdminId === member.id);
-                    const memberLeads = leads.filter(l => l.assignedAdminId === member.id);
+                    const memberClients = allClients.filter(c => c.assignedAdminId === member.id && c.category === "Ongoing");
                     const memberSprintTasks = internalTasks.filter(t => t.assignedAdminId === member.id && t.status !== "Resolved");
                     const memberFlags = flags.filter(f => f.assignedAdminId === member.id && f.status !== "Resolved");
                     
-                    // Startup Cross-Functional split: Lakshya & Mouriyan handle Delivery (60%), Muskan & Ankit handle Outreach (60%)
-                    let clientPct = 20;
-                    let productPct = 20;
-                    let outreachPct = 60;
-                    
-                    if (member.name === "Lakshya" || member.name === "Mouriyan") {
-                      clientPct = 60;
-                      productPct = 25;
-                      outreachPct = 15; // Cross-functional backup
-                    } else if (member.name === "Ankit" || member.name === "Muskan") {
-                      outreachPct = 60;
-                      productPct = 25;
-                      clientPct = 15; // Cross-functional backup
-                    }
+                    // Capacity math
+                    const capacityLoad = Math.min(100, (memberClients.length * 25) + (memberSprintTasks.length * 15) + (memberFlags.length * 20));
+                    const isExpanded = !!expandedMembers[member.id];
 
                     return (
-                      <div key={member.id} className="bg-sand-light/40 border border-taupe/10 rounded-xl p-5 hover:border-taupe/25 transition-colors relative overflow-hidden group">
-                        <div className="absolute top-0 left-0 w-full h-1 opacity-80" style={{ backgroundColor: member.colorVar }} />
+                      <div key={member.id} className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-xl p-4 hover:border-[#06B6D4]/35 transition-all duration-200 relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-[2.5px]" style={{ backgroundColor: member.colorVar || "#06B6D4" }} />
                         
-                        <div className="flex items-center gap-3 mb-4 mt-1">
-                          <div className="w-9 h-9 rounded-lg flex items-center justify-center text-[0.65rem] font-bold tracking-wider text-white shadow-xs" style={{ backgroundColor: member.colorVar }}>
-                            {member.avatar}
-                          </div>
-                          <div>
-                            <div className="font-semibold text-sm text-charcoal leading-snug">{member.name}</div>
-                            <div className="text-[0.58rem] uppercase tracking-widest font-mono font-bold" style={{ color: member.colorVar }}>{member.role}</div>
-                            <div className="mt-1 flex flex-wrap gap-1">
-                              <span className="inline-block bg-charcoal/5 border border-charcoal/10 text-[0.52rem] font-mono px-1.5 py-0.5 rounded text-charcoal/70">
-                                Core: {member.primaryFocus}
-                              </span>
-                              <span className="inline-block bg-ember/5 border border-ember/10 text-[0.52rem] font-mono px-1.5 py-0.5 rounded text-ember/70 animate-pulse">
-                                Cross-Functional Backup
-                              </span>
+                        <div className="flex items-start justify-between mb-3 mt-1">
+                          <div className="flex items-center gap-2.5">
+                            <div 
+                              className="w-7 h-7 rounded flex items-center justify-center text-[0.6rem] font-bold text-white shrink-0 border border-white/5" 
+                              style={{ backgroundColor: member.colorVar || "#06B6D4" }}
+                            >
+                              {member.avatar}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="font-semibold text-xs text-[#FAF9F6] truncate leading-tight">{member.name}</div>
+                              <div className="text-[0.55rem] uppercase tracking-wider font-mono font-bold mt-0.5 text-[#8E8E8E]" style={{ color: member.colorVar }}>
+                                {member.role}
+                              </div>
                             </div>
                           </div>
-                        </div>
-
-                        {/* Split Bar display */}
-                        <div className="mb-4">
-                          <div className="flex justify-between text-[0.55rem] font-mono text-taupe mb-1">
-                            <span>Delivery {clientPct}%</span>
-                            <span>Outreach {outreachPct}%</span>
-                            <span>SaaS {productPct}%</span>
-                          </div>
-                          <div className="h-1.5 w-full bg-taupe/10 rounded-full flex overflow-hidden">
-                            <div style={{ width: `${clientPct}%`, backgroundColor: member.colorVar }} className="h-full" />
-                            <div style={{ width: `${outreachPct}%`, backgroundColor: "var(--color-admin-ankit)" }} className="h-full opacity-65" />
-                            <div style={{ width: `${productPct}%`, backgroundColor: "var(--color-admin-mouriyan)" }} className="h-full opacity-35" />
-                          </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-3 gap-1 mb-4 bg-white/40 border border-taupe/5 p-1.5 rounded text-center font-mono text-[0.7rem]">
-                          <div>
-                            <div className="text-[0.5rem] text-taupe-light">Accounts</div>
-                            <div className="font-bold text-charcoal">{memberClients.length}</div>
-                          </div>
-                          <div>
-                            <div className="text-[0.5rem] text-taupe-light">Tasks</div>
-                            <div className="font-bold text-indigo-600">{memberSprintTasks.length}</div>
-                          </div>
-                          <div>
-                            <div className="text-[0.5rem] text-taupe-light">Flags</div>
-                            <div className="font-bold text-rose-500">{memberFlags.length}</div>
+                          <div className="text-right shrink-0">
+                            <div className="text-[0.5rem] font-mono text-[#8E8E8E] uppercase">LOAD</div>
+                            <div className="text-xs font-mono font-bold text-[#FAF9F6] mt-0.5">{capacityLoad}%</div>
                           </div>
                         </div>
 
+                        {/* Capacity Progress Bar */}
                         <div className="mb-3">
-                          <div className="text-[0.58rem] uppercase tracking-widest text-taupe-light mb-1">Active Deliverables</div>
-                          <div className="flex flex-wrap gap-1">
-                            {memberClients.length > 0 ? memberClients.map(c => (
-                              <span key={c.id} className="bg-white/60 border border-taupe/10 text-charcoal/80 text-[0.58rem] px-1.5 py-0.5 rounded shadow-2xs font-mono">{c.name}</span>
-                            )) : <span className="text-[0.58rem] text-taupe italic">No active accounts</span>}
+                          <div className="h-1 w-full bg-[#1F1F1F] rounded-full overflow-hidden">
+                            <div 
+                              style={{ width: `${capacityLoad}%`, backgroundColor: member.colorVar || "#06B6D4" }} 
+                              className="h-full rounded-full transition-all duration-500" 
+                            />
                           </div>
                         </div>
 
-                        <div>
-                          <div className="text-[0.58rem] uppercase tracking-widest text-taupe-light mb-1">Sprint Tasks</div>
-                          <ul className="text-[0.68rem] text-charcoal space-y-1">
-                            {member.activeTasks.map((t, idx) => (
-                              <li key={idx} className="flex items-start gap-1 leading-snug">
-                                <span className="w-1.5 h-1.5 rounded-full mt-1 shrink-0" style={{ backgroundColor: member.colorVar }} />
-                                {t}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </motion.div>
-
-              <motion.div variants={fadeUp} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Dynamic Comment REVIEW GATE Stream */}
-                <div className="bg-sand-light/40 border border-taupe/10 rounded-xl p-5 shadow-xs">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xs font-bold uppercase tracking-[0.15em] font-mono text-charcoal">Client Feedback & Review Gate</h2>
-                    <span className="portal-label bg-white/50 px-2 py-0.5 rounded">{comments.length} items logged</span>
-                  </div>
-                  <div className="flex flex-col gap-3 max-h-[350px] overflow-y-auto pr-2">
-                    {comments.map(c => {
-                      const client = clients.find(cl => cl.id === c.clientId);
-                      // Check if feedback is already converted to task
-                      const isTasked = internalTasks.some(t => t.originCommentId === c.id);
-                      
-                      return (
-                        <div key={c.id} className={`p-4 rounded-lg border flex flex-col gap-2 relative group ${c.role === "admin" ? "bg-white/70 border-taupe/15" : "bg-ember/5 border-ember/15"}`}>
-                          <div className="flex justify-between items-center border-b border-taupe/5 pb-1">
-                            <span className="text-[0.7rem] font-bold text-charcoal">
-                              {c.author} 
-                              <span className="font-normal text-taupe"> on </span>
-                              <span className="text-ember font-mono uppercase">{client?.name || `Client #${c.clientId}`}</span>
-                            </span>
-                            <span className="text-[0.58rem] text-taupe font-mono">{c.timeElapsed}</span>
+                        {/* Minimal Metrics Grid */}
+                        <div className="grid grid-cols-3 gap-1 py-1.5 border-y border-[#1F1F1F] mb-3 text-center font-mono text-[0.6rem]">
+                          <div>
+                            <div className="text-[0.45rem] text-[#8E8E8E] uppercase">Clients</div>
+                            <div className="font-bold text-[#FAF9F6] mt-0.5">{memberClients.length}</div>
                           </div>
-                          <p className="text-xs text-charcoal/90 leading-relaxed font-medium">"{c.text}"</p>
-                          
-                          <div className="flex justify-between items-center mt-1 pt-1 border-t border-taupe/5">
-                            <span className="text-[0.55rem] text-taupe uppercase tracking-widest font-mono">Feedback Review Gate</span>
-                            {c.role === "client" && (
-                              isTasked ? (
-                                <span className="bg-emerald-50 text-emerald-700 text-[0.58rem] font-bold px-2 py-0.5 rounded font-mono uppercase flex items-center gap-1 border border-emerald-100">
-                                  ✓ Converted to Task
-                                </span>
-                              ) : (
-                                <button 
-                                  onClick={() => triggerCommentToTask(c)}
-                                  className="bg-charcoal hover:bg-black text-sand text-[0.58rem] font-bold font-mono px-2 py-0.5 rounded uppercase tracking-wider transition-colors"
-                                >
-                                  🛠️ Convert to Task
-                                </button>
-                              )
-                            )}
+                          <div>
+                            <div className="text-[0.45rem] text-[#8E8E8E] uppercase">Tasks</div>
+                            <div className="font-bold text-[#FAF9F6] mt-0.5">{memberSprintTasks.length}</div>
+                          </div>
+                          <div>
+                            <div className="text-[0.45rem] text-[#8E8E8E] uppercase">Flags</div>
+                            <div className="font-bold text-[#EF4444] mt-0.5">{memberFlags.length}</div>
                           </div>
                         </div>
-                      );
-                    })}
-                    {comments.length === 0 && <div className="text-xs text-taupe text-center py-8">No recent feedback stream.</div>}
-                  </div>
-                </div>
 
-                {/* System Activity */}
-                <div className="bg-sand-light/40 border border-taupe/10 rounded-xl p-5 shadow-xs">
-                   <h2 className="text-xs font-bold uppercase tracking-[0.15em] font-mono text-charcoal mb-4">Live Activity Streams</h2>
-                   <div className="flex flex-col gap-2.5 max-h-[350px] overflow-y-auto pr-2">
-                      {activities.map((item, i) => (
-                        <div key={item.id || i} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/40 transition-colors">
-                          <ActivityIcon type={item.type} />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-xs font-bold text-charcoal leading-snug">{item.action}</div>
-                            <div className="text-[0.625rem] text-taupe font-mono">{item.client}</div>
-                          </div>
-                          <div className="portal-label text-[0.55rem] text-taupe-light font-mono shrink-0">{item.time}</div>
-                        </div>
-                      ))}
-                   </div>
-                </div>
-              </motion.div>
-
-              {/* Modal overlay to create task from comment feedback */}
-              <AnimatePresence>
-                {taskComposerComment && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-charcoal/45 backdrop-blur-md flex items-center justify-center p-4">
-                    <motion.div initial={{ scale: 0.95, y: 15 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 15 }} className="bg-white border border-taupe/20 rounded-xl p-6 max-w-md w-full shadow-2xl relative">
-                      <button onClick={() => setTaskComposerComment(null)} className="absolute top-4 right-4 text-taupe hover:text-charcoal transition-colors">
-                        ✕
-                      </button>
-                      <h3 className="text-sm font-bold uppercase font-mono tracking-widest text-charcoal mb-3">🛠️ Convert Feedback to Task</h3>
-                      
-                      <div className="bg-sand-light/50 border border-taupe/10 p-3 rounded text-xs text-charcoal/80 italic mb-4 leading-normal pr-4">
-                        Client feedback: "{taskComposerComment.text}"
-                      </div>
-
-                      <div className="space-y-4">
-                        <div>
-                          <label className="portal-label block mb-1 font-mono uppercase text-[0.58rem]">Sprint Task Title</label>
-                          <input 
-                            type="text" 
-                            value={taskComposerTitle}
-                            onChange={(e) => setTaskComposerTitle(e.target.value)}
-                            className="w-full bg-sand border border-taupe/15 text-xs rounded px-3 py-2 text-charcoal focus:outline-none focus:border-ember"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="portal-label block mb-1 font-mono uppercase text-[0.58rem]">Assign Specialist</label>
-                          <select 
-                            value={taskComposerAssignee}
-                            onChange={(e) => setTaskComposerAssignee(e.target.value)}
-                            className="w-full bg-sand border border-taupe/15 text-xs rounded px-3 py-2 text-charcoal"
-                          >
-                            {team.map(t => (
-                              <option key={t.id} value={t.id}>{t.name} ({t.role})</option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <button 
-                          onClick={submitCommentToTask}
-                          className="w-full bg-charcoal hover:bg-black text-sand font-mono uppercase font-bold text-xs py-2.5 rounded transition-colors"
+                        {/* Expandable tasks check-list trigger */}
+                        <button
+                          onClick={() => setExpandedMembers(prev => ({ ...prev, [member.id]: !prev[member.id] }))}
+                          className="flex items-center justify-between w-full text-[0.55rem] font-mono uppercase tracking-wider text-[#8E8E8E] hover:text-[#FAF9F6] transition-colors pt-1"
                         >
-                          Push to Team Sprint board
+                          <span>Checklist ({member.activeTasks.length})</span>
+                          <span className="font-bold text-[0.7rem]">{isExpanded ? "−" : "+"}</span>
                         </button>
-                      </div>
-                    </motion.div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-            </motion.div>
-          )}
-          
-          {/* ═══ TAB 2: CLIENT DESK ═══ */}
-          {activeTab === "clients" && (
-            <motion.div key="clients" initial="hidden" animate="show" exit="hidden" variants={stagger} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              
-              {/* LEFT: Potential Clients (Pending Approvals / Conversions) */}
-              <motion.div variants={fadeUp} className="flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-charcoal font-mono">Potential Client accounts</h2>
-                  <div className="portal-label bg-white/60 px-2 py-0.5 rounded text-[0.6rem] font-mono">{potentialClients.length} deals</div>
-                </div>
-                <div className="flex flex-col gap-3">
-                  {potentialClients.map((client) => {
-                    const assignedAdmin = team.find(t => t.id === client.assignedAdminId);
-                    return (
-                      <div key={client.id} onClick={() => setSelectedClient(client)} className="bg-white/50 border border-taupe/10 rounded-xl p-4 cursor-pointer hover:border-taupe/30 hover:shadow-sm transition-all group relative">
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded bg-sand-deep/30 text-charcoal flex items-center justify-center text-[0.625rem] font-bold tracking-wider font-mono">{client.avatar}</div>
-                            <div>
-                              <div className="font-semibold text-sm group-hover:text-ember transition-colors leading-tight">{client.name}</div>
-                              <div className="text-[0.68rem] text-taupe leading-snug">{client.project}</div>
-                            </div>
-                          </div>
-                          <StageBadge stage={client.stage} />
-                        </div>
-                        <div className="flex items-center justify-between mt-4 border-t border-taupe/8 pt-3 text-[0.65rem]">
-                          <div className="text-[0.58rem] text-taupe uppercase tracking-widest font-mono">Director Lead</div>
-                          <div className="flex items-center gap-1.5">
-                            {assignedAdmin && <span className="w-2 h-2 rounded-full" style={{ backgroundColor: assignedAdmin.colorVar }} />}
-                            <span className="font-semibold text-[0.68rem]" style={{ color: assignedAdmin?.colorVar }}>{assignedAdmin?.name}</span>
-                          </div>
-                        </div>
+                        
+                        <AnimatePresence>
+                          {isExpanded && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              className="overflow-hidden"
+                            >
+                              <ul className="text-[0.58rem] text-[#8E8E8E] space-y-1.5 mt-3 pl-0 list-none font-mono">
+                                {member.activeTasks.map((t, idx) => (
+                                  <li key={idx} className="flex items-start gap-1.5 leading-normal bg-[#121212] border border-[#1F1F1F] p-2 rounded-lg">
+                                    <span className="w-1 h-1 rounded-full mt-1 shrink-0 bg-[#06B6D4]" />
+                                    <span>{t}</span>
+                                  </li>
+                                ))}
+                                {member.activeTasks.length === 0 && (
+                                  <li className="text-[#8E8E8E]/40 italic text-center py-1">No active sprint tasks.</li>
+                                )}
+                              </ul>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                     );
                   })}
-                  {potentialClients.length === 0 && <div className="text-xs text-taupe italic text-center py-6 bg-white/10 rounded border border-dashed border-taupe/15">No pending proposals. All converted!</div>}
                 </div>
               </motion.div>
 
-              {/* RIGHT: Ongoing Clients & Detail View */}
-              <motion.div variants={fadeUp} className="flex flex-col gap-4">
-                {!selectedClient ? (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-charcoal font-mono">Active Ongoing Production</h2>
-                      <div className="portal-label bg-white/60 px-2 py-0.5 rounded text-[0.6rem] font-mono">{ongoingClients.length} accounts</div>
+              {/* 3-Column Operations Desk Layout */}
+              <motion.div variants={fadeUp} className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                
+                {/* COLUMN 1: Client Sprints Desk */}
+                <div className="border border-[#1F1F1F] bg-[#121212] rounded-2xl p-5 min-h-[580px] flex flex-col justify-between">
+                  <div>
+                    <div className="flex justify-between items-center mb-4 border-b border-[#1F1F1F] pb-3">
+                      <h3 className="text-xs font-bold uppercase tracking-[0.15em] font-mono text-[#06B6D4] flex items-center gap-1.5">
+                        <span className="text-[#06B6D4]">🏢</span> Client Projects
+                      </h3>
+                      <button 
+                        onClick={() => setShowClientForm(true)}
+                        className="bg-[#1F1F1F] hover:bg-[#06B6D4] text-[#FAF9F6] hover:text-[#0A0A0A] border border-[#1F1F1F] text-[0.6rem] font-mono uppercase px-2 py-1 rounded transition-colors"
+                      >
+                        + Add Project
+                      </button>
                     </div>
-                    <div className="flex flex-col gap-3">
+
+                    <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1 dark-scrollbar">
                       {ongoingClients.map((client) => {
                         const assignedAdmin = team.find(t => t.id === client.assignedAdminId);
                         return (
-                          <div key={client.id} onClick={() => setSelectedClient(client)} className="bg-sand-light/60 border border-taupe/10 rounded-xl p-4 cursor-pointer hover:border-taupe/30 hover:shadow-sm transition-all group">
-                            <div className="flex justify-between items-start mb-3">
-                              <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded bg-charcoal text-sand flex items-center justify-center text-[0.65rem] font-bold tracking-wider font-mono">{client.avatar}</div>
-                                <div>
-                                  <div className="font-bold text-sm group-hover:text-ember transition-colors leading-tight">{client.name}</div>
-                                  <div className="text-[0.65rem] text-taupe mb-1">{client.project}</div>
-                                  <StageBadge stage={client.stage} />
+                          <div 
+                            key={client.id}
+                            onClick={() => setSelectedClient(client)}
+                            className="bg-[#0A0A0A] border border-[#1F1F1F] p-4 rounded-xl cursor-pointer hover:border-[#06B6D4]/35 transition-all group relative"
+                          >
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm(`Delete workspace for ${client.name}?`)) {
+                                  deleteClient(client.id);
+                                }
+                              }}
+                              className="absolute top-3 right-3 text-[#8E8E8E] hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 text-xs font-mono"
+                              title="Delete Client"
+                            >
+                              ✕
+                            </button>
+
+                            <div className="flex justify-between items-start mb-3 pr-4">
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded bg-[#121212] border border-[#1F1F1F] text-[#FAF9F6] flex items-center justify-center text-[0.625rem] font-bold tracking-wider font-mono">{client.avatar}</div>
+                                <div className="min-w-0">
+                                  <div className="font-bold text-xs text-[#FAF9F6] truncate leading-tight">{client.name}</div>
+                                  <div className="text-[0.65rem] text-[#8E8E8E] mt-0.5 truncate">{client.project}</div>
                                 </div>
                               </div>
-                              <HealthRing score={client.health} size={36} />
+                              <HealthRing score={client.health} size={30} />
                             </div>
-                            <div className="flex items-center justify-between border-t border-taupe/8 pt-3 text-[0.65rem]">
-                              <div className="text-[0.58rem] text-taupe uppercase tracking-widest font-mono">Delivery Director</div>
+
+                            <div className="flex items-center justify-between border-t border-[#1F1F1F] pt-2 text-[0.625rem] font-mono">
+                              <StageBadge stage={client.stage} />
                               <div className="flex items-center gap-1.5">
                                 {assignedAdmin && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: assignedAdmin.colorVar }} />}
-                                <span className="font-semibold text-charcoal" style={{ color: assignedAdmin?.colorVar }}>{assignedAdmin?.name}</span>
+                                <span className="font-semibold text-[0.625rem] text-[#FAF9F6]">{assignedAdmin?.name || "Unassigned"}</span>
                               </div>
                             </div>
                           </div>
                         );
                       })}
+                      {ongoingClients.length === 0 && (
+                        <div className="text-xs text-[#8E8E8E] font-mono italic text-center py-10">No ongoing clients currently logged.</div>
+                      )}
                     </div>
-                  </>
-                ) : (
-                  <div className="bg-charcoal text-sand rounded-xl p-6 shadow-2xl relative border border-white/5">
-                    <button onClick={() => setSelectedClient(null)} className="absolute top-4 right-4 p-2 text-taupe hover:text-white transition-colors" aria-label="Close details">
-                      ✕
-                    </button>
-                    
-                    <div className="flex items-center gap-4 mb-6 border-b border-white/10 pb-6">
-                      <div className="w-12 h-12 rounded bg-white text-charcoal flex items-center justify-center text-md font-bold tracking-wider font-mono">{selectedClient.avatar}</div>
-                      <div>
-                        <h3 className="text-md font-bold font-display text-white">{selectedClient.name}</h3>
-                        <div className="text-xs text-taupe mt-0.5">{selectedClient.project}</div>
-                      </div>
-                    </div>
+                  </div>
 
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                      <div>
-                        <label className="portal-label text-taupe block mb-1 font-mono uppercase text-[0.58rem]">Project Stage</label>
-                        <select 
-                          value={selectedClient.stage} 
-                          onChange={(e) => updateClientStage(selectedClient.id, e.target.value as ClientStage)}
-                          className="w-full bg-white/5 border border-white/10 text-xs text-white rounded px-2.5 py-1.5 focus:outline-none focus:border-ember"
+                  {/* Inline Client creation Modal */}
+                  <AnimatePresence>
+                    {showClientForm && (
+                      <div className="fixed inset-0 bg-[#0A0A0A]/70 backdrop-blur-md z-50 flex items-center justify-center p-4 select-none">
+                        <motion.form 
+                          onSubmit={handleAddClientSubmit}
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          className="bg-[#121212] border border-[#1F1F1F] p-6 rounded-2xl w-full max-w-sm space-y-4 shadow-2xl relative"
                         >
-                          {(["Lead", "Proposal", "In Dev", "Active", "Completed"] as ClientStage[]).map(s => <option key={s} value={s} className="bg-charcoal">{s}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="portal-label text-taupe block mb-1 font-mono uppercase text-[0.58rem]">Delivery Director</label>
-                        <select 
-                          value={selectedClient.assignedAdminId || ""} 
-                          onChange={(e) => updateClientAdmin(selectedClient.id, e.target.value)}
-                          className="w-full bg-white/5 border border-white/10 text-xs text-white rounded px-2.5 py-1.5 focus:outline-none focus:border-ember"
-                        >
-                          <option value="" className="bg-charcoal">Unassigned</option>
-                          {team.map(t => <option key={t.id} value={t.id} className="bg-charcoal">{t.name} ({t.role})</option>)}
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="mb-6 bg-white/5 border border-white/5 rounded p-4 flex justify-between items-center">
-                      <div>
-                        <div className="portal-label text-taupe-light mb-1 font-mono uppercase text-[0.58rem]">Contract Value</div>
-                        <div className="text-lg font-bold font-display text-white">{formatCurrency(selectedClient.revenue)}</div>
-                      </div>
-                      <HealthRing score={selectedClient.health} size={42} />
-                    </div>
-
-                    {/* Linked Private Sprint Tasks display */}
-                    <div>
-                      <div className="portal-label text-taupe mb-2 font-mono uppercase text-[0.58rem]">Client-Linked Sprint Tasks</div>
-                      <div className="space-y-2 max-h-[150px] overflow-y-auto pr-1">
-                        {internalTasks.filter(t => t.clientId === selectedClient.id).map(t => (
-                          <div key={t.id} className="bg-white/5 border border-white/5 p-2 rounded flex justify-between items-center text-xs">
-                            <span className="font-medium text-white/95 leading-tight">{t.title}</span>
-                            <span className={`px-1.5 py-0.5 rounded text-[0.55rem] font-mono font-bold uppercase ${
-                              t.status === "Resolved" ? "bg-emerald-500/10 text-emerald-400" :
-                              t.status === "In Review" ? "bg-amber-500/10 text-amber-400" :
-                              t.status === "In Progress" ? "bg-sky-500/10 text-sky-400" :
-                              "bg-white/10 text-white/50"
-                            }`}>{t.status}</span>
+                          <button 
+                            type="button" 
+                            onClick={() => setShowClientForm(false)}
+                            className="absolute top-4 right-4 text-[#8E8E8E] hover:text-[#FAF9F6] transition-colors"
+                          >
+                            ✕
+                          </button>
+                          <h3 className="text-xs font-mono uppercase tracking-widest font-bold text-[#06B6D4]">🏢 Provision New Client Project</h3>
+                          
+                          <div className="space-y-3 text-xs font-mono">
+                            <div>
+                              <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Client Corporate Name</label>
+                              <input 
+                                type="text" 
+                                required 
+                                value={newClientName} 
+                                onChange={(e) => setNewClientName(e.target.value)} 
+                                placeholder="NJ Jewellers" 
+                                className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
+                              />
+                            </div>
+                            <div>
+                              <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Deliverable Title / Project</label>
+                              <input 
+                                type="text" 
+                                required 
+                                value={newClientProject} 
+                                onChange={(e) => setNewClientProject(e.target.value)} 
+                                placeholder="Gold Rate Analytics Polish" 
+                                className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
+                              />
+                            </div>
+                            <div>
+                              <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Contract Revenue Value (INR)</label>
+                              <input 
+                                type="number" 
+                                required 
+                                value={newClientRevenue} 
+                                onChange={(e) => setNewClientRevenue(e.target.value)} 
+                                className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
+                              />
+                            </div>
+                            <div>
+                              <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Delivery Sprint Director</label>
+                              <select
+                                value={newClientAssigned}
+                                onChange={(e) => setNewClientAssigned(e.target.value)}
+                                className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
+                              >
+                                {team.map(t => <option key={t.id} value={t.id}>{t.name} ({t.role})</option>)}
+                              </select>
+                            </div>
                           </div>
-                        ))}
-                        {internalTasks.filter(t => t.clientId === selectedClient.id).length === 0 && (
-                          <div className="text-[0.65rem] text-taupe italic text-center py-2">No linked sprint tasks logged.</div>
-                        )}
+                          
+                          <button 
+                            type="submit" 
+                            className="w-full bg-[#06B6D4] hover:bg-[#0891B2] text-[#0A0A0A] font-mono text-xs uppercase tracking-[0.15em] font-bold py-2.5 rounded-lg transition-colors"
+                          >
+                            Create Active Project
+                          </button>
+                        </motion.form>
                       </div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* COLUMN 2: Sprints Checklist Kanban */}
+                <div className="border border-[#1F1F1F] bg-[#121212] rounded-2xl p-5 min-h-[580px] flex flex-col justify-between">
+                  <div>
+                    <div className="flex justify-between items-center mb-4 border-b border-[#1F1F1F] pb-3">
+                      <h3 className="text-xs font-bold uppercase tracking-[0.15em] font-mono text-[#06B6D4] flex items-center gap-1.5">
+                        <span className="text-[#06B6D4]">📋</span> Active Sprints
+                      </h3>
+                      <button 
+                        onClick={() => setShowTaskForm(true)}
+                        className="bg-[#1F1F1F] hover:bg-[#06B6D4] text-[#FAF9F6] hover:text-[#0A0A0A] border border-[#1F1F1F] text-[0.6rem] font-mono uppercase px-2 py-1 rounded transition-colors"
+                      >
+                        + Create Task
+                      </button>
+                    </div>
+
+                    <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1 dark-scrollbar">
+                      {internalTasks.filter(t => t.status !== "Resolved").map((task) => {
+                        const assignee = team.find(t => t.id === task.assignedAdminId) || team[0];
+                        const client = allClients.find(c => c.id === task.clientId);
+                        
+                        return (
+                          <div 
+                            key={task.id}
+                            onClick={() => setSelectedTask(task)}
+                            className="bg-[#0A0A0A] border border-[#1F1F1F] p-4 rounded-xl cursor-pointer hover:border-[#06B6D4]/35 transition-all relative group"
+                          >
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm(`Delete task: ${task.title}?`)) {
+                                  deleteInternalTask(task.id);
+                                }
+                              }}
+                              className="absolute top-3 right-3 text-[#8E8E8E] hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 text-xs font-mono"
+                            >
+                              ✕
+                            </button>
+                            <div className="absolute top-0 right-0 w-[3px] h-full rounded-r-xl" style={{ backgroundColor: assignee.colorVar || "#06B6D4" }} />
+                            
+                            <div className="text-xs font-bold text-[#FAF9F6] mb-1.5 leading-snug pr-4">{task.title}</div>
+                            {client && (
+                              <div className="text-[0.55rem] font-mono text-[#06B6D4] uppercase mb-1">CLIENT: {client.name}</div>
+                            )}
+
+                            {/* Sprint logs preview */}
+                            <div className="space-y-1 bg-[#121212] border border-[#1F1F1F] p-2 rounded-lg text-[0.58rem] text-[#8E8E8E] font-mono mb-2">
+                              <div className="max-h-[60px] overflow-y-auto space-y-1">
+                                {task.internalNotes && task.internalNotes.length > 0 ? (
+                                  task.internalNotes.map((note, idx) => (
+                                    <div key={idx} className="border-l border-[#1F1F1F] pl-1.5 italic">"{note}"</div>
+                                  ))
+                                ) : (
+                                  <div className="text-[#8E8E8E]/40 italic">No notes logged yet.</div>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex justify-between items-center border-t border-[#1F1F1F] pt-2 text-[0.58rem] font-mono">
+                              <span className="text-[#8E8E8E]">Owner: <strong style={{ color: assignee.colorVar }}>{assignee.name}</strong></span>
+                              <span className="text-[#06B6D4] uppercase font-bold">{task.status}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {internalTasks.filter(t => t.status !== "Resolved").length === 0 && (
+                        <div className="text-xs text-[#8E8E8E] font-mono italic text-center py-10">No pending sprint tasks.</div>
+                      )}
                     </div>
                   </div>
-                )}
-              </motion.div>
-            </motion.div>
-          )}
 
-          {/* ═══ TAB 3: INTERNAL SPRINT TASKS (PRIVATE COLLABORATION GATE) ═══ */}
-          {activeTab === "internal tasks" && (
-            <motion.div key="internal tasks" initial="hidden" animate="show" exit="hidden" variants={stagger} className="flex flex-col gap-6">
-              
-              <motion.div variants={fadeUp}>
-                <div className="flex justify-between items-end mb-6">
-                  <div>
-                    <h2 className="text-xl font-bold font-display">🛠️ Private Sprint Tasks & Kanban</h2>
-                    <p className="text-sm text-taupe mt-1">Collaboration Gate. Collaborate privately before drafting and publishing releases for client review.</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="portal-label bg-indigo-50 border border-indigo-200 text-indigo-700 px-3 py-1 rounded font-mono uppercase font-semibold text-[0.625rem]">
-                      {internalTasks.filter(t => t.status !== "Resolved").length} active items
-                    </span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-                  {(["Todo", "In Progress", "In Review", "Resolved"] as TaskStatus[]).map((statusCol) => {
-                    const colTasks = internalTasks.filter(t => t.status === statusCol);
-                    return (
-                      <div key={statusCol} className="bg-sand-light/50 border border-taupe/10 rounded-xl p-4 min-h-[480px] flex flex-col">
-                        <div className="flex justify-between items-center mb-4 pb-2 border-b border-taupe/10">
-                          <span className="font-mono text-xs uppercase tracking-wider text-charcoal font-bold">{statusCol}</span>
-                          <span className="bg-white border border-taupe/12 text-[0.6rem] font-bold px-2 py-0.5 rounded font-mono text-taupe">{colTasks.length}</span>
-                        </div>
-
-                        <div className="flex-1 flex flex-col gap-3 overflow-y-auto">
-                          {colTasks.map((task) => {
-                            const assignee = team.find(t => t.id === task.assignedAdminId) || team[0];
-                            const client = clients.find(c => c.id === task.clientId);
-                            const prod = products.find(p => p.id === task.productId);
-
-                            return (
-                              <div key={task.id} className="bg-white border border-taupe/10 rounded-lg p-3 hover:border-taupe/25 transition-all shadow-2xs relative group">
-                                <div className="absolute top-0 right-0 w-1.5 h-full rounded-r-lg" style={{ backgroundColor: assignee.colorVar }} />
-                                
-                                <div className="text-xs font-bold text-charcoal mb-1 leading-snug">{task.title}</div>
-                                
-                                {client && (
-                                  <div className="text-[0.58rem] font-mono text-ember uppercase mb-1">Client: {client.name}</div>
-                                )}
-                                {prod && (
-                                  <div className="text-[0.58rem] font-mono text-indigo-600 uppercase mb-1">Product: {prod.name}</div>
-                                )}
-
-                                <div className="space-y-1 bg-sand-light/40 border border-taupe/5 p-2 rounded text-[0.625rem] text-charcoal/80 mb-3">
-                                  <div className="text-[0.5rem] font-mono uppercase text-taupe mb-1">Private Sprints Log</div>
-                                  <div className="max-h-[70px] overflow-y-auto space-y-1 pr-1 font-mono">
-                                    {task.internalNotes.map((note, nIdx) => (
-                                      <div key={nIdx} className="leading-tight border-l border-taupe/15 pl-1.5 italic">"{note}"</div>
-                                    ))}
-                                  </div>
-                                </div>
-
-                                <div className="flex flex-col gap-1.5 border-t border-taupe/5 pt-2">
-                                  <div className="flex items-center justify-between text-[0.55rem] font-mono text-taupe mb-1">
-                                    <span>Owner: <strong style={{ color: assignee.colorVar }}>{assignee.name}</strong></span>
-                                  </div>
-                                  
-                                  {/* Task Notes quick adding */}
-                                  <div className="flex gap-1">
-                                    <input 
-                                      type="text"
-                                      placeholder="Log sprint notes..."
-                                      value={newInternalTaskNotes[task.id] || ""}
-                                      onChange={(e) => setNewInternalTaskNotes(prev => ({ ...prev, [task.id]: e.target.value }))}
-                                      className="flex-1 bg-sand border border-taupe/15 px-1.5 py-0.5 rounded text-[0.65rem] focus:outline-none focus:border-ember"
-                                    />
-                                    <button 
-                                      onClick={() => {
-                                        if (!newInternalTaskNotes[task.id]?.trim()) return;
-                                        addInternalTaskNote(task.id, newInternalTaskNotes[task.id].trim());
-                                        setNewInternalTaskNotes(prev => ({ ...prev, [task.id]: "" }));
-                                      }}
-                                      className="bg-charcoal hover:bg-black text-sand text-[0.58rem] px-2 rounded"
-                                    >
-                                      +
-                                    </button>
-                                  </div>
-
-                                  {/* Status shifter */}
-                                  <select
-                                    value={task.status}
-                                    onChange={(e) => updateInternalTaskStatus(task.id, e.target.value as TaskStatus)}
-                                    className="w-full bg-sand border border-taupe/15 rounded text-[0.6rem] py-0.5 text-charcoal"
-                                  >
-                                    {(["Todo", "In Progress", "In Review", "Resolved"] as TaskStatus[]).map(s => (
-                                      <option key={s} value={s}>{s}</option>
-                                    ))}
-                                  </select>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
+                  {/* Inline Task creation Modal */}
+                  <AnimatePresence>
+                    {showTaskForm && (
+                      <div className="fixed inset-0 bg-[#0A0A0A]/70 backdrop-blur-md z-50 flex items-center justify-center p-4 select-none">
+                        <motion.form 
+                          onSubmit={handleAddTaskSubmit}
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          className="bg-[#121212] border border-[#1F1F1F] p-6 rounded-2xl w-full max-w-sm space-y-4 shadow-2xl relative"
+                        >
+                          <button 
+                            type="button" 
+                            onClick={() => setShowTaskForm(false)}
+                            className="absolute top-4 right-4 text-[#8E8E8E] hover:text-[#FAF9F6] transition-colors"
+                          >
+                            ✕
+                          </button>
+                          <h3 className="text-xs font-mono uppercase tracking-widest font-bold text-[#06B6D4]">📋 Log New Sprint Task</h3>
+                          
+                          <div className="space-y-3 text-xs font-mono">
+                            <div>
+                              <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Task Title</label>
+                              <input 
+                                type="text" 
+                                required 
+                                value={newTaskTitle} 
+                                onChange={(e) => setNewTaskTitle(e.target.value)} 
+                                placeholder="Refactor rate columns mobile wrapping" 
+                                className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
+                              />
+                            </div>
+                            <div>
+                              <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Linked Client Account (Optional)</label>
+                              <select
+                                value={newTaskClient}
+                                onChange={(e) => setNewTaskClient(e.target.value)}
+                                className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
+                              >
+                                <option value="">Internal Core Development</option>
+                                {allClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Specialist Owner</label>
+                              <select
+                                value={newTaskAssignee}
+                                onChange={(e) => setNewTaskAssignee(e.target.value)}
+                                className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
+                              >
+                                {team.map(t => <option key={t.id} value={t.id}>{t.name} ({t.role})</option>)}
+                              </select>
+                            </div>
+                          </div>
+                          
+                          <button 
+                            type="submit" 
+                            className="w-full bg-[#06B6D4] hover:bg-[#0891B2] text-[#0A0A0A] font-mono text-xs uppercase tracking-[0.15em] font-bold py-2.5 rounded-lg transition-colors"
+                          >
+                            Push Sprint Task
+                          </button>
+                        </motion.form>
                       </div>
-                    );
-                  })}
+                    )}
+                  </AnimatePresence>
                 </div>
+
+                {/* COLUMN 3: Support Incident Desk */}
+                <div className="border border-[#1F1F1F] bg-[#121212] rounded-2xl p-5 min-h-[580px] flex flex-col justify-between">
+                  <div>
+                    <div className="flex justify-between items-center mb-4 border-b border-[#1F1F1F] pb-3">
+                      <h3 className="text-xs font-bold uppercase tracking-[0.15em] font-mono text-[#06B6D4] flex items-center gap-1.5">
+                        <span className="text-[#06B6D4]">🚨</span> Incident Support
+                      </h3>
+                      <button 
+                        onClick={() => setShowFlagForm(true)}
+                        className="bg-[#1F1F1F] hover:bg-[#06B6D4] text-[#FAF9F6] hover:text-[#0A0A0A] border border-[#1F1F1F] text-[0.6rem] font-mono uppercase px-2 py-1 rounded transition-colors"
+                      >
+                        + Raise Ticket
+                      </button>
+                    </div>
+
+                    <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1 dark-scrollbar">
+                      {flags.filter(f => f.status !== "Resolved").map((flag) => {
+                        const assignee = team.find(t => t.id === flag.assignedAdminId);
+                        const client = allClients.find(c => c.id === flag.clientId);
+                        
+                        return (
+                          <div 
+                            key={flag.id}
+                            onClick={() => setSelectedFlag(flag)}
+                            className="bg-[#0A0A0A] border border-[#1F1F1F] p-4 rounded-xl cursor-pointer hover:border-[#06B6D4]/35 transition-all relative group"
+                          >
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm(`Remove support flag ticket?`)) {
+                                  deleteFlag(flag.id);
+                                }
+                              }}
+                              className="absolute top-3 right-3 text-[#8E8E8E] hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 text-xs font-mono"
+                            >
+                              ✕
+                            </button>
+
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className={`inline-flex px-1.5 py-0.5 rounded text-[0.5rem] uppercase font-mono font-bold ${
+                                flag.severity === "Critical" ? "bg-red-500/10 text-red-500 border border-red-500/30 animate-pulse" :
+                                flag.severity === "High" ? "bg-amber-500/10 text-amber-500 border border-amber-500/30" :
+                                "bg-stone-800 text-[#8E8E8E]"
+                              }`}>
+                                {flag.severity}
+                              </span>
+                              {client && (
+                                <span className="text-[0.55rem] font-mono text-[#06B6D4] truncate font-semibold uppercase">{client.name}</span>
+                              )}
+                            </div>
+
+                            <div className="text-xs font-bold text-[#FAF9F6] mb-2 leading-snug truncate pr-4">{flag.title}</div>
+                            
+                            <div className="flex justify-between items-center border-t border-[#1F1F1F] pt-2 text-[0.58rem] font-mono">
+                              <span className="text-[#8E8E8E]">Lead: <strong style={{ color: assignee?.colorVar }}>{assignee?.name || "Unassigned"}</strong></span>
+                              <span className="text-[#06B6D4] font-bold uppercase">{flag.status}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {flags.filter(f => f.status !== "Resolved").length === 0 && (
+                        <div className="text-xs text-[#8E8E8E] font-mono italic text-center py-10">No active support tickets. All stable!</div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Inline Support Flag creation Modal */}
+                  <AnimatePresence>
+                    {showFlagForm && (
+                      <div className="fixed inset-0 bg-[#0A0A0A]/70 backdrop-blur-md z-50 flex items-center justify-center p-4 select-none">
+                        <motion.form 
+                          onSubmit={handleAddFlagSubmit}
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          className="bg-[#121212] border border-[#1F1F1F] p-6 rounded-2xl w-full max-w-sm space-y-4 shadow-2xl relative"
+                        >
+                          <button 
+                            type="button" 
+                            onClick={() => setShowFlagForm(false)}
+                            className="absolute top-4 right-4 text-[#8E8E8E] hover:text-[#FAF9F6] transition-colors"
+                          >
+                            ✕
+                          </button>
+                          <h3 className="text-xs font-mono uppercase tracking-widest font-bold text-[#EF4444]">🚨 File Post-Service Escalation Ticket</h3>
+                          
+                          <div className="space-y-3 text-xs font-mono">
+                            <div>
+                              <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Issue Title</label>
+                              <input 
+                                type="text" 
+                                required 
+                                value={newFlagTitle} 
+                                onChange={(e) => setNewFlagTitle(e.target.value)} 
+                                placeholder="Rate limit API timeout" 
+                                className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
+                              />
+                            </div>
+                            <div>
+                              <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Escalation Details</label>
+                              <textarea 
+                                required 
+                                value={newFlagDesc} 
+                                onChange={(e) => setNewFlagDesc(e.target.value)} 
+                                placeholder="API crashes exactly at 23:00 daily." 
+                                rows={3}
+                                className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6] resize-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Escalated Client Account</label>
+                              <select
+                                value={newFlagClient}
+                                onChange={(e) => setNewFlagClient(e.target.value)}
+                                className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
+                              >
+                                {allClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Severity</label>
+                              <select
+                                value={newFlagSeverity}
+                                onChange={(e) => setNewFlagSeverity(e.target.value as FlagSeverity)}
+                                className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
+                              >
+                                <option value="Critical">Critical Outage</option>
+                                <option value="High">High Glitch</option>
+                                <option value="Medium">Medium Enhancement</option>
+                                <option value="Low">Low QA Polish</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Assigned Lead</label>
+                              <select
+                                value={newFlagAssignee}
+                                onChange={(e) => setNewFlagAssignee(e.target.value)}
+                                className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
+                              >
+                                {team.map(t => <option key={t.id} value={t.id}>{t.name} ({t.role})</option>)}
+                              </select>
+                            </div>
+                          </div>
+                          
+                          <button 
+                            type="submit" 
+                            className="w-full bg-[#EF4444] text-[#FAF9F6] font-mono text-xs uppercase tracking-[0.15em] font-bold py-2.5 rounded-lg transition-colors"
+                          >
+                            Raise Incident Ticket
+                          </button>
+                        </motion.form>
+                      </div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
               </motion.div>
 
             </motion.div>
           )}
 
-          {/* ═══ TAB 4: OUTREACH & COLD CALLS FUNNEL ═══ */}
+          {/* ═══ TAB 2: OUTREACH FUNNEL ═══ */}
           {activeTab === "outreach" && (
             <motion.div key="outreach" initial="hidden" animate="show" exit="hidden" variants={stagger} className="flex flex-col gap-6">
               
-              {/* Outreach Sourcing Metrics Panel */}
-              <motion.div variants={fadeUp} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Sourcing funnel analytics */}
+              <motion.div variants={fadeUp} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                  { label: "Total Deal Pipeline", value: formatCurrency(outreachAnalytics.totalPipeline) },
-                  { label: "Pipeline Quality Index", value: `${outreachAnalytics.avgScore}%`, accent: true },
-                  { label: "Sourced by Ankit (Comms)", value: `${outreachAnalytics.ankitLeads} leads` },
-                  { label: "Sourced by Muskan (Branding)", value: `${outreachAnalytics.muskanLeads} leads` }
+                  { label: "Total Lead Pipeline", value: formatCurrency(outreachAnalytics.totalPipeline) },
+                  { label: "Deal Quality score", value: `${outreachAnalytics.avgScore}%`, accent: true },
+                  { label: "Active Lead Targets", value: `${leads.length} contacts` },
+                  { label: "Converted Success Rate", value: "85%", accent: false },
                 ].map((m, idx) => (
-                  <div key={idx} className="bg-sand-light/60 border border-taupe/10 rounded-xl p-4 flex flex-col justify-between shadow-2xs">
-                    <div className="portal-label text-[0.58rem] mb-1">{m.label}</div>
-                    <div className={`text-xl font-bold font-display ${m.accent ? "text-ember" : "text-charcoal"}`}>{m.value}</div>
+                  <div key={idx} className="bg-[#121212] border border-[#1F1F1F] rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+                    <div className="portal-label text-[0.55rem] mb-2">{m.label}</div>
+                    <div className={`text-xl font-bold font-mono ${m.accent ? "text-[#06B6D4]" : "text-[#FAF9F6]"}`}>{m.value}</div>
                   </div>
                 ))}
               </motion.div>
 
               <motion.div variants={fadeUp}>
-                <div className="flex justify-between items-end mb-6">
+                <div className="flex justify-between items-center mb-6">
                   <div>
-                    <h2 className="text-xl font-bold font-display">Almmatix Deal Funnel & Outreach</h2>
-                    <p className="text-sm text-taupe mt-1">Outbound cold calling pipelines, social marketing sourcing (Muskan & Ankit), and direct conversions.</p>
+                    <h2 className="text-sm font-bold uppercase tracking-[0.2em] font-mono text-[#06B6D4]">Sales Outreach Sourcing Desk</h2>
+                    <p className="text-xs text-[#8E8E8E] mt-1 font-mono">Cold Calling records, social media pipelines (LinkedIn/Twitter), and conversion triggers.</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button 
-                      onClick={() => setShowLeadForm(prev => !prev)}
-                      className="bg-charcoal hover:bg-black text-sand text-[0.625rem] font-bold font-mono uppercase px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5"
-                    >
-                      {showLeadForm ? "✕ Close Form" : "🎯 Sourced Lead +"}
-                    </button>
-                  </div>
+                  <button 
+                    onClick={() => setShowLeadForm(prev => !prev)}
+                    className="bg-[#121212] hover:bg-[#06B6D4] text-[#06B6D4] hover:text-[#0A0A0A] border border-[#06B6D4]/30 text-[0.6rem] font-bold font-mono uppercase px-4 py-2.5 rounded-lg transition-all"
+                  >
+                    {showLeadForm ? "✕ Close Form" : "🎯 Add Sourced Lead"}
+                  </button>
                 </div>
 
-                {/* Inline Lead creation form */}
+                {/* Inline Lead Sourcing form */}
                 <AnimatePresence>
                   {showLeadForm && (
                     <motion.form 
@@ -971,877 +1025,714 @@ export default function AdminDashboard() {
                       initial={{ opacity: 0, height: 0 }} 
                       animate={{ opacity: 1, height: "auto" }} 
                       exit={{ opacity: 0, height: 0 }} 
-                      className="bg-white border border-taupe/15 rounded-xl p-5 mb-6 shadow-md overflow-hidden grid grid-cols-1 md:grid-cols-3 gap-4"
+                      className="bg-[#121212] border border-[#1F1F1F] rounded-2xl p-5 mb-6 shadow-xl overflow-hidden grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono"
                     >
                       <div>
-                        <label className="portal-label block mb-1 font-mono uppercase text-[0.58rem]">Outreach Target Company</label>
+                        <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Corporate Target</label>
                         <input 
                           type="text" 
                           required
-                          placeholder="e.g. Karthik Exports Pvt Ltd"
                           value={newLeadCompany}
                           onChange={(e) => setNewLeadCompany(e.target.value)}
-                          className="w-full bg-sand border border-taupe/15 text-xs rounded px-3 py-2 text-charcoal focus:outline-none"
+                          placeholder="UPKEM Labs Inc"
+                          className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs text-[#FAF9F6] outline-none focus:border-[#06B6D4]"
                         />
                       </div>
                       <div>
-                        <label className="portal-label block mb-1 font-mono uppercase text-[0.58rem]">Project Deliverable Details</label>
+                        <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Project Focus</label>
                         <input 
                           type="text" 
                           required
-                          placeholder="e.g. Website development & CRM UI Sprints"
                           value={newLeadDesc}
                           onChange={(e) => setNewLeadDesc(e.target.value)}
-                          className="w-full bg-sand border border-taupe/15 text-xs rounded px-3 py-2 text-charcoal focus:outline-none"
+                          placeholder="Website polish & CRM Dashboard"
+                          className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs text-[#FAF9F6] outline-none focus:border-[#06B6D4]"
                         />
                       </div>
                       <div>
-                        <label className="portal-label block mb-1 font-mono uppercase text-[0.58rem]">Estimated Value (INR)</label>
+                        <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Est Val (INR)</label>
                         <input 
                           type="number" 
                           required
                           value={newLeadVal}
                           onChange={(e) => setNewLeadVal(e.target.value)}
-                          className="w-full bg-sand border border-taupe/15 text-xs rounded px-3 py-2 text-charcoal focus:outline-none"
+                          className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs text-[#FAF9F6] outline-none focus:border-[#06B6D4]"
                         />
                       </div>
-
                       <div>
-                        <label className="portal-label block mb-1 font-mono uppercase text-[0.58rem]">Sourcing Channel</label>
-                        <select 
+                        <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Sourced Channel</label>
+                        <select
                           value={newLeadSource}
                           onChange={(e) => setNewLeadSource(e.target.value as LeadSource)}
-                          className="w-full bg-sand border border-taupe/15 text-xs rounded px-3 py-2 text-charcoal"
+                          className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs text-[#FAF9F6] outline-none focus:border-[#06B6D4]"
                         >
-                          {["Cold Call", "LinkedIn", "Twitter", "Email", "Referral", "Instagram", "Social Media"].map(sc => (
-                            <option key={sc} value={sc}>{sc}</option>
-                          ))}
+                          <option value="LinkedIn">LinkedIn Outreach</option>
+                          <option value="Twitter">Twitter Sprints</option>
+                          <option value="Cold Call">Cold Calling</option>
+                          <option value="Email">Cold Emailing</option>
                         </select>
                       </div>
-
                       <div>
-                        <label className="portal-label block mb-1 font-mono uppercase text-[0.58rem]">Sourced By (Specialist)</label>
-                        <select 
+                        <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Sourced By</label>
+                        <select
                           value={newLeadSourcedBy}
                           onChange={(e) => setNewLeadSourcedBy(e.target.value)}
-                          className="w-full bg-sand border border-taupe/15 text-xs rounded px-3 py-2 text-charcoal"
+                          className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs text-[#FAF9F6] outline-none focus:border-[#06B6D4]"
                         >
-                          {team.map(t => (
-                            <option key={t.id} value={t.id}>{t.name} ({t.primaryFocus})</option>
-                          ))}
+                          {team.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                         </select>
                       </div>
-
-                      <div>
-                        <label className="portal-label block mb-1 font-mono uppercase text-[0.58rem]">Interest / Engagement Index (0-100)</label>
-                        <input 
-                          type="number" 
-                          value={newLeadScore}
-                          onChange={(e) => setNewLeadScore(e.target.value)}
-                          className="w-full bg-sand border border-taupe/15 text-xs rounded px-3 py-2 text-charcoal focus:outline-none"
-                        />
-                      </div>
-
-                      <div className="md:col-span-3 flex justify-end">
+                      <div className="flex items-end">
                         <button 
                           type="submit"
-                          className="bg-charcoal hover:bg-black text-sand text-xs font-mono font-bold uppercase py-2 px-6 rounded"
+                          className="w-full bg-[#06B6D4] text-[#0A0A0A] uppercase font-bold py-2.5 rounded-lg text-xs"
                         >
-                          Confirm & Log target Sourcing
+                          Log Outreach Lead
                         </button>
                       </div>
                     </motion.form>
                   )}
                 </AnimatePresence>
 
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-                  {(["Lead", "Cold Contact", "Discussion", "Proposal"] as OutreachStatus[]).map((funnelStatus) => {
-                    const statusLeads = leads.filter(l => l.status === funnelStatus);
+                {/* Sourcing leads calling pipeline grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {leads.map((lead) => {
+                    const assignee = team.find(t => t.id === lead.assignedAdminId);
+                    const sourcer = team.find(t => t.id === lead.sourcedById);
+
                     return (
-                      <div key={funnelStatus} className="bg-sand-light/50 border border-taupe/10 rounded-xl p-4 min-h-[480px] flex flex-col">
-                        <div className="flex justify-between items-center mb-4 pb-2 border-b border-taupe/10">
-                          <span className="font-mono text-xs uppercase tracking-wider text-charcoal font-bold">{funnelStatus}</span>
-                          <span className="bg-white border border-taupe/15 text-[0.6rem] font-bold px-2 py-0.5 rounded font-mono text-taupe">{statusLeads.length}</span>
+                      <div key={lead.id} className="bg-[#121212] border border-[#1F1F1F] p-5 rounded-2xl relative group font-mono text-xs">
+                        <button
+                          onClick={() => {
+                            if (confirm(`Remove lead ${lead.companyName}?`)) {
+                              deleteLead(lead.id);
+                            }
+                          }}
+                          className="absolute top-3 right-3 text-[#8E8E8E] hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-0.5"
+                        >
+                          ✕
+                        </button>
+
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <span className="text-[0.55rem] bg-[#1F1F1F] text-[#06B6D4] px-2 py-0.5 rounded font-bold uppercase tracking-widest">{lead.source}</span>
+                            <h3 className="text-sm font-bold text-[#FAF9F6] mt-2 leading-tight">{lead.companyName}</h3>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[0.5rem] text-[#8E8E8E] block uppercase">Est Val</span>
+                            <span className="font-extrabold text-[#FAF9F6]">{formatCurrency(lead.estimatedValue)}</span>
+                          </div>
                         </div>
 
-                        <div className="flex-1 flex flex-col gap-3 overflow-y-auto">
-                          {statusLeads.map((lead) => {
-                            const handler = team.find(t => t.id === lead.assignedAdminId) || team[0];
-                            const sourcer = team.find(t => t.id === lead.sourcedById) || team[0];
-                            return (
-                              <div key={lead.id} className="bg-white border border-white rounded-lg p-3.5 hover:border-taupe/20 transition-all shadow-2xs relative group">
-                                <div className="absolute top-0 right-0 w-1.5 h-full rounded-r-lg" style={{ backgroundColor: handler.colorVar }} />
-                                
-                                <div className="text-xs font-extrabold text-charcoal mb-1 leading-snug">{lead.companyName}</div>
-                                <p className="text-[0.68rem] text-taupe leading-relaxed mb-3">{lead.projectDescription}</p>
+                        <p className="text-[#8E8E8E] text-[0.68rem] leading-relaxed mb-4">"{lead.projectDescription}"</p>
 
-                                {/* Sourcing information and Score bar */}
-                                <div className="mb-3 space-y-2 border-t border-taupe/5 pt-2">
-                                  <div className="flex justify-between text-[0.58rem] font-mono text-taupe-light">
-                                    <span>Sourced By: <strong style={{ color: sourcer.colorVar }}>{sourcer.name}</strong></span>
-                                    <span>Score: <strong className="text-ember">{lead.engagementScore}%</strong></span>
-                                  </div>
-                                  <div className="h-1 w-full bg-taupe/10 rounded-full overflow-hidden">
-                                    <div style={{ width: `${lead.engagementScore}%` }} className="h-full bg-ember" />
-                                  </div>
-                                </div>
+                        <div className="bg-[#0A0A0A] border border-[#1F1F1F] p-3 rounded-xl mb-4 space-y-1.5">
+                          <div className="text-[0.5rem] uppercase text-[#8E8E8E] border-b border-[#1F1F1F] pb-1 flex justify-between items-center">
+                            <span>Outreach log notes ({lead.callsMade} dials)</span>
+                            <button 
+                              onClick={() => incrementLeadCalls(lead.id)}
+                              className="text-[#06B6D4] hover:underline uppercase text-[0.48rem] font-bold"
+                            >
+                              📞 Dial pinger (+1)
+                            </button>
+                          </div>
+                          <div className="max-h-[60px] overflow-y-auto space-y-1 text-[0.625rem] text-[#8E8E8E] pr-1">
+                            {lead.notes.map((note, idx) => (
+                              <div key={idx} className="border-l border-[#1F1F1F] pl-2 italic">"{note}"</div>
+                            ))}
+                          </div>
+                          <div className="flex gap-1.5 mt-2 pt-1 border-t border-[#1F1F1F]">
+                            <input 
+                              type="text" 
+                              placeholder="Log conversation details..." 
+                              value={newLeadNotes[lead.id] || ""}
+                              onChange={(e) => setNewLeadNotes(prev => ({ ...prev, [lead.id]: e.target.value }))}
+                              className="flex-1 bg-[#121212] border border-[#1F1F1F] rounded px-2 py-1 text-[0.625rem] text-[#FAF9F6] outline-none"
+                            />
+                            <button 
+                              onClick={() => {
+                                if (!newLeadNotes[lead.id]?.trim()) return;
+                                addLeadNote(lead.id, newLeadNotes[lead.id].trim());
+                                setNewLeadNotes(prev => ({ ...prev, [lead.id]: "" }));
+                              }}
+                              className="bg-[#06B6D4] hover:bg-[#0891B2] text-[#0A0A0A] font-bold px-2 rounded"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
 
-                                <div className="flex justify-between items-center text-[0.65rem] font-mono text-taupe mb-2">
-                                  <span>Val: <span className="font-bold text-charcoal">{formatCurrency(lead.estimatedValue)}</span></span>
-                                  <span>Calls: <span className="font-bold text-charcoal">{lead.callsMade} logs</span></span>
-                                </div>
-
-                                <div className="flex items-center gap-1.5 mb-3">
-                                  <span className="text-[0.55rem] text-taupe-light font-mono uppercase">Channel:</span>
-                                  <span className="bg-sand border border-taupe/10 px-1.5 py-0.5 rounded text-[0.55rem] font-bold font-mono tracking-wider text-charcoal">{lead.source}</span>
-                                </div>
-
-                                {/* Call note logs */}
-                                <div className="mb-3.5 bg-sand-light/50 p-2 rounded text-[0.625rem] text-charcoal/80 space-y-1">
-                                  <div className="text-[0.5rem] font-mono uppercase text-taupe">Notes & Contacts</div>
-                                  <div className="max-h-[70px] overflow-y-auto space-y-1 pr-1 font-mono leading-tight">
-                                    {lead.notes.map((note, nIdx) => (
-                                      <div key={nIdx} className="border-l border-taupe/15 pl-1.5">"{note}"</div>
-                                    ))}
-                                  </div>
-                                </div>
-
-                                {/* Interactive Call Logger */}
-                                <div className="flex flex-col gap-1.5 border-t border-taupe/5 pt-2">
-                                  <div className="flex gap-1.5">
-                                    <button 
-                                      onClick={() => incrementLeadCalls(lead.id)}
-                                      className="flex-1 bg-sand hover:bg-sand-deep border border-taupe/15 text-[0.55rem] font-mono uppercase font-bold py-1 px-1 rounded transition-all text-charcoal"
-                                    >
-                                      📞 Call Log
-                                    </button>
-                                    <button 
-                                      onClick={() => convertLeadToClient(lead.id)}
-                                      className="flex-1 bg-ember text-white text-[0.55rem] font-mono uppercase font-bold py-1 px-1 rounded hover:bg-ember-dark transition-all"
-                                    >
-                                      🤝 Convert
-                                    </button>
-                                  </div>
-
-                                  <div className="flex gap-1">
-                                    <input 
-                                      type="text" 
-                                      placeholder="Quick log note..." 
-                                      value={newLeadNotes[lead.id] || ""}
-                                      onChange={(e) => setNewLeadNotes(prev => ({ ...prev, [lead.id]: e.target.value }))}
-                                      className="flex-1 bg-sand border border-taupe/15 px-1.5 py-0.5 rounded text-[0.65rem] focus:outline-none focus:border-ember"
-                                    />
-                                    <button 
-                                      onClick={() => {
-                                        if (!newLeadNotes[lead.id]?.trim()) return;
-                                        addLeadNote(lead.id, newLeadNotes[lead.id].trim());
-                                        setNewLeadNotes(prev => ({ ...prev, [lead.id]: "" }));
-                                      }}
-                                      className="bg-charcoal text-sand text-[0.58rem] px-2 rounded"
-                                    >
-                                      +
-                                    </button>
-                                  </div>
-
-                                  {/* Funnel progression select */}
-                                  <select 
-                                    value={lead.status}
-                                    onChange={(e) => updateLeadStatus(lead.id, e.target.value as OutreachStatus)}
-                                    className="w-full bg-sand border border-taupe/15 rounded text-[0.6rem] py-0.5 text-charcoal"
-                                  >
-                                    {(["Lead", "Cold Contact", "Discussion", "Proposal", "Lost"] as OutreachStatus[]).map(st => (
-                                      <option key={st} value={st}>{st}</option>
-                                    ))}
-                                  </select>
-                                </div>
-                              </div>
-                            );
-                          })}
+                        <div className="flex flex-wrap gap-3 items-center justify-between border-t border-[#1F1F1F] pt-3 text-[0.58rem]">
+                          <div className="flex gap-4">
+                            <span>Sourced: <strong className="text-[#FAF9F6]">{sourcer?.name || "Muskan"}</strong></span>
+                            <span>Pipeline Lead: <strong className="text-[#FAF9F6]">{assignee?.name || "Ankit"}</strong></span>
+                          </div>
+                          
+                          <button 
+                            onClick={() => {
+                              if (confirm(`Convert ${lead.companyName} to Ongoing Client? This will provision their active project.`)) {
+                                convertLeadToClient(lead.id);
+                                alert("🎉 Lead converted! Staging playground sandbox and timeline are provisioned.");
+                              }
+                            }}
+                            className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg font-mono uppercase font-bold"
+                          >
+                            🚀 Convert to Client
+                          </button>
                         </div>
                       </div>
                     );
                   })}
                 </div>
               </motion.div>
+
             </motion.div>
           )}
 
-          {/* ═══ TAB 5: SUPPORT QUEUE ═══ */}
-          {activeTab === "support queue" && (
-            <motion.div key="support queue" initial="hidden" animate="show" exit="hidden" variants={stagger}>
-              <motion.div variants={fadeUp}>
-                <div className="flex justify-between items-end mb-6">
-                  <div>
-                     <h2 className="text-xl font-bold font-display">🚨 Client Support & Escalation Flags</h2>
-                     <p className="text-sm text-taupe mt-1">Post-service issue queues filed directly by personalized client portals. Track and update resolution timelines.</p>
-                  </div>
-                  <span className="bg-rose-50 border border-rose-200 text-rose-600 px-3 py-1 rounded font-mono uppercase font-semibold text-xs">
-                    {flags.filter(f => f.status !== "Resolved").length} active alerts
-                  </span>
-                </div>
-
-                <div className="bg-white border border-taupe/10 rounded-xl overflow-hidden shadow-2xs">
-                  <div className="grid grid-cols-[0.8fr_1.3fr_2fr_1fr_1.2fr_1.5fr] gap-4 px-6 py-3.5 bg-sand-light/50 border-b border-taupe/15 font-mono text-[0.65rem] uppercase font-bold text-taupe">
-                    <div>Severity</div>
-                    <div>Client Account</div>
-                    <div>Issue Escalation Details</div>
-                    <div>Status</div>
-                    <div>Sprint Owner</div>
-                    <div>Sprint Timeline Resolution Logs</div>
-                  </div>
-
-                  <div className="divide-y divide-taupe/10">
-                    {flags.map((flag) => {
-                      const client = clients.find(c => c.id === flag.clientId);
-                      const staff = team.find(t => t.id === flag.assignedAdminId);
-                      
-                      const severityColors: Record<FlagSeverity, string> = {
-                        Critical: "bg-red-500 text-white animate-live-pulse",
-                        High: "bg-orange-500 text-white",
-                        Medium: "bg-amber-500 text-white",
-                        Low: "bg-taupe text-sand"
-                      };
-
-                      return (
-                        <div key={flag.id} className="grid grid-cols-[0.8fr_1.3fr_2fr_1fr_1.2fr_1.5fr] gap-4 px-6 py-4 items-center hover:bg-sand-warm/10 transition-colors">
-                          {/* Severity */}
-                          <div>
-                            <span className={`inline-flex px-2 py-0.5 rounded text-[0.55rem] uppercase tracking-wider font-mono font-bold ${severityColors[flag.severity]}`}>
-                              {flag.severity}
-                            </span>
-                          </div>
-
-                          {/* Client */}
-                          <div className="min-w-0 pr-2">
-                            <div className="text-xs font-extrabold text-charcoal">{client?.name || `Client #${flag.clientId}`}</div>
-                            <div className="text-[0.6rem] text-taupe font-mono leading-tight">{client?.project}</div>
-                          </div>
-
-                          {/* Escalation details */}
-                          <div className="pr-4">
-                            <div className="text-xs font-bold text-charcoal leading-snug">{flag.title}</div>
-                            <p className="text-[0.68rem] text-taupe leading-normal mt-0.5">{flag.description}</p>
-                            <span className="text-[0.55rem] text-taupe-light font-mono block mt-1">Logged: {flag.createdAt}</span>
-                          </div>
-
-                          {/* Status gate */}
-                          <div>
-                            <select
-                              value={flag.status}
-                              onChange={(e) => updateFlagStatus(flag.id, e.target.value as FlagStatus)}
-                              className="bg-charcoal text-sand text-[0.65rem] rounded p-1 focus:outline-none focus:border-ember font-mono uppercase"
-                            >
-                              {(["Open", "Investigating", "In Dev", "Resolved"] as FlagStatus[]).map(st => (
-                                <option key={st} value={st} className="bg-charcoal">{st}</option>
-                              ))}
-                            </select>
-                          </div>
-
-                          {/* Sprint Owner assignment */}
-                          <div>
-                            <select
-                              value={flag.assignedAdminId || ""}
-                              onChange={(e) => assignFlagAdmin(flag.id, e.target.value)}
-                              className="bg-sand border border-taupe/15 text-[0.7rem] text-charcoal rounded p-1 focus:outline-none focus:border-ember"
-                            >
-                              <option value="">Unassigned</option>
-                              {team.map(t => (
-                                <option key={t.id} value={t.id}>{t.name} ({t.avatar})</option>
-                              ))}
-                            </select>
-                          </div>
-
-                          {/* Sprint Logs inline compiler */}
-                          <div className="flex flex-col gap-1.5">
-                            <div className="max-h-[80px] overflow-y-auto text-[0.65rem] text-charcoal/80 space-y-1 font-mono pr-1 bg-sand-light/30 p-1.5 rounded">
-                              {flag.sprintLogs.map((log, lIdx) => (
-                                <div key={log.id || lIdx} className="leading-tight">
-                                  <strong className="text-charcoal">{log.author}:</strong> "{log.text}"
-                                </div>
-                              ))}
-                            </div>
-                            
-                            <div className="flex gap-1">
-                              <input 
-                                type="text"
-                                placeholder="Log sprint resolution update..."
-                                value={newSupportSprintNotes[flag.id] || ""}
-                                onChange={(e) => setNewSupportSprintNotes(prev => ({ ...prev, [flag.id]: e.target.value }))}
-                                className="flex-1 bg-sand border border-taupe/15 px-1.5 py-0.5 rounded text-[0.65rem] focus:outline-none"
-                              />
-                              <button
-                                onClick={() => {
-                                  if (!newSupportSprintNotes[flag.id]?.trim()) return;
-                                  addFlagSprintLog(flag.id, currentAdmin.name, newSupportSprintNotes[flag.id].trim());
-                                  setNewSupportSprintNotes(prev => ({ ...prev, [flag.id]: "" }));
-                                }}
-                                className="bg-charcoal text-sand text-[0.58rem] px-2 rounded hover:bg-black"
-                              >
-                                +
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    {flags.length === 0 && (
-                      <div className="text-sm text-taupe text-center py-8 italic bg-sand/10">No client flags recorded. Operations healthy!</div>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-
-          {/* ═══ TAB 6: CHANGELOGS COMPOSER ═══ */}
-          {activeTab === "releases" && (
-            <motion.div key="releases" initial="hidden" animate="show" exit="hidden" variants={stagger} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              
-              {/* LEFT & CENTER: Release Drafting Board */}
-              <motion.div variants={fadeUp} className="lg:col-span-2 flex flex-col gap-6">
-                <div className="bg-white border border-taupe/10 rounded-xl p-6 shadow-2xs">
-                  <h2 className="text-sm font-bold uppercase tracking-[0.1em] text-charcoal font-mono mb-4">📢 Draft Changelog Review Release</h2>
-                  <p className="text-xs text-taupe mb-6 leading-relaxed">Compile client improvements internally. The client only sees this checklist in their portal for formal confirmation once published.</p>
-
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <label className="portal-label block mb-2 font-mono uppercase text-[0.625rem]">Select Client Account</label>
-                        <select 
-                          value={composerClientId}
-                          onChange={(e) => setComposerClientId(e.target.value)}
-                          className="w-full bg-sand border border-taupe/15 text-sm rounded px-3 py-2 text-charcoal"
-                        >
-                          {ongoingClients.map(cl => (
-                            <option key={cl.id} value={cl.id}>{cl.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="portal-label block mb-2 font-mono uppercase text-[0.625rem]">Release Version</label>
-                        <input 
-                          type="text" 
-                          placeholder="e.g. v1.2.0" 
-                          value={composerVersion}
-                          onChange={(e) => setComposerVersion(e.target.value)}
-                          className="w-full bg-sand border border-taupe/15 text-sm rounded px-3 py-2 text-charcoal focus:outline-none focus:border-ember"
-                        />
-                      </div>
-                      <div>
-                        <label className="portal-label block mb-2 font-mono uppercase text-[0.625rem]">Release Title</label>
-                        <input 
-                          type="text" 
-                          placeholder="e.g. Analytics POLISH" 
-                          value={composerTitle}
-                          onChange={(e) => setComposerTitle(e.target.value)}
-                          className="w-full bg-sand border border-taupe/15 text-sm rounded px-3 py-2 text-charcoal focus:outline-none focus:border-ember"
-                        />
-                      </div>
-                    </div>
-
-                    {/* What was improved checklist compiler */}
-                    <div>
-                      <label className="portal-label block mb-2 font-mono uppercase text-[0.625rem]">What was improved (Checklist Builder)</label>
-                      <div className="flex gap-2 mb-3">
-                        <input 
-                          type="text" 
-                          placeholder="Type an improvement action..." 
-                          value={composerItemText}
-                          onChange={(e) => setComposerItemText(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && handleAddComposerItem()}
-                          className="flex-1 bg-sand border border-taupe/15 text-sm rounded px-3 py-2 text-charcoal focus:outline-none focus:border-ember"
-                        />
-                        <button 
-                          onClick={handleAddComposerItem}
-                          className="bg-charcoal hover:bg-black text-sand font-mono uppercase font-bold text-xs px-4 rounded transition-colors"
-                        >
-                          Add Item
-                        </button>
-                      </div>
-
-                      {/* Display compiled checklist */}
-                      <div className="bg-sand-light/40 border border-taupe/10 rounded-lg p-4 space-y-2">
-                        {composerItems.map((item, idx) => (
-                          <div key={idx} className="flex justify-between items-start gap-4 text-sm bg-white/70 px-3 py-2 rounded border border-taupe/5 group">
-                            <span className="leading-snug text-charcoal font-medium">✓ {item}</span>
-                            <button 
-                              onClick={() => handleRemoveComposerItem(idx)}
-                              className="text-[0.65rem] text-red-500 font-mono opacity-0 group-hover:opacity-100 hover:underline shrink-0"
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        ))}
-                        {composerItems.length === 0 && (
-                          <div className="text-xs text-taupe italic text-center py-4">No checklist items added. Type above to add changes.</div>
-                        )}
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={handlePublishRelease}
-                      disabled={composerItems.length === 0 || !composerVersion}
-                      className="w-full bg-ember hover:bg-ember-dark text-white font-mono uppercase font-bold text-xs tracking-wider py-3 rounded transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      📢 Publish Release to Client Portal Review
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* RIGHT: Releases Pipeline Log */}
-              <motion.div variants={fadeUp} className="flex flex-col gap-4">
-                <div className="bg-sand-light/40 border border-taupe/10 rounded-xl p-5 shadow-xs">
-                  <h2 className="text-xs font-bold uppercase tracking-[0.15em] font-mono text-charcoal mb-4">Releases Pipeline History</h2>
-                  
-                  <div className="space-y-3.5 max-h-[500px] overflow-y-auto pr-1">
-                    {releases.map((release) => {
-                      const client = clients.find(cl => cl.id === release.clientId);
-                      return (
-                        <div key={release.id} className="bg-white border border-taupe/10 rounded-lg p-3 relative shadow-2xs">
-                          <span className={`absolute top-3 right-3 inline-flex px-1.5 py-0.5 rounded text-[0.55rem] font-mono font-bold ${
-                            release.status === "Approved" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800 animate-pulse"
-                          }`}>
-                            {release.status}
-                          </span>
-
-                          <div className="text-[0.6rem] font-mono font-bold text-ember uppercase">{release.version}</div>
-                          <div className="text-xs font-bold text-charcoal mb-1 leading-snug mt-0.5">{release.title}</div>
-                          <div className="text-[0.65rem] text-taupe font-mono mb-2">Account: {client?.name}</div>
-
-                          <div className="space-y-1 border-t border-taupe/5 pt-2 mb-2">
-                            {release.whatWasImproved.map((imp, idx) => (
-                              <div key={idx} className="text-[0.68rem] text-charcoal/80 flex items-start gap-1 leading-snug">
-                                <span className="text-emerald-500 shrink-0">✓</span> {imp}
-                              </div>
-                            ))}
-                          </div>
-                          
-                          {release.status === "Awaiting Review" && (
-                            <button
-                              onClick={() => approveRelease(release.id)}
-                              className="w-full mt-2 bg-charcoal hover:bg-black text-sand text-[0.625rem] font-mono font-bold uppercase py-1.5 rounded transition-all"
-                            >
-                              Confirm Release Verification
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-
-          {/* ═══ TAB 7: THE LAB (INTERNAL PRODUCTS INCUBATIONS) ═══ */}
-          {activeTab === "products" && (
-            <motion.div key="products" initial="hidden" animate="show" exit="hidden" variants={stagger}>
-               <motion.div variants={fadeUp} className="flex flex-col gap-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="text-xl font-bold font-display">The Lab (Internal Products)</h2>
-                      <p className="text-sm text-taupe mt-1">Proprietary SaaS tool incubations developed entirely in-house by Almmatix Companies.</p>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {products.map((product) => {
-                      const lead = team.find(t => t.id === product.leadId);
-                      const productTasks = internalTasks.filter(t => t.productId === product.id && t.status !== "Resolved");
-
-                      return (
-                        <div key={product.id} className="bg-sand-light/60 border border-taupe/10 rounded-2xl p-6 hover:shadow-lg transition-all group overflow-hidden relative shadow-xs flex flex-col justify-between">
-                          <div className="absolute top-0 right-0 w-32 h-32 bg-ember/5 rounded-bl-full -mr-16 -mt-16 transition-transform group-hover:scale-115" />
-                          
-                          <div className="relative z-10">
-                            <div className="flex justify-between items-start mb-4">
-                              <div className="font-bold text-md text-charcoal leading-tight">{product.name}</div>
-                              <span className="text-[0.55rem] uppercase tracking-widest font-mono bg-charcoal text-sand px-2 py-0.5 rounded font-semibold">{product.stage}</span>
-                            </div>
-                            
-                            <p className="text-xs text-charcoal/80 mb-5 min-h-[40px] leading-relaxed">{product.description}</p>
-                            
-                            <div className="space-y-4">
-                              {product.metrics && (
-                                <div className="bg-white/40 border border-taupe/5 p-2 rounded flex justify-between items-center text-xs font-mono">
-                                  <span className="text-taupe-light">{product.metrics.label}:</span>
-                                  <strong className="text-charcoal">{product.metrics.value}</strong>
-                                </div>
-                              )}
-
-                              <div>
-                                <div className="text-[0.58rem] uppercase tracking-widest font-mono text-taupe mb-1.5">Development Progress</div>
-                                <div className="w-full h-1.5 bg-taupe/15 rounded-full overflow-hidden">
-                                  <div className="h-full bg-ember" style={{ width: `${product.progress}%` }} />
-                                </div>
-                                <div className="text-right text-[0.625rem] font-bold text-ember mt-0.5 font-mono">{product.progress}% Complete</div>
-                              </div>
-
-                              {/* Repo links */}
-                              <div className="flex justify-between text-[0.625rem] font-mono text-taupe-light border-t border-taupe/5 pt-3">
-                                <span>Repo: <a href={`https://${product.repoLink}`} className="underline text-charcoal font-semibold">{product.repoLink?.split("/").pop()}</a></span>
-                                {product.sandboxLink && (
-                                  <span>Preview: <a href={`https://${product.sandboxLink}`} className="underline text-ember font-semibold">Live Sandbox</a></span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="relative z-10 border-t border-taupe/10 pt-4 mt-5">
-                            <div className="text-[0.58rem] uppercase tracking-widest font-mono text-taupe mb-2">Lab Product Lead</div>
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                {lead && <span className="w-6 h-6 rounded bg-charcoal text-sand flex items-center justify-center text-[0.5rem] font-bold font-mono" style={{ backgroundColor: lead.colorVar }}>{lead.avatar}</span>}
-                                <span className="text-xs font-semibold text-charcoal">{lead?.name}</span>
-                              </div>
-                              <span className="bg-indigo-50 border border-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded text-[0.55rem] font-mono uppercase">
-                                {productTasks.length} active tasks
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-               </motion.div>
-            </motion.div>
-          )}
-
-          {/* ═══ TAB 8: ACCESS & PROVISIONING (CORE PARTNERS ONLY) ═══ */}
-          {activeTab === "provisioning" && isCorePartner && (
-            <motion.div key="provisioning" initial="hidden" animate="show" exit="hidden" variants={stagger}>
-              <motion.div variants={fadeUp} className="flex flex-col gap-8">
+          {/* ═══ TAB 3: CLIENT PORTAL PREVIEW VIEW ═══ */}
+          {activeTab === "client_portal_view" && (
+            <motion.div key="client_portal_view" initial="hidden" animate="show" exit="hidden" variants={stagger} className="w-full">
+              <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-[#1F1F1F] pb-4">
                 <div>
-                  <h2 className="text-xl font-bold font-display flex items-center gap-2">
-                    Access & Credentials Provisioning
-                    <span className="text-[0.55rem] font-mono uppercase bg-amber-500 text-charcoal px-2 py-0.5 rounded font-extrabold">Partners Only</span>
-                  </h2>
-                  <p className="text-sm text-taupe mt-1">Pre-authorize email addresses for new team interns or client sandboxes. They can then register themselves with a custom password.</p>
+                  <h2 className="text-sm font-bold uppercase tracking-wider font-mono text-[#06B6D4]">Client Portal Preview Simulator</h2>
+                  <p className="text-xs text-[#8E8E8E] mt-1 font-mono">Live customer dashboard viewport. Test visual isolation and timeline status feeds.</p>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <span className="text-[0.6rem] font-mono uppercase text-[#8E8E8E] tracking-widest select-none">Active Viewport Profile:</span>
+                  <select
+                    value={selectedClientId}
+                    onChange={(e) => setSelectedClientId(Number(e.target.value))}
+                    className="bg-[#121212] border border-[#1F1F1F] text-xs text-[#FAF9F6] px-3 py-1.5 rounded-lg font-mono uppercase focus:outline-none focus:border-[#06B6D4]"
+                  >
+                    {allClients.filter(c => c.category === "Ongoing").map(cl => (
+                      <option key={cl.id} value={cl.id}>{cl.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
+              {/* Mount the actual client view component directly inside the viewport frame */}
+              <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-2xl overflow-hidden relative shadow-2xl">
+                <div className="bg-[#121212] border-b border-[#1F1F1F] px-4 py-2 text-[0.55rem] font-mono text-[#8E8E8E] flex justify-between items-center select-none">
+                  <span>🖥️ PREVIEW VIEWPORT FRAME — CLIENT ISOLATED SPACE</span>
+                  <span className="text-[#06B6D4] font-bold">● VISUAL SIMULATOR MODE</span>
+                </div>
+                <ClientPortalView />
+              </div>
+            </motion.div>
+          )}
+
+          {/* ═══ TAB 4: STAFF INVITES / ACCESS PROVISIONING ═══ */}
+          {activeTab === "staff_invites" && (
+            <motion.div key="staff_invites" initial="hidden" animate="show" exit="hidden" variants={stagger} className="grid grid-cols-1 lg:grid-cols-3 gap-6 font-mono text-xs">
+              
+              {/* Invite Provisioner Form */}
+              <div className="lg:col-span-1 border border-[#1F1F1F] bg-[#121212] p-5 rounded-2xl space-y-4">
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-[#06B6D4] mb-1">Invite Employee / Client</h3>
+                  <p className="text-[0.625rem] text-[#8E8E8E] leading-normal font-sans">Pre-authorize secure email addresses. Only listed emails are allowed to bypass cryptographical signup barriers.</p>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                  {/* Left side: Provisioning Form */}
-                  <form onSubmit={handleProvisionSubmit} className="lg:col-span-5 bg-sand-light/60 border border-taupe/15 rounded-2xl p-6 flex flex-col gap-5 shadow-xs">
-                    <div className="text-xs uppercase tracking-widest font-mono text-charcoal font-bold border-b border-taupe/10 pb-2">Pre-Authorize Credentials</div>
-
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[0.625rem] font-mono uppercase text-taupe font-bold">Email Address</label>
-                      <input
-                        type="email"
+                {!isCorePartner ? (
+                  <div className="bg-red-500/5 border border-red-500/20 p-4 rounded-xl text-center">
+                    <span className="text-[0.65rem] text-red-400 font-bold uppercase block">🔒 Core Partner Restricted</span>
+                    <span className="text-[0.58rem] text-[#8E8E8E] block mt-1 font-sans">Only Lakshya, Mouriyan, Ankit, or Muskan can authorize staff registry.</span>
+                  </div>
+                ) : (
+                  <form onSubmit={handleProvisionSubmit} className="space-y-4 text-xs font-mono">
+                    <div>
+                      <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Authorized Email</label>
+                      <input 
+                        type="email" 
                         required
                         value={provEmail}
                         onChange={(e) => setProvEmail(e.target.value)}
-                        placeholder="e.g. intern.dev@almmatix.com"
-                        className="w-full bg-sand-warm/30 border border-taupe/20 px-3 py-2 text-xs rounded font-sans focus:outline-none focus:border-charcoal transition-all text-charcoal font-medium placeholder-taupe/40"
+                        placeholder="intern.outreach@almmatix.com"
+                        className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
                       />
                     </div>
-
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[0.625rem] font-mono uppercase text-taupe font-bold">Invitee Full Name</label>
-                      <input
-                        type="text"
+                    <div>
+                      <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Employee Name</label>
+                      <input 
+                        type="text" 
                         required
                         value={provName}
                         onChange={(e) => setProvName(e.target.value)}
-                        placeholder="e.g. John Doe"
-                        className="w-full bg-sand-warm/30 border border-taupe/20 px-3 py-2 text-xs rounded font-sans focus:outline-none focus:border-charcoal transition-all text-charcoal font-medium placeholder-taupe/40"
+                        placeholder="Muskan Sourcing Intern"
+                        className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
                       />
                     </div>
-
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[0.625rem] font-mono uppercase text-taupe font-bold">Designation / Role Title</label>
-                      <input
-                        type="text"
+                    <div>
+                      <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Operational Role</label>
+                      <input 
+                        type="text" 
                         required
                         value={provRole}
                         onChange={(e) => setProvRole(e.target.value)}
-                        placeholder="e.g. Developer Intern"
-                        className="w-full bg-sand-warm/30 border border-taupe/20 px-3 py-2 text-xs rounded font-sans focus:outline-none focus:border-charcoal transition-all text-charcoal font-medium placeholder-taupe/40"
+                        placeholder="Outreach Intern"
+                        className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
                       />
                     </div>
-
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[0.625rem] font-mono uppercase text-taupe font-bold">Account Category</label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {[
-                          { id: "admin", label: "Startup Admin (Intern/Dev)" },
-                          { id: "client", label: "Client Partner" }
-                        ].map((cat) => (
-                          <button
-                            key={cat.id}
-                            type="button"
-                            onClick={() => {
-                              setProvCategory(cat.id as any);
-                              if (cat.id === "client") {
-                                setProvRole("Client Partner");
-                              } else {
-                                setProvRole("Dev Intern");
-                              }
-                            }}
-                            className={`py-2 px-3 rounded text-[0.65rem] uppercase font-mono font-bold tracking-wider border transition-all text-center focus:outline-none ${
-                              provCategory === cat.id
-                                ? "bg-charcoal text-sand border-charcoal"
-                                : "border-taupe/20 text-taupe hover:border-taupe/40 hover:bg-sand-warm/20"
-                            }`}
-                          >
-                            {cat.label}
-                          </button>
-                        ))}
-                      </div>
+                    <div>
+                      <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Permissions Category</label>
+                      <select
+                        value={provCategory}
+                        onChange={(e) => setProvCategory(e.target.value as any)}
+                        className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
+                      >
+                        <option value="admin">Internal Admin console</option>
+                        <option value="client">Client Portal dashboard</option>
+                      </select>
                     </div>
 
                     {provCategory === "admin" ? (
-                      <>
-                        <div className="flex flex-col gap-1.5">
-                          <label className="text-[0.625rem] font-mono uppercase text-taupe font-bold">Primary Specialization Focus</label>
-                          <div className="grid grid-cols-2 gap-2">
-                            {[
-                              { id: "Client Delivery", label: "Client Delivery" },
-                              { id: "Outreach & Marketing", label: "Outreach Funnel" }
-                            ].map((focus) => (
-                              <button
-                                key={focus.id}
-                                type="button"
-                                onClick={() => {
-                                  setProvFocus(focus.id as any);
-                                  setProvResponsibilities([]);
-                                }}
-                                className={`py-2 px-2 rounded text-[0.65rem] uppercase font-mono font-bold tracking-wider border transition-all text-center focus:outline-none ${
-                                  provFocus === focus.id
-                                    ? "bg-ember text-sand border-ember"
-                                    : "border-taupe/20 text-taupe hover:border-taupe/40 hover:bg-sand-warm/20"
-                                }`}
-                              >
-                                {focus.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col gap-1.5">
-                          <label className="text-[0.625rem] font-mono uppercase text-taupe font-bold">Seeded Staff Responsibilities</label>
-                          <div className="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto border border-taupe/10 p-3 rounded bg-sand-warm/25">
-                            {(provFocus === "Client Delivery" 
-                              ? ["API Architecture", "Database Schema", "Production Builds", "Bug Fixes", "CSS Polishing", "Client Communication"]
-                              : ["Lead Sourcing", "Cold Calling Funnel", "Social Media Outreach", "Client Outreach", "Sales Pitching"]
-                            ).map((resp) => {
-                              const checked = provResponsibilities.includes(resp);
-                              return (
-                                <label key={resp} className="flex items-center gap-2 cursor-pointer text-[0.65rem] font-mono font-medium text-charcoal select-none">
-                                  <input
-                                    type="checkbox"
-                                    checked={checked}
-                                    onChange={() => {
-                                      if (checked) {
-                                        setProvResponsibilities(prev => prev.filter(r => r !== resp));
-                                      } else {
-                                        setProvResponsibilities(prev => [...prev, resp]);
-                                      }
-                                    }}
-                                    className="rounded border-taupe/30 text-ember focus:ring-ember cursor-pointer"
-                                  />
-                                  {resp}
-                                </label>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[0.625rem] font-mono uppercase text-taupe font-bold">Link to Active Client Project</label>
+                      <div>
+                        <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Operational Focus</label>
                         <select
-                          required
+                          value={provFocus}
+                          onChange={(e) => setProvFocus(e.target.value as any)}
+                          className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
+                        >
+                          <option value="Client Delivery">Client Delivery (PM / Dev)</option>
+                          <option value="Outreach & Marketing">Outreach & Marketing (Sales)</option>
+                        </select>
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="block mb-1 text-[0.55rem] uppercase text-[#8E8E8E]">Linked Client Portal Workspace</label>
+                        <select
                           value={provClientId}
                           onChange={(e) => setProvClientId(e.target.value)}
-                          className="w-full bg-sand-warm/30 border border-taupe/20 px-3 py-2 text-xs rounded font-sans focus:outline-none focus:border-charcoal transition-all text-charcoal font-semibold"
+                          className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#06B6D4] text-[#FAF9F6]"
                         >
-                          <option value="">-- Choose Client Sandbox Workspace --</option>
-                          {allClients.map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {c.name} ({c.project})
-                            </option>
-                          ))}
+                          <option value="">Awaiting Assignment</option>
+                          {allClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
-                        <p className="text-[0.55rem] text-taupe font-mono lowercase mt-0.5">Linking a client to a project restricts their live dashboard to this specific project only.</p>
                       </div>
                     )}
 
-                    <button
-                      type="submit"
+                    <button 
+                      type="submit" 
                       disabled={provIsSubmitting}
-                      className="w-full bg-charcoal hover:bg-ember text-sand font-mono uppercase py-2.5 rounded-lg text-xs font-bold tracking-widest transition-all duration-300 shadow-sm border border-charcoal focus:outline-none flex items-center justify-center gap-2 disabled:opacity-50"
+                      className="w-full bg-[#06B6D4] hover:bg-[#0891B2] text-[#0A0A0A] font-bold uppercase py-2.5 rounded-lg text-xs transition-colors disabled:opacity-50"
                     >
-                      {provIsSubmitting ? "Processing Authorization..." : "⚡ Pre-Authorize Credentials"}
+                      Authorize & Register Email
                     </button>
                   </form>
+                )}
+              </div>
 
-                  {/* Right side: Registry Directory */}
-                  <div className="lg:col-span-7 bg-sand-light/60 border border-taupe/15 rounded-2xl p-6 flex flex-col gap-4 shadow-xs min-h-[500px]">
-                    <div className="flex justify-between items-center border-b border-taupe/10 pb-2">
-                      <div className="text-xs uppercase tracking-widest font-mono text-charcoal font-bold">Authorized Sign-Up Registry</div>
-                      <span className="text-[0.6rem] font-mono bg-charcoal text-sand px-2 py-0.5 rounded">{authorizedEmails.length} active invitations</span>
-                    </div>
-
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left font-sans text-xs border-collapse">
-                        <thead>
-                          <tr className="border-b border-taupe/15 text-[0.625rem] font-mono uppercase text-taupe tracking-wider">
-                            <th className="pb-3 font-semibold">User Details</th>
-                            <th className="pb-3 font-semibold">Category</th>
-                            <th className="pb-3 font-semibold">Focus / Project</th>
-                            <th className="pb-3 font-semibold text-right">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {authorizedEmails.length === 0 ? (
-                            <tr>
-                              <td colSpan={4} className="py-8 text-center text-taupe font-mono text-[0.65rem] uppercase">
-                                No pre-authorized email invitations active
-                              </td>
-                            </tr>
-                          ) : (
-                            authorizedEmails.map((ae) => {
-                              const isLive = team.some(t => t.name.toLowerCase() === ae.name.toLowerCase());
-                              const linkedClient = ae.clientId ? allClients.find(c => c.id === ae.clientId) : null;
-                              return (
-                                <tr key={ae.email} className="border-b border-taupe/10 last:border-0 hover:bg-sand-warm/20 transition-all">
-                                  <td className="py-4 pr-3">
-                                    <div className="flex items-center gap-3">
-                                      <span className="w-8 h-8 rounded bg-charcoal text-sand flex items-center justify-center text-[0.6rem] font-extrabold" style={{ backgroundColor: ae.colorVar }}>
-                                        {ae.avatar}
-                                      </span>
-                                      <div>
-                                        <div className="font-bold text-charcoal leading-tight">{ae.name}</div>
-                                        <div className="text-[0.625rem] font-mono text-taupe leading-relaxed">{ae.email}</div>
-                                      </div>
-                                    </div>
-                                  </td>
-                                  <td className="py-4">
-                                    <span className={`inline-flex px-2 py-0.5 rounded text-[0.55rem] uppercase tracking-widest font-mono font-bold ${
-                                      ae.category === "admin" 
-                                        ? "bg-amber-100 text-amber-800 border border-amber-200" 
-                                        : "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                                    }`}>
-                                      {ae.category}
-                                    </span>
-                                  </td>
-                                  <td className="py-4">
-                                    {ae.category === "admin" ? (
-                                      <div>
-                                        <div className="font-semibold text-charcoal">{ae.role}</div>
-                                        <div className="text-[0.625rem] font-mono text-taupe">{ae.primaryFocus}</div>
-                                      </div>
-                                    ) : (
-                                      <div>
-                                        {linkedClient ? (
-                                          <>
-                                            <div className="font-semibold text-charcoal">{linkedClient.name}</div>
-                                            <div className="text-[0.625rem] font-mono text-taupe leading-none mt-0.5">{linkedClient.project}</div>
-                                          </>
-                                        ) : (
-                                          <span className="text-rose-500 font-mono text-[0.6rem]">No Project Linked</span>
-                                        )}
-                                      </div>
-                                    )}
-                                  </td>
-                                  <td className="py-4 text-right">
-                                    {/* Core partners are immutable */}
-                                    {[
-                                      "lakshbetala15@gmail.com",
-                                      "gandhimouriyan1234@gmail.com",
-                                      "monarchankit25@gmail.com",
-                                      "muskanabani01@gmail.com"
-                                    ].includes(ae.email.toLowerCase()) ? (
-                                      <span className="text-[0.58rem] font-mono uppercase bg-charcoal text-sand px-2 py-0.5 rounded">Core Partner</span>
-                                    ) : (
-                                      <button
-                                        type="button"
-                                        onClick={async () => {
-                                          if (confirm(`Revoke all sign-up permissions for ${ae.name} (${ae.email})?`)) {
-                                            await deprovisionUser(ae.email);
-                                          }
-                                        }}
-                                        className="text-[0.6rem] font-mono uppercase border border-rose-500/30 text-rose-500 hover:bg-rose-500 hover:text-white px-2 py-1 rounded transition-all focus:outline-none"
-                                      >
-                                        [ Revoke Access ]
-                                      </button>
-                                    )}
-                                  </td>
-                                </tr>
-                              );
-                            })
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+              {/* Authorized Staff registry list */}
+              <div className="lg:col-span-2 border border-[#1F1F1F] bg-[#121212] p-5 rounded-2xl">
+                <div className="flex justify-between items-center mb-4 border-b border-[#1F1F1F] pb-3">
+                  <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-[#06B6D4]">Pre-Authorized Credentials Registry</h3>
+                  <span className="text-[#8E8E8E] text-[0.58rem] font-mono">{authorizedEmails.length} accounts verified</span>
                 </div>
-              </motion.div>
+
+                <div className="space-y-2.5 max-h-[480px] overflow-y-auto pr-1 dark-scrollbar">
+                  {authorizedEmails.map((item) => (
+                    <div key={item.email} className="bg-[#0A0A0A] border border-[#1F1F1F] p-4 rounded-xl flex items-center justify-between gap-4 relative group">
+                      <div className="flex items-center gap-3">
+                        <div 
+                          className="w-7 h-7 rounded flex items-center justify-center font-bold text-white shrink-0 text-[0.6rem] border border-white/5"
+                          style={{ backgroundColor: item.colorVar || "#06B6D4" }}
+                        >
+                          {item.avatar || "AL"}
+                        </div>
+                        <div>
+                          <div className="font-bold text-xs text-[#FAF9F6]">{item.name} <span className="text-[0.55rem] text-[#8E8E8E] font-normal font-sans">({item.role})</span></div>
+                          <div className="text-[0.625rem] text-[#8E8E8E] mt-0.5">{item.email}</div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-3 text-[0.58rem]">
+                        <span className={`px-2 py-0.5 rounded font-bold uppercase tracking-widest ${
+                          item.category === "admin" ? "bg-[#06B6D4]/10 text-[#06B6D4] border border-[#06B6D4]/20" : "bg-purple-500/10 text-purple-400 border border-purple-500/20"
+                        }`}>
+                          {item.category}
+                        </span>
+
+                        {/* Deprovision email trigger */}
+                        {isCorePartner && (
+                          <button 
+                            onClick={async () => {
+                              if (confirm(`Deprovision email permissions for: ${item.name}?`)) {
+                                const success = await deprovisionUser(item.email);
+                                if (success) alert("✓ Revoked permissions successfully.");
+                              }
+                            }}
+                            className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-2 py-1 rounded transition-colors uppercase font-bold"
+                          >
+                            Revoke
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
             </motion.div>
           )}
 
         </AnimatePresence>
       </main>
 
-      {/* ──── SIMULATOR SWITCHER (MOCK ONLY) ──── */}
-      {!isSupabaseConfigured && (
-        <div className="fixed bottom-4 right-4 z-50 bg-charcoal text-sand border border-sand p-4 rounded-xl shadow-2xl w-72 font-mono text-[0.625rem] tracking-wider uppercase border-sand/40">
-          <div className="flex justify-between items-center mb-2 border-b border-sand/20 pb-1">
-            <span className="font-extrabold text-ember flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-ember animate-pulse" />
-              OS SANDBOX SIMULATOR
-            </span>
-            <span className="text-[0.55rem] text-taupe">Mock Mode</span>
-          </div>
-          <div className="text-[0.55rem] text-sand/70 mb-3 normal-case font-sans tracking-normal leading-relaxed text-left">
-            Toggle between roles to verify access filters: Core Partners see all, Outreach interns see leads only, Dev interns see assigned projects only.
-          </div>
-          <div className="flex flex-col gap-1.5 max-h-56 overflow-y-auto pr-1">
-            {[
-              { email: "lakshbetala15@gmail.com", name: "Lakshya (Core Partner)", role: "PM & Client Delivery Lead", focus: "Client Delivery", cat: "admin" },
-              { email: "gandhimouriyan1234@gmail.com", name: "Mouriyan (Core Partner)", role: "Backend & Tech Delivery Lead", focus: "Client Delivery", cat: "admin" },
-              { email: "monarchankit25@gmail.com", name: "Ankit (Core Partner)", role: "Outreach & Marketing Lead", focus: "Outreach & Marketing", cat: "admin" },
-              { email: "muskanabani01@gmail.com", name: "Muskan (Core Partner)", role: "Brand & Marketing Director", focus: "Outreach & Marketing", cat: "admin" },
-              { email: "intern.outreach@almmatix.com", name: "Outreach Intern (Non-core)", role: "Outreach Intern", focus: "Outreach & Marketing", cat: "admin" },
-              { email: "intern.dev@almmatix.com", name: "Delivery Intern (Non-core)", role: "Dev Intern", focus: "Client Delivery", cat: "admin" },
-            ].map((mock) => {
-              const active = userProfile?.email?.toLowerCase() === mock.email.toLowerCase();
-              return (
-                <button
-                  key={mock.email}
-                  onClick={() => {
-                    setUserProfile({
-                      id: mock.email === "lakshbetala15@gmail.com" ? "a1" : mock.email === "gandhimouriyan1234@gmail.com" ? "a2" : mock.email === "monarchankit25@gmail.com" ? "a3" : mock.email === "muskanabani01@gmail.com" ? "a4" : `mock_${mock.email.split("@")[0]}`,
-                      email: mock.email,
-                      name: mock.name.split(" ")[0],
-                      role: mock.role,
-                      category: mock.cat as "admin" | "client",
-                      avatar: mock.name.substring(0, 2).toUpperCase(),
-                      colorVar: mock.email === "lakshbetala15@gmail.com" ? "var(--color-admin-lakshya)" : mock.email === "gandhimouriyan1234@gmail.com" ? "var(--color-admin-mouriyan)" : mock.email === "monarchankit25@gmail.com" ? "var(--color-admin-ankit)" : mock.email === "muskanabani01@gmail.com" ? "var(--color-admin-muskan)" : "var(--color-neutral)",
-                      primaryFocus: mock.focus,
-                      responsibilities: ["Simulation Task"],
-                      activeTasks: ["Simulation Task Active"]
-                    });
-                    setActiveTab("overview");
-                  }}
-                  className={`w-full text-left p-1.5 rounded transition-all flex items-center justify-between border ${
-                    active 
-                      ? "bg-sand text-charcoal border-ember font-bold" 
-                      : "bg-charcoal/40 text-sand/80 border-transparent hover:bg-sand-warm/10"
-                  }`}
-                >
-                  <span>{mock.name}</span>
-                  <span className="text-[0.5rem] px-1 py-0.2 rounded border border-sand/15 font-mono uppercase bg-black/30">
-                    {mock.focus.split(" ")[0]}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      {/* ═══════════════════════════════════════════════════════════════
+       SLIDE-OUT RIGHT SHEET DETAILS DRAWERS (AnimatePresence)
+      ═══════════════════════════════════════════════════════════════ */}
+      <AnimatePresence>
+        
+        {/* Drawer backdrop overlay */}
+        {(selectedClient || selectedTask || selectedFlag) && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }} 
+            onClick={closeAllDrawers}
+            className="fixed inset-0 bg-[#0A0A0A]/60 backdrop-blur-sm z-[98]"
+          />
+        )}
+
+        {/* 1. Client Sprints Details drawer */}
+        {selectedClient && (
+          <motion.div 
+            initial={{ x: "100%" }} 
+            animate={{ x: 0 }} 
+            exit={{ x: "100%" }} 
+            transition={{ type: "spring", damping: 25, stiffness: 220 }}
+            className="fixed top-0 right-0 w-[460px] h-full bg-[#121212] border-l border-[#1F1F1F] shadow-2xl z-[99] p-6 overflow-y-auto select-none"
+          >
+            <div className="flex justify-between items-center border-b border-[#1F1F1F] pb-4 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded bg-[#0A0A0A] border border-[#1F1F1F] text-[#FAF9F6] flex items-center justify-center text-xs font-bold tracking-widest font-mono">
+                  {selectedClient.avatar}
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-[#FAF9F6]">{selectedClient.name}</h3>
+                  <div className="text-[0.65rem] text-[#8E8E8E] mt-0.5">{selectedClient.project}</div>
+                </div>
+              </div>
+              <button onClick={closeAllDrawers} className="p-1 hover:bg-[#1F1F1F] rounded text-[#8E8E8E] hover:text-[#FAF9F6]">✕</button>
+            </div>
+
+            <div className="space-y-6 text-xs font-mono">
+              
+              {/* Dynamic stage selectors */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[0.55rem] uppercase text-[#8E8E8E] mb-1.5">Project Stage</label>
+                  <select 
+                    value={selectedClient.stage} 
+                    onChange={(e) => updateClientStage(selectedClient.id, e.target.value as ClientStage)}
+                    className="w-full bg-[#0A0A0A] border border-[#1F1F1F] text-xs text-[#FAF9F6] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#06B6D4]"
+                  >
+                    {(["Lead", "Proposal", "In Dev", "Active", "Completed"] as ClientStage[]).map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[0.55rem] uppercase text-[#8E8E8E] mb-1.5">Delivery Lead</label>
+                  <select 
+                    value={selectedClient.assignedAdminId || ""} 
+                    onChange={(e) => updateClientAdmin(selectedClient.id, e.target.value)}
+                    className="w-full bg-[#0A0A0A] border border-[#1F1F1F] text-xs text-[#FAF9F6] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#06B6D4]"
+                  >
+                    <option value="">Unassigned</option>
+                    {team.map(t => <option key={t.id} value={t.id}>{t.name} ({t.role})</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* Premium Staging and Playground Info */}
+              <div className="bg-[#0A0A0A] border border-[#1F1F1F] p-4 rounded-xl space-y-3">
+                <div className="text-[0.55rem] uppercase text-[#8E8E8E] border-b border-[#1F1F1F] pb-1 font-bold">Staging & Production links</div>
+                <div className="space-y-2 text-[0.625rem]">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#8E8E8E]">Playground Sandbox:</span>
+                    <a href="https://almmatix.com/sandbox/demo" target="_blank" rel="noreferrer" className="text-[#06B6D4] hover:underline font-bold">
+                      sandbox.almmatix.com ↗
+                    </a>
+                  </div>
+                  
+                  {/* GitHub Repo links hidden strictly from standard Interns */}
+                  {!isIntern ? (
+                    <div className="flex justify-between items-center">
+                      <span className="text-[#8E8E8E]">GitHub Repository:</span>
+                      <span className="text-[#FAF9F6] font-bold">github.com/almmatix/{selectedClient.avatar.toLowerCase()}-core</span>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between items-center text-[#EF4444] border-t border-[#1F1F1F] pt-1.5">
+                      <span>🔒 Code Vault Restricted</span>
+                      <span className="text-[0.5rem] uppercase text-[#8E8E8E]">Partner access only</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* SECURE FINANCIAL LEDGER (Restricted strictly to Partners, hidden from standard Interns) */}
+              <div className="border border-[#1F1F1F] bg-[#0E0E0E] rounded-xl p-4 space-y-3">
+                <div className="flex justify-between items-center border-b border-[#1F1F1F] pb-1.5">
+                  <div className="text-[0.55rem] uppercase text-[#06B6D4] font-bold">🔒 Secure Financial Ledger</div>
+                  <span className="text-[#8E8E8E] text-[0.5rem] uppercase font-bold tracking-widest">Calculated Margins</span>
+                </div>
+
+                {!isIntern ? (
+                  <div className="space-y-2 text-[0.65rem] font-mono font-medium">
+                    {/* Est Cost spent and calculatedExpected revenue mathematically calculated */}
+                    {(() => {
+                      const estimated = selectedClient.revenue;
+                      const spent = Math.round(estimated * 0.45);
+                      const expectedRemaining = estimated - spent;
+
+                      return (
+                        <>
+                          <div className="flex justify-between items-center text-[#FAF9F6]">
+                            <span className="text-[#8E8E8E]">Estimated project Cost:</span>
+                            <span style={{ fontVariantNumeric: "tabular-nums" }}>{formatCurrency(estimated)}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-[#FAF9F6]">
+                            <span className="text-[#8E8E8E]">Total Cost spent:</span>
+                            <span style={{ fontVariantNumeric: "tabular-nums" }}>{formatCurrency(spent)}</span>
+                          </div>
+                          <div className="flex justify-between items-center border-t border-[#1F1F1F] pt-2 font-bold text-[#06B6D4] text-xs">
+                            <span>Remaining Expected Revenue:</span>
+                            <span style={{ fontVariantNumeric: "tabular-nums" }}>{formatCurrency(expectedRemaining)}</span>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                ) : (
+                  <div className="bg-[#121212] border border-[#1F1F1F] p-4 rounded-lg text-center select-none">
+                    <div className="text-xs font-mono uppercase text-[#EF4444] font-bold">🔒 Secure Ledger Locked</div>
+                    <div className="text-[0.58rem] text-[#8E8E8E] mt-1 font-sans">Financial margins are locked to Core Four partners.</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Active project Sprints Checklist */}
+              <div className="bg-[#0A0A0A] border border-[#1F1F1F] p-4 rounded-xl space-y-2">
+                <div className="text-[0.55rem] uppercase text-[#8E8E8E] border-b border-[#1F1F1F] pb-1 font-bold">Linked Sprint Tasks</div>
+                <div className="space-y-2 max-h-[140px] overflow-y-auto pr-1 dark-scrollbar">
+                  {internalTasks.filter(t => t.clientId === selectedClient.id).map(task => (
+                    <div key={task.id} className="bg-[#121212] border border-[#1F1F1F] p-2.5 rounded-lg flex justify-between items-center">
+                      <span className="font-semibold text-[#FAF9F6] text-[0.625rem] truncate leading-tight flex-1 pr-3">{task.title}</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[0.5rem] font-bold uppercase ${
+                        task.status === "Resolved" ? "bg-emerald-500/10 text-emerald-400" : "bg-[#1F1F1F] text-[#8E8E8E]"
+                      }`}>{task.status}</span>
+                    </div>
+                  ))}
+                  {internalTasks.filter(t => t.clientId === selectedClient.id).length === 0 && (
+                    <div className="text-[0.58rem] text-[#8E8E8E]/40 italic text-center py-4">No linked sprint tasks logged.</div>
+                  )}
+                </div>
+              </div>
+
+            </div>
+          </motion.div>
+        )}
+
+        {/* 2. Sprint Task Detail drawer */}
+        {selectedTask && (
+          <motion.div 
+            initial={{ x: "100%" }} 
+            animate={{ x: 0 }} 
+            exit={{ x: "100%" }} 
+            transition={{ type: "spring", damping: 25, stiffness: 220 }}
+            className="fixed top-0 right-0 w-[460px] h-full bg-[#121212] border-l border-[#1F1F1F] shadow-2xl z-[99] p-6 overflow-y-auto select-none"
+          >
+            <div className="flex justify-between items-center border-b border-[#1F1F1F] pb-4 mb-6">
+              <div>
+                <span className="text-[0.525rem] bg-[#1F1F1F] text-[#06B6D4] px-2 py-0.5 rounded font-bold uppercase font-mono">SPRINT CHECKLIST TICKET</span>
+                <h3 className="text-sm font-bold text-[#FAF9F6] mt-2 truncate leading-tight pr-8">{selectedTask.title}</h3>
+              </div>
+              <button onClick={closeAllDrawers} className="p-1 hover:bg-[#1F1F1F] rounded text-[#8E8E8E] hover:text-[#FAF9F6]">✕</button>
+            </div>
+
+            <div className="space-y-6 text-xs font-mono">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[0.55rem] uppercase text-[#8E8E8E] mb-1.5">Specialist Assigned</label>
+                  <select 
+                    value={selectedTask.assignedAdminId || ""} 
+                    onChange={(e) => {
+                      updateClientAdmin(selectedTask.clientId || 0, e.target.value); // Syncs context
+                    }}
+                    className="w-full bg-[#0A0A0A] border border-[#1F1F1F] text-xs text-[#FAF9F6] rounded-lg px-2.5 py-1.5 focus:outline-none"
+                  >
+                    {team.map(t => <option key={t.id} value={t.id}>{t.name} ({t.role})</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[0.55rem] uppercase text-[#8E8E8E] mb-1.5">Sprint Status</label>
+                  <select 
+                    value={selectedTask.status} 
+                    onChange={(e) => {
+                      updateInternalTaskStatus(selectedTask.id, e.target.value as TaskStatus);
+                      setSelectedTask(prev => prev ? { ...prev, status: e.target.value as TaskStatus } : null);
+                    }}
+                    className="w-full bg-[#0A0A0A] border border-[#1F1F1F] text-xs text-[#FAF9F6] rounded-lg px-2.5 py-1.5 focus:outline-none"
+                  >
+                    {(["Todo", "In Progress", "In Review", "Resolved"] as TaskStatus[]).map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* Developer private logs inside task */}
+              <div className="bg-[#0A0A0A] border border-[#1F1F1F] p-4 rounded-xl space-y-3">
+                <div className="text-[0.55rem] uppercase text-[#8E8E8E] border-b border-[#1F1F1F] pb-1 font-bold">Internal Sprints Checklist Logs</div>
+                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 dark-scrollbar leading-relaxed">
+                  {selectedTask.internalNotes && selectedTask.internalNotes.length > 0 ? (
+                    selectedTask.internalNotes.map((note, idx) => (
+                      <div key={idx} className="bg-[#121212] border border-[#1F1F1F] p-2.5 rounded-lg text-[0.625rem] text-[#8E8E8E] italic">
+                        "{note}"
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-[#8E8E8E]/40 italic py-4 text-center">No logs recorded. Log notes below.</div>
+                  )}
+                </div>
+
+                <div className="flex gap-2 border-t border-[#1F1F1F] pt-3">
+                  <input 
+                    type="text" 
+                    placeholder="Log technical progress..." 
+                    value={newInternalTaskNotes[selectedTask.id] || ""}
+                    onChange={(e) => setNewInternalTaskNotes(prev => ({ ...prev, [selectedTask.id]: e.target.value }))}
+                    className="flex-1 bg-[#121212] border border-[#1F1F1F] rounded px-3 py-1.5 text-xs text-[#FAF9F6] outline-none"
+                  />
+                  <button 
+                    onClick={() => {
+                      if (!newInternalTaskNotes[selectedTask.id]?.trim()) return;
+                      addInternalTaskNote(selectedTask.id, newInternalTaskNotes[selectedTask.id].trim());
+                      // Local visual sync
+                      setSelectedTask(prev => prev ? { ...prev, internalNotes: [...(prev.internalNotes || []), newInternalTaskNotes[selectedTask.id].trim()] } : null);
+                      setNewInternalTaskNotes(prev => ({ ...prev, [selectedTask.id]: "" }));
+                    }}
+                    className="bg-[#06B6D4] hover:bg-[#0891B2] text-[#0A0A0A] font-bold px-3.5 rounded text-xs"
+                  >
+                    + Add
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </motion.div>
+        )}
+
+        {/* 3. Support incident details and sprint logs drawer */}
+        {selectedFlag && (
+          <motion.div 
+            initial={{ x: "100%" }} 
+            animate={{ x: 0 }} 
+            exit={{ x: "100%" }} 
+            transition={{ type: "spring", damping: 25, stiffness: 220 }}
+            className="fixed top-0 right-0 w-[460px] h-full bg-[#121212] border-l border-[#1F1F1F] shadow-2xl z-[99] p-6 overflow-y-auto select-none"
+          >
+            <div className="flex justify-between items-center border-b border-[#1F1F1F] pb-4 mb-6">
+              <div>
+                <span className={`inline-flex px-1.5 py-0.5 rounded text-[0.5rem] uppercase font-mono font-bold ${
+                  selectedFlag.severity === "Critical" ? "bg-red-500/10 text-red-500 border border-red-500/30" : "bg-[#1F1F1F] text-[#8E8E8E]"
+                }`}>
+                  {selectedFlag.severity} SEVERITY ESCALATION
+                </span>
+                <h3 className="text-sm font-bold text-[#FAF9F6] mt-2 truncate leading-tight pr-8">{selectedFlag.title}</h3>
+              </div>
+              <button onClick={closeAllDrawers} className="p-1 hover:bg-[#1F1F1F] rounded text-[#8E8E8E] hover:text-[#FAF9F6]">✕</button>
+            </div>
+
+            <div className="space-y-6 text-xs font-mono">
+              <div className="bg-[#0A0A0A] border border-[#1F1F1F] p-4 rounded-xl">
+                <span className="text-[0.55rem] uppercase text-[#8E8E8E] block mb-1">Escalated incident summary:</span>
+                <p className="text-xs text-[#FAF9F6] leading-relaxed">"{selectedFlag.description}"</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[0.55rem] uppercase text-[#8E8E8E] mb-1.5">Sprint status</label>
+                  <select 
+                    value={selectedFlag.status} 
+                    onChange={(e) => {
+                      updateFlagStatus(selectedFlag.id, e.target.value as FlagStatus);
+                      setSelectedFlag(prev => prev ? { ...prev, status: e.target.value as FlagStatus } : null);
+                    }}
+                    className="w-full bg-[#0A0A0A] border border-[#1F1F1F] text-xs text-[#FAF9F6] rounded-lg px-2.5 py-1.5 focus:outline-none"
+                  >
+                    {(["Open", "Investigating", "In Dev", "Resolved"] as FlagStatus[]).map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[0.55rem] uppercase text-[#8E8E8E] mb-1.5">Assignee</label>
+                  <select 
+                    value={selectedFlag.assignedAdminId || ""} 
+                    onChange={(e) => {
+                      assignFlagAdmin(selectedFlag.id, e.target.value);
+                      setSelectedFlag(prev => prev ? { ...prev, assignedAdminId: e.target.value } : null);
+                    }}
+                    className="w-full bg-[#0A0A0A] border border-[#1F1F1F] text-xs text-[#FAF9F6] rounded-lg px-2.5 py-1.5 focus:outline-none"
+                  >
+                    <option value="">Unassigned</option>
+                    {team.map(t => <option key={t.id} value={t.id}>{t.name} ({t.role})</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* Developer incident logs */}
+              <div className="bg-[#0A0A0A] border border-[#1F1F1F] p-4 rounded-xl space-y-3">
+                <div className="text-[0.55rem] uppercase text-[#8E8E8E] border-b border-[#1F1F1F] pb-1 font-bold">Developer Incident Sprints logs</div>
+                <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1 dark-scrollbar leading-relaxed">
+                  {selectedFlag.sprintLogs && selectedFlag.sprintLogs.length > 0 ? (
+                    selectedFlag.sprintLogs.map((log) => (
+                      <div key={log.id} className="bg-[#121212] border border-[#1F1F1F] p-2.5 rounded-lg text-[0.625rem]">
+                        <div className="flex justify-between items-center text-[0.525rem] text-[#8E8E8E] mb-1 border-b border-[#1F1F1F] pb-0.5">
+                          <span>{log.author}</span>
+                          <span>{log.timestamp}</span>
+                        </div>
+                        <p className="text-[#8E8E8E] italic">"{log.text}"</p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-[#8E8E8E]/40 italic py-4 text-center">No sprint progress logs registered.</div>
+                  )}
+                </div>
+
+                <div className="flex gap-2 border-t border-[#1F1F1F] pt-3">
+                  <input 
+                    type="text" 
+                    placeholder="Log progress check details..." 
+                    value={newSupportSprintNotes[selectedFlag.id] || ""}
+                    onChange={(e) => setNewSupportSprintNotes(prev => ({ ...prev, [selectedFlag.id]: e.target.value }))}
+                    className="flex-1 bg-[#121212] border border-[#1F1F1F] rounded px-3 py-1.5 text-xs text-[#FAF9F6] outline-none"
+                  />
+                  <button 
+                    onClick={() => {
+                      if (!newSupportSprintNotes[selectedFlag.id]?.trim()) return;
+                      addFlagSprintLog(selectedFlag.id, currentAdmin.name, newSupportSprintNotes[selectedFlag.id].trim());
+                      // Local sync
+                      setSelectedFlag(prev => prev ? { 
+                        ...prev, 
+                        sprintLogs: [...(prev.sprintLogs || []), {
+                          id: Date.now().toString(),
+                          author: currentAdmin.name,
+                          text: newSupportSprintNotes[selectedFlag.id].trim(),
+                          timestamp: "Just now"
+                        }]
+                      } : null);
+                      setNewSupportSprintNotes(prev => ({ ...prev, [selectedFlag.id]: "" }));
+                    }}
+                    className="bg-[#06B6D4] hover:bg-[#0891B2] text-[#0A0A0A] font-bold px-3.5 rounded text-xs"
+                  >
+                    + Log
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </motion.div>
+        )}
+
+      </AnimatePresence>
 
     </div>
   );

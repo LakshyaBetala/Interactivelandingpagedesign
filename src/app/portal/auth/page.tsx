@@ -7,17 +7,18 @@ import { supabase } from "@/lib/supabaseClient";
 
 export default function AuthPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"admin" | "client">("admin");
   const [isSignUp, setIsSignUp] = useState(false);
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [clientProject, setClientProject] = useState("");
   
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Connection state
+  const [supabaseStatus, setSupabaseStatus] = useState<"connecting" | "online" | "offline">("connecting");
 
   // Check if already authenticated on mount
   useEffect(() => {
@@ -27,6 +28,34 @@ export default function AuthPage() {
       }
     });
   }, [router]);
+
+  // Real-time Supabase connectivity health check pinger
+  useEffect(() => {
+    const checkConnectivity = async () => {
+      const isConfigured = 
+        process.env.NEXT_PUBLIC_SUPABASE_URL !== undefined &&
+        process.env.NEXT_PUBLIC_SUPABASE_URL !== "https://placeholder-project.supabase.co" &&
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY !== undefined &&
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY !== "placeholder-key-for-build";
+      
+      if (!isConfigured) {
+        setSupabaseStatus("offline");
+        return;
+      }
+
+      try {
+        const { error } = await supabase.from("profiles").select("count", { count: "exact", head: true });
+        if (!error) {
+          setSupabaseStatus("online");
+        } else {
+          setSupabaseStatus("offline");
+        }
+      } catch (e) {
+        setSupabaseStatus("offline");
+      }
+    };
+    checkConnectivity();
+  }, []);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,8 +72,8 @@ export default function AuthPage() {
           "monarchankit25@gmail.com",
           "muskanabani01@gmail.com"
         ];
-        if (activeTab === "admin" && !ADMIN_EMAILS.includes(email.toLowerCase())) {
-          throw new Error("Only registered partner Gmail addresses are authorized for console access.");
+        if (!ADMIN_EMAILS.includes(email.toLowerCase())) {
+          throw new Error("Access Denied: Only registered partner Gmail addresses are authorized to register console accounts.");
         }
 
         const { data, error } = await supabase.auth.signUp({
@@ -61,7 +90,7 @@ export default function AuthPage() {
 
         if (data.user) {
           setSuccessMsg(
-            "Account created! Please check your email for confirmation or sign in directly if email verification is bypassed."
+            "Partner registration initiated successfully. Please verify your email inbox."
           );
           setIsSignUp(false);
         }
@@ -84,53 +113,49 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-sand font-sans flex items-center justify-center p-4 relative overflow-hidden select-none">
-      {/* Brutalist Architectural background grid */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(40,40,40,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(40,40,40,0.05)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
+    <div className="min-h-screen bg-[#0C0A09] text-[#FAF9F6] font-sans flex flex-col items-center justify-center p-4 relative overflow-hidden select-none">
+      {/* Premium Minimalist Hairline background grid */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
 
-      {/* Decorative Ember light streak */}
-      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-ember/5 rounded-full filter blur-[120px] pointer-events-none" />
+      {/* Connectivity Status Indicator Widget */}
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 bg-[#1C1917]/80 backdrop-blur-md border border-[#292524] rounded-full px-4 py-1.5 shadow-2xl font-mono text-[0.6rem] tracking-wider transition-all duration-300">
+        {supabaseStatus === "connecting" && (
+          <>
+            <span className="w-1.5 h-1.5 rounded-full bg-[#D97706] animate-pulse" />
+            <span className="text-[#A8A29E] uppercase">VERIFYING OS ENGINE CONNECTION...</span>
+          </>
+        )}
+        {supabaseStatus === "online" && (
+          <>
+            <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
+            <span className="text-[#10B981] font-bold uppercase">LIVE DATABASE SYNC ACTIVE</span>
+          </>
+        )}
+        {supabaseStatus === "offline" && (
+          <>
+            <span className="w-1.5 h-1.5 rounded-full bg-[#D97706] animate-pulse" />
+            <span className="text-[#D97706] font-bold uppercase">LOCAL OFFLINE SANDBOX ACTIVE</span>
+          </>
+        )}
+      </div>
 
       <motion.div
-        initial={{ opacity: 0, y: 30 }}
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-[480px] bg-white border-4 border-charcoal p-8 relative shadow-[8px_8px_0px_0px_#282828] z-10"
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        className="w-full max-w-[420px] bg-[#1C1917] border border-[#292524] p-8 relative rounded-xl shadow-2xl z-10"
       >
         {/* Top Header */}
-        <div className="flex items-center justify-between mb-8 border-b-2 border-charcoal pb-4">
-          <div>
-            <h1 className="font-mono text-xs uppercase tracking-[0.2em] text-ember font-bold">
-              ALMMATIX // OS
+        <div className="flex flex-col items-center text-center mb-8 border-b border-[#292524] pb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="w-2 h-2 rounded-full bg-[#06B6D4]" />
+            <h1 className="font-mono text-[0.75rem] uppercase tracking-[0.25em] text-[#FAF9F6] font-bold">
+              ALMMATIX OS
             </h1>
-            <p className="font-mono text-[0.65rem] text-charcoal/60 mt-1 uppercase tracking-wider">
-              Control Center Auth Gate
-            </p>
           </div>
-          <div className="font-mono text-[0.6rem] bg-charcoal text-sand px-2 py-1 uppercase tracking-widest font-bold">
-            SECURE
-          </div>
-        </div>
-
-        {/* Dynamic Portal Tabs */}
-        <div className="grid grid-cols-2 gap-2 mb-6 bg-sand/30 p-1 border-2 border-charcoal">
-          {(["admin", "client"] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => {
-                setActiveTab(tab);
-                setErrorMsg(null);
-                setSuccessMsg(null);
-              }}
-              className={`py-2 text-[0.65rem] uppercase font-mono tracking-wider font-semibold transition-all duration-200 ${
-                activeTab === tab
-                  ? "bg-charcoal text-white shadow-md"
-                  : "text-charcoal/60 hover:text-charcoal"
-              }`}
-            >
-              {tab === "admin" ? "Partner Console" : "Client Hub"}
-            </button>
-          ))}
+          <p className="font-mono text-[0.625rem] text-[#A8A29E] uppercase tracking-widest">
+            Partner Control Console
+          </p>
         </div>
 
         {/* Main Form */}
@@ -138,15 +163,15 @@ export default function AuthPage() {
           <AnimatePresence mode="wait">
             <motion.div
               key={isSignUp ? "signup" : "signin"}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 10 }}
-              transition={{ duration: 0.2 }}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
               className="space-y-4"
             >
               {isSignUp && (
                 <div>
-                  <label className="block text-[0.6rem] uppercase tracking-widest font-mono text-charcoal/70 mb-1.5 font-bold">
+                  <label className="block text-[0.55rem] uppercase tracking-widest font-mono text-[#A8A29E] mb-1.5 font-bold">
                     Full Name
                   </label>
                   <input
@@ -155,13 +180,13 @@ export default function AuthPage() {
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Enter name"
-                    className="w-full bg-sand/10 border-2 border-charcoal px-3 py-2 text-xs font-mono text-charcoal outline-none focus:border-ember focus:bg-white transition-all placeholder:text-charcoal/30"
+                    className="w-full bg-[#0C0A09] border border-[#292524] rounded-lg px-3 py-2 text-xs font-mono text-[#FAF9F6] outline-none focus:border-[#06B6D4] focus:bg-[#0C0A09]/80 transition-all placeholder:text-[#57534E]"
                   />
                 </div>
               )}
 
               <div>
-                <label className="block text-[0.6rem] uppercase tracking-widest font-mono text-charcoal/70 mb-1.5 font-bold">
+                <label className="block text-[0.55rem] uppercase tracking-widest font-mono text-[#A8A29E] mb-1.5 font-bold">
                   Email Address
                 </label>
                 <input
@@ -169,17 +194,13 @@ export default function AuthPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder={
-                    activeTab === "admin"
-                      ? "partner@gmail.com"
-                      : "client@company.com"
-                  }
-                  className="w-full bg-sand/10 border-2 border-charcoal px-3 py-2 text-xs font-mono text-charcoal outline-none focus:border-ember focus:bg-white transition-all placeholder:text-charcoal/30"
+                  placeholder="partner@gmail.com"
+                  className="w-full bg-[#0C0A09] border border-[#292524] rounded-lg px-3 py-2 text-xs font-mono text-[#FAF9F6] outline-none focus:border-[#06B6D4] focus:bg-[#0C0A09]/80 transition-all placeholder:text-[#57534E]"
                 />
               </div>
 
               <div>
-                <label className="block text-[0.6rem] uppercase tracking-widest font-mono text-charcoal/70 mb-1.5 font-bold">
+                <label className="block text-[0.55rem] uppercase tracking-widest font-mono text-[#A8A29E] mb-1.5 font-bold">
                   {isSignUp ? "Create Password" : "Secret Password"}
                 </label>
                 <input
@@ -188,7 +209,7 @@ export default function AuthPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-sand/10 border-2 border-charcoal px-3 py-2 text-xs font-mono text-charcoal outline-none focus:border-ember focus:bg-white transition-all placeholder:text-charcoal/30"
+                  className="w-full bg-[#0C0A09] border border-[#292524] rounded-lg px-3 py-2 text-xs font-mono text-[#FAF9F6] outline-none focus:border-[#06B6D4] focus:bg-[#0C0A09]/80 transition-all placeholder:text-[#57534E]"
                 />
               </div>
             </motion.div>
@@ -196,14 +217,14 @@ export default function AuthPage() {
 
           {/* Feedback Messages */}
           {errorMsg && (
-            <div className="bg-red-50 border-2 border-red-500 p-3 text-red-700 text-[0.65rem] font-mono leading-relaxed">
-              [ERROR]: {errorMsg}
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-red-400 text-[0.625rem] font-mono leading-relaxed text-center">
+              ⚠️ {errorMsg}
             </div>
           )}
 
           {successMsg && (
-            <div className="bg-green-50 border-2 border-green-500 p-3 text-green-700 text-[0.65rem] font-mono leading-relaxed">
-              [SUCCESS]: {successMsg}
+            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 text-emerald-400 text-[0.625rem] font-mono leading-relaxed text-center">
+              ✓ {successMsg}
             </div>
           )}
 
@@ -211,29 +232,27 @@ export default function AuthPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-ember hover:bg-ember-dark text-white font-mono text-xs uppercase tracking-[0.15em] font-semibold py-3 border-2 border-charcoal hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_#282828] active:translate-y-[0px] active:shadow-none transition-all duration-200 disabled:opacity-50"
+            className="w-full bg-[#06B6D4] hover:bg-[#0891B2] text-[#0C0A09] font-mono text-xs uppercase tracking-[0.2em] font-bold py-3 rounded-lg transition-all duration-200 disabled:opacity-50"
           >
-            {loading ? "Authenticating..." : isSignUp ? "Create Access Token" : "Request Portal Access"}
+            {loading ? "Authenticating..." : isSignUp ? "Request Partner Account" : "Access Control Gate"}
           </button>
         </form>
 
         {/* Footer controls & sign up toggler */}
-        <div className="mt-6 pt-4 border-t-2 border-charcoal/10 flex flex-col items-center justify-between text-center gap-2">
+        <div className="mt-6 pt-5 border-t border-[#292524] flex flex-col items-center justify-between text-center gap-2">
           <button
             onClick={() => {
               setIsSignUp(!isSignUp);
               setErrorMsg(null);
               setSuccessMsg(null);
             }}
-            className="font-mono text-[0.65rem] text-ember hover:underline uppercase tracking-wider"
+            className="font-mono text-[0.6rem] text-[#06B6D4] hover:underline uppercase tracking-wider"
           >
-            {isSignUp ? "← Return to login panel" : "First time partner or client? Create Account"}
+            {isSignUp ? "← Return to login panel" : "New partner account signup request"}
           </button>
 
-          <p className="font-mono text-[0.55rem] text-charcoal/45 mt-2 leading-relaxed">
-            {activeTab === "admin"
-              ? "Notice: Accessing administrative assets requires verification. Registrants must use an authorized partner Gmail account."
-              : "Welcome client: Log in with credentials provided by your Almmatix project manager to monitor tickets and verify releases."}
+          <p className="font-mono text-[0.525rem] text-[#A8A29E] mt-3 leading-relaxed">
+            Authorized partner accounts only. Access permissions are verified cryptographically. Registrants must use an active partner Gmail address.
           </p>
         </div>
       </motion.div>
