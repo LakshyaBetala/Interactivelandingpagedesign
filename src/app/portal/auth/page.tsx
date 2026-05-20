@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "@/lib/supabaseClient";
 
 export default function AuthPage() {
   const router = useRouter();
@@ -12,53 +11,73 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<"connecting" | "online" | "offline">("connecting");
-
-  useEffect(() => { supabase.auth.getSession().then(({ data: { session } }) => { if (session) router.push("/portal"); }); }, [router]);
 
   useEffect(() => {
-    const check = async () => {
-      const configured = process.env.NEXT_PUBLIC_SUPABASE_URL !== undefined && process.env.NEXT_PUBLIC_SUPABASE_URL !== "https://placeholder-project.supabase.co" && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY !== undefined && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY !== "placeholder-key-for-build";
-      if (!configured) { setStatus("offline"); return; }
-      try { const { error } = await supabase.from("profiles").select("count", { count: "exact", head: true }); setStatus(error ? "offline" : "online"); } catch { setStatus("offline"); }
-    };
-    check();
-  }, []);
+    // Check if already logged in via local auth
+    const session = localStorage.getItem("almmatix_session");
+    if (session) {
+      router.push("/portal");
+    }
+  }, [router]);
 
   const handleAuth = async (e: React.FormEvent) => {
-    e.preventDefault(); setErrorMsg(null); setSuccessMsg(null); setLoading(true);
-    try {
-      if (isSignUp) {
-        const ADMIN_EMAILS = ["lakshbetala15@gmail.com", "gandhimouriyan1234@gmail.com", "monarchankit25@gmail.com", "muskanabani01@gmail.com"];
-        if (!ADMIN_EMAILS.includes(email.toLowerCase())) throw new Error("Access denied. Only authorized emails can register.");
-        const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { name: fullName || email.split("@")[0] } } });
-        if (error) throw error;
-        if (data.user) { setSuccessMsg("Account created. Check your email to verify."); setIsSignUp(false); }
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        router.push("/portal");
+    e.preventDefault(); 
+    setErrorMsg(null); 
+    setLoading(true);
+
+    setTimeout(() => {
+      try {
+        const storedUsersRaw = localStorage.getItem("almmatix_users");
+        const users = storedUsersRaw ? JSON.parse(storedUsersRaw) : [];
+
+        if (isSignUp) {
+          const ADMIN_EMAILS = ["lakshbetala15@gmail.com", "gandhimouriyan1234@gmail.com", "monarchankit25@gmail.com", "muskanabani01@gmail.com"];
+          if (!ADMIN_EMAILS.includes(email.toLowerCase())) {
+            throw new Error("Access denied. Only authorized Master Admins can register here.");
+          }
+          if (users.find((u: any) => u.email === email)) {
+            throw new Error("Account already exists.");
+          }
+          const newUser = {
+            id: Date.now().toString(),
+            email: email.toLowerCase(),
+            password,
+            name: fullName || email.split("@")[0],
+            role: "admin",
+            category: "admin"
+          };
+          users.push(newUser);
+          localStorage.setItem("almmatix_users", JSON.stringify(users));
+          localStorage.setItem("almmatix_session", JSON.stringify(newUser));
+          router.push("/portal");
+        } else {
+          // Sign In
+          const user = users.find((u: any) => u.email === email.toLowerCase() && u.password === password);
+          if (!user) {
+            throw new Error("Invalid email or password.");
+          }
+          localStorage.setItem("almmatix_session", JSON.stringify(user));
+          router.push("/portal");
+        }
+      } catch (err: any) { 
+        setErrorMsg(err.message || "Authentication error."); 
+      } finally { 
+        setLoading(false); 
       }
-    } catch (err: any) { setErrorMsg(err.message || "Authentication error."); } finally { setLoading(false); }
+    }, 500); // Simulate network request
   };
 
   const inputClass = "w-full bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl px-3.5 py-2.5 text-[12px] text-[var(--color-text-primary)] outline-none focus:border-[var(--color-ember)] transition-colors placeholder:text-[var(--color-text-faint)]";
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] font-sans flex items-center justify-center p-4">
-      <div className="fixed top-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-[var(--color-bg-soft)] border border-[var(--color-border)] rounded-full px-3 py-1.5 text-[10px]">
-        <span className={`w-1.5 h-1.5 rounded-full ${status === "online" ? "bg-[var(--color-ok)]" : "bg-[var(--color-warn)] animate-pulse"}`} />
-        <span className="text-[var(--color-text-muted)]">{status === "online" ? "Connected" : status === "connecting" ? "Connecting..." : "Offline mode"}</span>
-      </div>
-
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }} className="w-full max-w-sm">
         {/* Card */}
         <div className="bg-[var(--color-surface)] border border-[var(--color-border-card)] rounded-2xl p-7 shadow-2xl">
           <div className="text-center mb-6">
             <h1 className="text-[14px] font-bold tracking-tight text-[var(--color-card-text)] mb-1">almmatix</h1>
-            <p className="text-[11px] text-[var(--color-card-text-muted)]">{isSignUp ? "Create your account" : "Sign in to continue"}</p>
+            <p className="text-[11px] text-[var(--color-card-text-muted)]">{isSignUp ? "Create Admin Account" : "Sign in to CRM"}</p>
           </div>
 
           <form onSubmit={handleAuth} className="space-y-3">
@@ -82,18 +101,17 @@ export default function AuthPage() {
             </AnimatePresence>
 
             {errorMsg && <div className="bg-[var(--color-bad-soft)] border border-[var(--color-bad)]/20 rounded-xl p-3 text-[var(--color-bad)] text-[11px] text-center">{errorMsg}</div>}
-            {successMsg && <div className="bg-[var(--color-ok-soft)] border border-[var(--color-ok)]/20 rounded-xl p-3 text-[var(--color-ok)] text-[11px] text-center">{successMsg}</div>}
 
             <button type="submit" disabled={loading} className="w-full bg-[var(--color-ember)] hover:bg-[var(--color-ember-hover)] text-white text-[12px] font-semibold py-2.5 rounded-xl transition-colors disabled:opacity-50">
-              {loading ? "Loading..." : isSignUp ? "Create Account" : "Sign In"}
+              {loading ? "Loading..." : isSignUp ? "Create Admin" : "Sign In"}
             </button>
           </form>
 
           <div className="mt-5 pt-4 border-t border-[var(--color-border-card)] text-center">
-            <button onClick={() => { setIsSignUp(!isSignUp); setErrorMsg(null); setSuccessMsg(null); }} className="text-[11px] text-[var(--color-ember)] hover:underline">
-              {isSignUp ? "Already have an account? Sign in" : "Need an account? Sign up"}
+            <button onClick={() => { setIsSignUp(!isSignUp); setErrorMsg(null); }} className="text-[11px] text-[var(--color-ember)] hover:underline">
+              {isSignUp ? "Already have an account? Sign in" : "Need an Admin account? Sign up"}
             </button>
-            <p className="text-[9px] text-[var(--color-card-text-muted)] mt-2">Only authorized emails can register.</p>
+            <p className="text-[9px] text-[var(--color-card-text-muted)] mt-2">Client and Intern accounts must be created by an Admin inside the CRM.</p>
           </div>
         </div>
       </motion.div>

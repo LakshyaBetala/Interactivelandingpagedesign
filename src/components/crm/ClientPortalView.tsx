@@ -12,8 +12,13 @@ export default function ClientPortalView() {
   const { clients, comments, flags, releases, selectedClientId, setSelectedClientId, userProfile } = crm;
 
   const isAdmin = userProfile?.category === "admin" || !userProfile;
-  const client = clients.find(c => c.id === selectedClientId) || clients[0];
-  if (!client) return <div className="min-h-screen flex items-center justify-center text-[var(--color-text-muted)] text-[11px] bg-[var(--color-bg)] font-sans">No project data available.</div>;
+  const isClient = userProfile?.category === "client";
+  
+  const client = isClient 
+    ? clients.find(c => c.id === userProfile.assignedClientId)
+    : (clients.find(c => c.id === selectedClientId) || clients[0]);
+    
+  if (!client) return <div className="min-h-screen flex items-center justify-center text-[var(--color-text-muted)] text-[11px] bg-[var(--color-bg)] font-sans">No project data available. Contact your admin.</div>;
 
   const ongoingClients = clients.filter(c => ["Converted", "Dev 1", "Demo 2", "Dev Final", "Final Demo", "Delivery", "Maintenance"].includes(c.stage));
   const clientComments = comments.filter(c => c.clientId === client.id);

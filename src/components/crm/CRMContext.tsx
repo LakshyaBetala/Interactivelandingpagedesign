@@ -160,7 +160,9 @@ export interface UserProfile {
   email: string;
   name: string;
   role: string;
-  category: "admin" | "client";
+  category: "admin" | "intern" | "client";
+  assignedClientId?: number; // Only for clients
+  assignedProjects?: number[]; // Only for interns
   avatar: string;
   colorVar: string;
   primaryFocus: string;
@@ -502,6 +504,9 @@ interface CRMContextProps {
   updateClientStage: (clientId: number, newStage: ClientStage) => void;
   updateClientAdmin: (clientId: number, adminId: string) => void;
   updateClient: (clientId: number, updates: Partial<CRMClient>) => void;
+  addCrmUser: (user: any) => void;
+  deleteCrmUser: (email: string) => void;
+  crmUsers: any[];
   updateLead: (leadId: string, updates: Partial<OutreachLead>) => void;
   updateInternalTask: (taskId: string, updates: Partial<InternalTask>) => void;
   updateFlag: (flagId: string, updates: Partial<ProjectFlag>) => void;
@@ -553,6 +558,7 @@ const CRMContext = createContext<CRMContextProps | undefined>(undefined);
 
 export function CRMProvider({ children }: { children: ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [crmUsers, setCrmUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [isSupabaseConfigured, setIsSupabaseConfigured] = useState<boolean>(false);
   const [isSupabaseOnline, setIsSupabaseOnline] = useState<boolean>(false);
@@ -675,61 +681,57 @@ export function CRMProvider({ children }: { children: ReactNode }) {
 
   // Monitor auth status
   useEffect(() => {
-    const configured = checkSupabaseStatus();
-    if (!configured) {
+    // Read Local Storage Auth (bypassing Supabase for demo purposes to support local user creation)
+    const sessionRaw = localStorage.getItem("almmatix_session");
+    if (sessionRaw) {
+      const session = JSON.parse(sessionRaw);
       setUserProfile({
-        id: "a1",
-        email: "lakshbetala15@gmail.com",
-        name: "Lakshya",
-        role: "PM & Client Delivery Lead",
-        category: "admin",
-        avatar: "LB",
+        id: session.id,
+        email: session.email,
+        name: session.name,
+        role: session.role,
+        category: session.category as any,
+        assignedClientId: session.assignedClientId,
+        assignedProjects: session.assignedProjects,
+        avatar: session.name.substring(0, 2).toUpperCase(),
         colorVar: "var(--color-admin-lakshya)",
-        primaryFocus: "Client Delivery",
-        responsibilities: ["Client Communication", "Product Strategy", "QA / Delivery Gate"],
-        activeTasks: ["Review Supreme Petro Release", "Rafter.so Onboarding"],
+        primaryFocus: "Operations",
+        responsibilities: [],
+        activeTasks: [],
       });
-      setLoading(false);
-      return;
+      fetchOperationalData(session);
+    } else {
+      setUserProfile(null);
     }
+    setLoading(false);
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        // Retrieve profile details
-        const { data: dbProfile, error } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", session.user.id)
-          .single();
+    const usersRaw = localStorage.getItem("almmatix_users");
+    if (usersRaw) {
+      setCrmUsers(JSON.parse(usersRaw));
+    }
+  }, []);
 
-        if (dbProfile) {
-          const profile: UserProfile = {
-            id: dbProfile.id,
-            email: session.user.email || "",
-            name: dbProfile.name,
-            role: dbProfile.role || "Consultant",
-            category: dbProfile.category as "admin" | "client",
-            avatar: dbProfile.avatar || "AL",
-            colorVar: dbProfile.color_var || "var(--color-neutral)",
-            primaryFocus: dbProfile.primary_focus || "Client Delivery",
-            responsibilities: dbProfile.responsibilities || [],
-            activeTasks: dbProfile.active_tasks || [],
-          };
-          setUserProfile(profile);
-          await fetchOperationalData(profile);
-        }
-      } else {
-        setUserProfile(null);
-      }
-      setLoading(false);
+  const addCrmUser = useCallback((user: any) => {
+    setCrmUsers(prev => {
+      const updated = [...prev, user];
+      localStorage.setItem("almmatix_users", JSON.stringify(updated));
+      return updated;
     });
+  }, []);
 
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [checkSupabaseStatus, fetchOperationalData]);
+  const deleteCrmUser = useCallback((email: string) => {
+    setCrmUsers(prev => {
+      const updated = prev.filter(u => u.email !== email);
+      localStorage.setItem("almmatix_users", JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  const signOut = useCallback(async () => {
+    localStorage.removeItem("almmatix_session");
+    setUserProfile(null);
+    window.location.reload();
+  }, []);
 
   const provisionUser = useCallback(async (emailData: Omit<AuthorizedEmail, "createdAt">) => {
     if (isSupabaseConfigured) {
@@ -785,15 +787,6 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     setAuthorizedEmails((prev) => prev.filter((ae) => ae.email.toLowerCase() !== email.toLowerCase()));
     return true;
   }, [isSupabaseConfigured]);
-
-  // Sign out helper
-  const signOut = async () => {
-    if (isSupabaseConfigured) {
-      await supabase.auth.signOut();
-      setUserProfile(null);
-      window.location.reload();
-    }
-  };
 
   // --- MUTATOR WRAPPERS WITH RESILIENT LOCAL FALLBACKS ---
 
@@ -1507,7 +1500,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
       addInternalTask, updateInternalTaskStatus, addInternalTaskNote,
       addNewClient, deleteClient, deleteLead, deleteInternalTask, deleteFlag, deleteRelease,
       userProfile, setUserProfile, loading, isSupabaseConfigured, isSupabaseOnline, signOut,
-      authorizedEmails, provisionUser, deprovisionUser, purgeAllMockData
+      authorizedEmails, provisionUser, deprovisionUser, purgeAllMockData, addCrmUser, deleteCrmUser, crmUsers
     }}>
       {children}
     </CRMContext.Provider>

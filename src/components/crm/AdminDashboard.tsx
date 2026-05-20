@@ -10,7 +10,7 @@ const PROJECT_STAGES: ClientStage[] = ["Requirement","Model","Demo 1","Converted
 const TASK_COLS: { s: TaskStatus; l: string }[] = [{s:"Todo",l:"To Do"},{s:"In Progress",l:"In Progress"},{s:"In Review",l:"Review"},{s:"Resolved",l:"Done"}];
 const SOCIAL_COLS: { s: SocialStatus; l: string }[] = [{s:"Idea",l:"Ideas"},{s:"Planned",l:"Planned"},{s:"In Progress",l:"Creating"},{s:"Scheduled",l:"Scheduled"},{s:"Posted",l:"Done"}];
 const LEAD_STATUSES: OutreachStatus[] = ["Lead","Contacted","Responded","Requirements","Demo","Quoted","Converted","Lost"];
-type Section = "dashboard"|"projects"|"tasks"|"social"|"leads"|"support"|"products";
+type Section = "dashboard"|"projects"|"tasks"|"social"|"leads"|"support"|"products"|"access";
 const pc: Record<string,string> = {a1:"#FF5A1F",a2:"#0D9488",a3:"#65A30D",a4:"#9333EA"};
 
 /* ─── tiny shared components ─── */
@@ -21,10 +21,11 @@ const X = ({onClick}:{onClick:()=>void}) => <button onClick={e=>{e.stopPropagati
 
 /* ═══════════════════════════════════════════ ROOT ═══════════════════════════════════════════ */
 export default function AdminDashboard() {
-  const crm = useCRM();
-  const {clients,team,leads,internalTasks,flags,products,userProfile,isSupabaseOnline,signOut} = crm;
-  const [sec,setSec] = useState<Section>("dashboard");
-  const [sel,setSel] = useState<string|number|null>(null);
+  const crm=useCRM();
+  const {team,products,comments,activities,leads,flags,internalTasks}=crm;
+  const clients = crm.userProfile?.category === "intern" ? crm.clients.filter(c => c.assignedAdminId === crm.userProfile?.id || (crm.userProfile?.assignedProjects || []).includes(c.id)) : crm.clients;
+  const [sec,setSec]=useState<Section>("dashboard");
+  const [sel,setSel]=useState<number|string|null>(null);
   const [showAdd,setShowAdd] = useState(false);
   const go = (s:Section)=>{setSec(s);setSel(null);setShowAdd(false);};
   const navItems:{id:Section;l:string;i:string;c?:number}[] = [
@@ -36,6 +37,7 @@ export default function AdminDashboard() {
     {id:"support",l:"Support",i:"⚑",c:flags.filter(f=>f.status!=="Resolved").length},
     {id:"products",l:"Products",i:"△",c:products.length},
   ];
+  if (crm.userProfile?.category === "admin") navItems.push({id:"access",l:"Access Management",i:"⚿",c:crm.crmUsers?.length||0});
   return (
     <div className="flex h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] font-sans overflow-hidden">
       {/* ── sidebar ── */}
@@ -50,26 +52,27 @@ export default function AdminDashboard() {
           ))}
         </nav>
         <div className="p-3 border-t border-[var(--color-border-subtle)] text-[9px]">
-          <div className="flex items-center gap-1.5 mb-1"><Dot c={isSupabaseOnline?"bg-[var(--color-ok)]":"bg-[var(--color-warn)] animate-pulse"}/><span className="text-[var(--color-text-faint)]">{isSupabaseOnline?"Connected":"Offline"}</span></div>
-          <div className="flex items-center justify-between"><span className="text-[var(--color-text-secondary)] font-medium">{userProfile?.name||"Admin"}</span><button onClick={signOut} className="text-[var(--color-text-faint)] hover:text-[var(--color-bad)]">Out</button></div>
+          <div className="flex items-center gap-1.5 mb-1"><Dot c={crm.isSupabaseOnline?"bg-[var(--color-ok)]":"bg-[var(--color-warn)] animate-pulse"}/><span className="text-[var(--color-text-faint)]">{crm.isSupabaseOnline?"Connected":"Offline"}</span></div>
+          <div className="flex items-center justify-between"><span className="text-[var(--color-text-secondary)] font-medium">{crm.userProfile?.name||"Admin"}</span><button onClick={crm.signOut} className="text-[var(--color-text-faint)] hover:text-[var(--color-bad)]">Out</button></div>
         </div>
       </aside>
       {/* ── main ── */}
       <main className="flex-1 flex flex-col overflow-hidden">
         <header className="h-10 flex-shrink-0 border-b border-[var(--color-border-subtle)] flex items-center justify-between px-5 bg-[var(--color-bg-raised)]">
           <h2 className="text-[12.5px] font-semibold">{navItems.find(n=>n.id===sec)?.l}</h2>
-          {!["dashboard","products"].includes(sec)&&<button onClick={()=>setShowAdd(!showAdd)} className="px-2 py-[3px] bg-[var(--color-ember)] text-white text-[9px] font-semibold rounded hover:bg-[var(--color-ember-hover)] transition-colors">+ New</button>}
+          {!["dashboard","products","access"].includes(sec)&&<button onClick={()=>setShowAdd(!showAdd)} className="px-2 py-[3px] bg-[var(--color-ember)] text-white text-[9px] font-semibold rounded hover:bg-[var(--color-ember-hover)] transition-colors">+ New</button>}
         </header>
         <div className="flex-1 flex overflow-hidden">
           <div className="flex-1 overflow-y-auto crm-scroll p-4">
             <AnimatePresence mode="wait"><motion.div key={sec} initial={{opacity:0,y:3}} animate={{opacity:1,y:0}} exit={{opacity:0}} transition={{duration:.1}}>
               {sec==="dashboard"&&<Dashboard crm={crm}/>}
-              {sec==="projects"&&<Projects crm={crm} sel={sel} setSel={setSel} showAdd={showAdd} close={()=>setShowAdd(false)}/>}
+              {sec==="projects"&&<Projects crm={crm} clients={clients} sel={sel} setSel={setSel} showAdd={showAdd} close={()=>setShowAdd(false)}/>}
               {sec==="tasks"&&<Tasks crm={crm} showAdd={showAdd} close={()=>setShowAdd(false)}/>}
               {sec==="social"&&<Social crm={crm} showAdd={showAdd} close={()=>setShowAdd(false)}/>}
               {sec==="leads"&&<Leads crm={crm} sel={sel} setSel={setSel} showAdd={showAdd} close={()=>setShowAdd(false)}/>}
               {sec==="support"&&<Support crm={crm} sel={sel} setSel={setSel} showAdd={showAdd} close={()=>setShowAdd(false)}/>}
-              {sec==="products"&&<Products crm={crm}/>}
+              {sec==="products"&&<Products crm={crm} clients={clients}/>}
+              {sec==="access"&&<AccessManagement crm={crm} clients={clients}/>}
             </motion.div></AnimatePresence>
           </div>
           <AnimatePresence>
@@ -204,7 +207,9 @@ function ProjDrawer({crm,id,onClose}:any){
       <div className="space-y-px"><EF l="Project" v={c.project} f="project"/><EF l="Location" v={c.location} f="location"/>
         <div className="flex items-center justify-between py-px"><Lbl>Owner</Lbl><select value={c.assignedAdminId||""} onChange={e=>crm.updateClientAdmin(id,e.target.value)} className="text-[9px] bg-[var(--color-bg)] border border-[var(--color-border)] rounded px-1 py-px outline-none cursor-pointer">{crm.team.map((t:any)=><option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
         <div className="flex items-center justify-between py-px"><Lbl>Health</Lbl><span className="text-[10px] font-medium">{c.health}%</span></div></div>
-      <div className="border-t border-[var(--color-border)] pt-2"><Lbl>Financials</Lbl><div className="grid grid-cols-2 gap-1.5 mt-1"><div className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md p-2"><p className="text-[7.5px] text-[var(--color-text-faint)]">Revenue</p><p className="text-[12px] font-bold">{fmt(c.revenue)}</p></div><div className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md p-2"><p className="text-[7.5px] text-[var(--color-text-faint)]">Cost</p><p className="text-[12px] font-bold">{fmt(c.cost||0)}</p></div><div className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md p-2"><p className="text-[7.5px] text-[var(--color-text-faint)]">Margin</p><p className="text-[12px] font-bold text-[var(--color-ok)]">{fmt(c.revenue-(c.cost||0))}</p></div><div className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md p-2"><p className="text-[7.5px] text-[var(--color-text-faint)]">Pending Balance</p><p className="text-[12px] font-bold text-[var(--color-warn)]">{fmt(c.revenue-(c.amountPaid||0))}</p></div></div></div>
+      {crm.userProfile?.category === "admin" && (
+        <div className="border-t border-[var(--color-border)] pt-2"><Lbl>Financials</Lbl><div className="grid grid-cols-2 gap-1.5 mt-1"><div className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md p-2"><p className="text-[7.5px] text-[var(--color-text-faint)]">Revenue</p><p className="text-[12px] font-bold">{fmt(c.revenue)}</p></div><div className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md p-2"><p className="text-[7.5px] text-[var(--color-text-faint)]">Cost</p><p className="text-[12px] font-bold">{fmt(c.cost||0)}</p></div><div className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md p-2"><p className="text-[7.5px] text-[var(--color-text-faint)]">Margin</p><p className="text-[12px] font-bold text-[var(--color-ok)]">{fmt(c.revenue-(c.cost||0))}</p></div><div className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md p-2"><p className="text-[7.5px] text-[var(--color-text-faint)]">Pending Balance</p><p className="text-[12px] font-bold text-[var(--color-warn)]">{fmt(c.revenue-(c.amountPaid||0))}</p></div></div></div>
+      )}
       {crm.comments.filter((m:any)=>m.clientId===id).length>0&&<div className="border-t border-[var(--color-border)] pt-2"><Lbl>Feedback</Lbl>{crm.comments.filter((m:any)=>m.clientId===id).slice(-2).map((m:any)=><div key={m.id} className="p-1.5 rounded bg-[var(--color-bg)] mt-1 text-[9px]"><span className="font-semibold">{m.author}</span> <span className="text-[var(--color-text-faint)]">{m.timeElapsed}</span><p className="text-[var(--color-text-muted)] mt-px">{m.text}</p></div>)}</div>}
       <div className="border-t border-[var(--color-border)] pt-2"><button onClick={()=>{crm.deleteClient(id);onClose();}} className="text-[8px] text-[var(--color-bad)] hover:underline">Delete project</button></div>
     </div>
@@ -415,6 +420,85 @@ function Products({crm}:any){
           {(p.repoLink||p.sandboxLink)&&<div className="flex gap-2 mt-2">{p.repoLink&&<span className="text-[7.5px] text-[var(--color-card-text-muted)] bg-[var(--color-surface-muted)] px-1.5 py-px rounded">📁 {p.repoLink.split("/").slice(-1)}</span>}{p.sandboxLink&&<span className="text-[7.5px] text-[var(--color-card-text-muted)] bg-[var(--color-surface-muted)] px-1.5 py-px rounded">🌐 {p.sandboxLink}</span>}</div>}
         </div>
       );})}
+    </div>
+  );
+}
+
+/* ═══════════════════════ ACCESS MANAGEMENT ═══════════════════════ */
+function AccessManagement({crm, clients}:any) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [role, setRole] = useState("client");
+  const [assignedClientId, setAssignedClientId] = useState<number>(clients[0]?.id || 1);
+  const [error, setError] = useState<string|null>(null);
+
+  const createUser = () => {
+    if (!email || !password || !name) {
+      setError("Please fill all fields");
+      return;
+    }
+    crm.addCrmUser({
+      id: Date.now().toString(),
+      email: email.toLowerCase(),
+      password,
+      name,
+      role: role === "admin" ? "admin" : role === "intern" ? "intern" : "client",
+      category: role === "admin" ? "admin" : role === "intern" ? "intern" : "client",
+      assignedClientId: role === "client" ? assignedClientId : undefined,
+      createdBy: crm.userProfile?.email
+    });
+    setEmail(""); setPassword(""); setName(""); setError(null);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border-card)] rounded-xl p-5 shadow-sm max-w-2xl">
+        <h3 className="text-[12px] font-semibold mb-4">Create Access Profile</h3>
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div><Lbl>Full Name</Lbl><input value={name} onChange={e=>setName(e.target.value)} className="w-full mt-1 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md px-3 py-1.5 text-[11px] outline-none focus:border-[var(--color-ember)]" placeholder="John Doe"/></div>
+          <div><Lbl>Email Address</Lbl><input value={email} onChange={e=>setEmail(e.target.value)} className="w-full mt-1 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md px-3 py-1.5 text-[11px] outline-none focus:border-[var(--color-ember)]" placeholder="john@example.com"/></div>
+          <div><Lbl>Temporary Password</Lbl><input value={password} onChange={e=>setPassword(e.target.value)} type="password" className="w-full mt-1 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md px-3 py-1.5 text-[11px] outline-none focus:border-[var(--color-ember)]" placeholder="••••••••"/></div>
+          <div><Lbl>Access Role</Lbl>
+            <select value={role} onChange={e=>setRole(e.target.value)} className="w-full mt-1 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md px-3 py-1.5 text-[11px] outline-none focus:border-[var(--color-ember)]">
+              <option value="client">Client (Restricted to Project)</option>
+              <option value="intern">Intern / Employee (Internal access)</option>
+              <option value="admin">Admin (Full Access)</option>
+            </select>
+          </div>
+          {role === "client" && (
+            <div className="col-span-2"><Lbl>Assigned Project (Client Abstraction)</Lbl>
+              <select value={assignedClientId} onChange={e=>setAssignedClientId(Number(e.target.value))} className="w-full mt-1 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md px-3 py-1.5 text-[11px] outline-none focus:border-[var(--color-ember)]">
+                {clients.map((c:any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+          )}
+        </div>
+        {error && <p className="text-[10px] text-[var(--color-bad)] mb-3">{error}</p>}
+        <button onClick={createUser} className="bg-[var(--color-ember)] text-white text-[11px] font-semibold px-4 py-2 rounded-md hover:bg-[var(--color-ember-hover)] transition-colors">Create User</button>
+      </div>
+
+      <div>
+        <h3 className="text-[12px] font-semibold mb-3">Active Credentials</h3>
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border-card)] rounded-xl overflow-hidden shadow-sm">
+          <table className="w-full text-left border-collapse text-[10px]">
+            <thead><tr className="border-b border-[var(--color-border-card)]"><th className="p-3 font-medium text-[var(--color-text-muted)]">User</th><th className="p-3 font-medium text-[var(--color-text-muted)]">Email</th><th className="p-3 font-medium text-[var(--color-text-muted)]">Role</th><th className="p-3 font-medium text-[var(--color-text-muted)]">Restriction</th><th className="p-3 font-medium text-[var(--color-text-muted)]">Created By</th><th className="p-3"></th></tr></thead>
+            <tbody>
+              {crm.crmUsers?.map((u:any) => (
+                <tr key={u.id} className="border-b border-[var(--color-border-card)]/30 hover:bg-[var(--color-bg-soft)] transition-colors">
+                  <td className="p-3 font-medium">{u.name}</td>
+                  <td className="p-3 text-[var(--color-text-secondary)]">{u.email}</td>
+                  <td className="p-3"><span className={`px-2 py-0.5 rounded-full ${u.role==='admin'?'bg-[var(--color-ember)]/20 text-[var(--color-ember)]':u.role==='client'?'bg-[var(--color-ok)]/20 text-[var(--color-ok)]':'bg-[var(--color-info)]/20 text-[var(--color-info)]'}`}>{u.role}</span></td>
+                  <td className="p-3 text-[var(--color-text-secondary)]">{u.role === 'client' ? `Project ID: ${u.assignedClientId}` : '—'}</td>
+                  <td className="p-3 text-[var(--color-text-secondary)]">{u.createdBy || 'System'}</td>
+                  <td className="p-3 text-right"><button onClick={()=>crm.deleteCrmUser(u.email)} className="text-[var(--color-bad)] hover:underline">Revoke</button></td>
+                </tr>
+              ))}
+              {(!crm.crmUsers || crm.crmUsers.length === 0) && <tr><td colSpan={6} className="p-6 text-center text-[var(--color-text-faint)]">No custom accounts provisioned yet.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
