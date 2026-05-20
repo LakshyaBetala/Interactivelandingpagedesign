@@ -7,6 +7,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Clean existing entities
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 DROP FUNCTION IF EXISTS public.handle_new_user();
+DROP FUNCTION IF EXISTS public.is_admin();
 DROP TABLE IF EXISTS public.releases CASCADE;
 DROP TABLE IF EXISTS public.internal_tasks CASCADE;
 DROP TABLE IF EXISTS public.project_flags CASCADE;
@@ -37,6 +38,16 @@ CREATE TYPE flag_status AS ENUM ('Open', 'Investigating', 'In Dev', 'Resolved');
 CREATE TYPE task_status AS ENUM ('Todo', 'In Progress', 'In Review', 'Resolved');
 CREATE TYPE release_status AS ENUM ('Draft', 'Awaiting Review', 'Approved');
 
+-- Helper function: SECURITY DEFINER bypasses RLS to prevent infinite recursion
+-- when checking admin status inside profiles-table policies.
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND category = 'admin'
+  );
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
 -- 1. Profiles Table (Extends Supabase Auth)
 CREATE TABLE public.profiles (
     id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -62,10 +73,7 @@ CREATE POLICY "Allow profiles update for owners"
 
 CREATE POLICY "Allow admin full access to profiles"
     ON public.profiles FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles 
-            WHERE id = auth.uid() AND category = 'admin'
-        )
+        public.is_admin()
     );
 
 -- 2. Clients Table
@@ -89,19 +97,12 @@ ALTER TABLE public.clients ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins have full access to clients"
     ON public.clients FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles 
-            WHERE id = auth.uid() AND category = 'admin'
-        )
+        public.is_admin()
     );
 
 CREATE POLICY "Clients can view their own client profile"
     ON public.clients FOR SELECT USING (
-        profile_id = auth.uid() OR 
-        EXISTS (
-            SELECT 1 FROM public.profiles 
-            WHERE id = auth.uid() AND category = 'admin'
-        )
+        profile_id = auth.uid() OR public.is_admin()
     );
 
 -- 3. Internal Products Table
@@ -122,10 +123,7 @@ ALTER TABLE public.internal_products ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins have full access to products"
     ON public.internal_products FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles 
-            WHERE id = auth.uid() AND category = 'admin'
-        )
+        public.is_admin()
     );
 
 CREATE POLICY "Clients can read products"
@@ -147,10 +145,7 @@ ALTER TABLE public.comments ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins have full access to comments"
     ON public.comments FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles 
-            WHERE id = auth.uid() AND category = 'admin'
-        )
+        public.is_admin()
     );
 
 CREATE POLICY "Clients can read and create comments for their sandbox"
@@ -175,10 +170,7 @@ ALTER TABLE public.activities ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins can view and edit activities"
     ON public.activities FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles 
-            WHERE id = auth.uid() AND category = 'admin'
-        )
+        public.is_admin()
     );
 
 CREATE POLICY "Clients can view activities related to their project"
@@ -210,10 +202,7 @@ ALTER TABLE public.outreach_leads ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins have full access to outreach leads"
     ON public.outreach_leads FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles 
-            WHERE id = auth.uid() AND category = 'admin'
-        )
+        public.is_admin()
     );
 
 -- 7. Project Flags Table
@@ -235,10 +224,7 @@ ALTER TABLE public.project_flags ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins have full access to project flags"
     ON public.project_flags FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles 
-            WHERE id = auth.uid() AND category = 'admin'
-        )
+        public.is_admin()
     );
 
 CREATE POLICY "Clients have access to their own project flags"
@@ -267,10 +253,7 @@ ALTER TABLE public.internal_tasks ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins have full access to internal tasks"
     ON public.internal_tasks FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles 
-            WHERE id = auth.uid() AND category = 'admin'
-        )
+        public.is_admin()
     );
 
 -- 9. Releases Table
@@ -291,10 +274,7 @@ ALTER TABLE public.releases ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins have full access to releases"
     ON public.releases FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles 
-            WHERE id = auth.uid() AND category = 'admin'
-        )
+        public.is_admin()
     );
 
 CREATE POLICY "Clients can view their project releases"
@@ -324,10 +304,7 @@ ALTER TABLE public.authorized_emails ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins have full access to authorized emails"
     ON public.authorized_emails FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles 
-            WHERE id = auth.uid() AND category = 'admin'
-        )
+        public.is_admin()
     );
 
 CREATE POLICY "Allow public select on authorized emails during signup"
