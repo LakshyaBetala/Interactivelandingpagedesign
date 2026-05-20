@@ -38,16 +38,6 @@ CREATE TYPE flag_status AS ENUM ('Open', 'Investigating', 'In Dev', 'Resolved');
 CREATE TYPE task_status AS ENUM ('Todo', 'In Progress', 'In Review', 'Resolved');
 CREATE TYPE release_status AS ENUM ('Draft', 'Awaiting Review', 'Approved');
 
--- Helper function: SECURITY DEFINER bypasses RLS to prevent infinite recursion
--- when checking admin status inside profiles-table policies.
-CREATE OR REPLACE FUNCTION public.is_admin()
-RETURNS boolean AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() AND category = 'admin'
-  );
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
-
 -- 1. Profiles Table (Extends Supabase Auth)
 CREATE TABLE public.profiles (
     id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -61,6 +51,17 @@ CREATE TABLE public.profiles (
     active_tasks text[] DEFAULT '{}'::text[],
     created_at timestamp with time zone DEFAULT now()
 );
+
+-- Helper function: SECURITY DEFINER bypasses RLS to prevent infinite recursion
+-- when checking admin status inside profiles-table policies.
+-- Must be created AFTER the profiles table exists.
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND category = 'admin'
+  );
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
 
 -- Enable RLS on Profiles
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
