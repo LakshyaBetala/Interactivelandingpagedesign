@@ -11,7 +11,7 @@ export default function ClientPortalView() {
   const crm = useCRM();
   const { clients, comments, flags, releases, selectedClientId, setSelectedClientId, userProfile } = crm;
 
-  const isAdmin = userProfile?.category === "admin" || !userProfile;
+  const isAdmin = userProfile?.category === "admin";
   const isClient = userProfile?.category === "client";
   
   const client = isClient 
@@ -198,7 +198,7 @@ function FeedbackInput({ crm, client }: any) {
   const [text, setText] = useState("");
   const send = () => {
     if (!text.trim()) return;
-    const isAdmin = crm.userProfile?.category === "admin" || !crm.userProfile;
+    const isAdmin = crm.userProfile?.category === "admin";
     crm.addComment({ author: crm.userProfile?.name || "Client", role: isAdmin ? "admin" as const : "client" as const, text: text.trim(), timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), timeElapsed: "Just now", clientId: client.id });
     setText("");
   };

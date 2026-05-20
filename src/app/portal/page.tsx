@@ -14,10 +14,10 @@ function PortalContent() {
 
   // Auth protection
   useEffect(() => {
-    if (!loading && isSupabaseConfigured && !userProfile) {
+    if (!loading && !userProfile) {
       router.push("/portal/auth");
     }
-  }, [userProfile, loading, isSupabaseConfigured, router]);
+  }, [userProfile, loading, router]);
 
   // Sync view with role
   useEffect(() => {
@@ -37,8 +37,8 @@ function PortalContent() {
     );
   }
 
-  const isAdmin = userProfile?.category === "admin" || !isSupabaseConfigured;
-  const showSwitcher = !isSupabaseConfigured || (userProfile && userProfile.category === "admin");
+  const isAdmin = userProfile?.category === "admin";
+  const showSwitcher = userProfile && userProfile.category === "admin";
 
   return (
     <div className="min-h-screen">
