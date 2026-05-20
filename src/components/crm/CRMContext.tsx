@@ -17,6 +17,8 @@ export interface CRMClient {
   stage: ClientStage;
   health: number;
   revenue: number;
+  cost?: number;
+  amountPaid?: number;
   lastActivity: string;
   avatar: string;
   assignedAdminId?: string;
@@ -53,6 +55,7 @@ export interface Comment {
   timestamp: string;
   timeElapsed: string;
   clientId: number; // Linked to client portal view
+  isUnreadAdmin?: boolean;
 }
 
 export interface Activity {
@@ -189,15 +192,15 @@ const INITIAL_TEAM: TeamMember[] = [
 ];
 
 const INITIAL_CLIENTS: CRMClient[] = [
-  { id: 1, name: "UPKEM", project: "Mobile App", location: "India", category: "Ongoing", stage: "Dev 1", health: 90, revenue: 80000, lastActivity: "Building app screens — dashboard + profile", avatar: "UP", assignedAdminId: "a1" },
-  { id: 2, name: "SPC (Supreme Petro)", project: "Tally BI Dashboard + AI Agents", location: "Chennai", category: "Potential", stage: "Model", health: 70, revenue: 40000, lastActivity: "Dashboard quoted ₹40k, AI Agents ₹1.75L to quote", avatar: "SP", assignedAdminId: "a1" },
-  { id: 3, name: "NJ Jewellers", project: "Gold Price Board", location: "Chennai", category: "Potential", stage: "Demo 1", health: 75, revenue: 25000, lastActivity: "Confirm expected next week", avatar: "NJ", assignedAdminId: "a1" },
-  { id: 4, name: "DOITFORME", project: "Website", location: "India", category: "Ongoing", stage: "Maintenance", health: 95, revenue: 0, lastActivity: "Already built, maintenance mode", avatar: "DI", assignedAdminId: "a1" },
-  { id: 5, name: "Sumati", project: "Small project", location: "India", category: "Potential", stage: "Requirement", health: 50, revenue: 0, lastActivity: "Exploring scope", avatar: "SU", assignedAdminId: "a2" },
-  { id: 6, name: "Varsiddhi", project: "TBD", location: "India", category: "Potential", stage: "Requirement", health: 30, revenue: 0, lastActivity: "Not confirmed, exploring", avatar: "VA", assignedAdminId: "a2" },
-  { id: 7, name: "MMXport", project: "TBD", location: "India", category: "Potential", stage: "Requirement", health: 40, revenue: 0, lastActivity: "Early stage discussions", avatar: "MM", assignedAdminId: "a2" },
-  { id: 8, name: "Techie", project: "Personalized LinkedIn", location: "India", category: "Potential", stage: "Model", health: 45, revenue: 0, lastActivity: "LinkedIn automation for tech", avatar: "TE", assignedAdminId: "a2" },
-  { id: 9, name: "Greenlit", project: "New Product", location: "India", category: "Ongoing", stage: "Model", health: 60, revenue: 0, lastActivity: "In product pipeline", avatar: "GL", assignedAdminId: "a1" },
+  { id: 1, name: "UPKEM", project: "Mobile App", location: "India", category: "Ongoing", stage: "Dev 1", health: 90, revenue: 80000, cost: 35000, amountPaid: 40000, lastActivity: "Building app screens — dashboard + profile", avatar: "UP", assignedAdminId: "a1" },
+  { id: 2, name: "SPC (Supreme Petro)", project: "Tally BI Dashboard + AI Agents", location: "Chennai", category: "Potential", stage: "Model", health: 70, revenue: 40000, cost: 15000, amountPaid: 0, lastActivity: "Dashboard quoted ₹40k, AI Agents ₹1.75L to quote", avatar: "SP", assignedAdminId: "a1" },
+  { id: 3, name: "NJ Jewellers", project: "Gold Price Board", location: "Chennai", category: "Potential", stage: "Demo 1", health: 75, revenue: 25000, cost: 8000, amountPaid: 10000, lastActivity: "Confirm expected next week", avatar: "NJ", assignedAdminId: "a1" },
+  { id: 4, name: "DOITFORME", project: "Website", location: "India", category: "Ongoing", stage: "Maintenance", health: 95, revenue: 15000, cost: 2000, amountPaid: 15000, lastActivity: "Already built, maintenance mode", avatar: "DI", assignedAdminId: "a1" },
+  { id: 5, name: "Sumati", project: "Small project", location: "India", category: "Potential", stage: "Requirement", health: 50, revenue: 0, cost: 0, amountPaid: 0, lastActivity: "Exploring scope", avatar: "SU", assignedAdminId: "a2" },
+  { id: 6, name: "Varsiddhi", project: "TBD", location: "India", category: "Potential", stage: "Requirement", health: 30, revenue: 0, cost: 0, amountPaid: 0, lastActivity: "Not confirmed, exploring", avatar: "VA", assignedAdminId: "a2" },
+  { id: 7, name: "MMXport", project: "TBD", location: "India", category: "Potential", stage: "Requirement", health: 40, revenue: 0, cost: 0, amountPaid: 0, lastActivity: "Early stage discussions", avatar: "MM", assignedAdminId: "a2" },
+  { id: 8, name: "Techie", project: "Personalized LinkedIn", location: "India", category: "Potential", stage: "Model", health: 45, revenue: 0, cost: 0, amountPaid: 0, lastActivity: "LinkedIn automation for tech", avatar: "TE", assignedAdminId: "a2" },
+  { id: 9, name: "Greenlit", project: "New Product", location: "India", category: "Ongoing", stage: "Model", health: 60, revenue: 0, cost: 0, amountPaid: 0, lastActivity: "In product pipeline", avatar: "GL", assignedAdminId: "a1" },
 ];
 
 const INITIAL_PRODUCTS: InternalProduct[] = [
@@ -208,10 +211,10 @@ const INITIAL_PRODUCTS: InternalProduct[] = [
 ];
 
 const INITIAL_COMMENTS: Comment[] = [
-  { id: "1", author: "UPKEM Team", role: "client", text: "Can we get a progress update on the app screens?", timestamp: "10:30", timeElapsed: "2 hours ago", clientId: 1 },
-  { id: "2", author: "Lakshya", role: "admin", text: "App screens for dashboard and profile are ready. Sharing build link today.", timestamp: "10:45", timeElapsed: "1 hour ago", clientId: 1 },
-  { id: "3", author: "SPC Team", role: "client", text: "When can we see the Tally dashboard demo?", timestamp: "11:00", timeElapsed: "4 hours ago", clientId: 2 },
-  { id: "4", author: "Lakshya", role: "admin", text: "Demo will be ready by end of this week. AI agents quote to follow.", timestamp: "11:15", timeElapsed: "3 hours ago", clientId: 2 },
+  { id: "1", author: "UPKEM Team", role: "client", text: "Can we get a progress update on the app screens?", timestamp: "10:30", timeElapsed: "2 hours ago", clientId: 1, isUnreadAdmin: true },
+  { id: "2", author: "Lakshya", role: "admin", text: "App screens for dashboard and profile are ready. Sharing build link today.", timestamp: "10:45", timeElapsed: "1 hour ago", clientId: 1, isUnreadAdmin: false },
+  { id: "3", author: "SPC Team", role: "client", text: "When can we see the Tally dashboard demo?", timestamp: "11:00", timeElapsed: "4 hours ago", clientId: 2, isUnreadAdmin: true },
+  { id: "4", author: "Lakshya", role: "admin", text: "Demo will be ready by end of this week. AI agents quote to follow.", timestamp: "11:15", timeElapsed: "3 hours ago", clientId: 2, isUnreadAdmin: false },
 ];
 
 const INITIAL_ACTIVITY: Activity[] = [
@@ -495,6 +498,7 @@ interface CRMContextProps {
   setSelectedClientId: (id: number) => void;
   addComment: (comment: Omit<Comment, "id">) => void;
   deleteComment: (id: string) => void;
+  markCommentAsRead: (id: string) => void;
   updateClientStage: (clientId: number, newStage: ClientStage) => void;
   updateClientAdmin: (clientId: number, adminId: string) => void;
   updateClient: (clientId: number, updates: Partial<CRMClient>) => void;
@@ -811,8 +815,13 @@ export function CRMProvider({ children }: { children: ReactNode }) {
       }
     }
     // Safe Local Fallback
-    setComments((prev) => [{ ...newComment, id: Date.now().toString() }, ...prev]);
+    setComments((prev) => [{ ...newComment, id: Date.now().toString(), isUnreadAdmin: newComment.role === 'client' }, ...prev]);
   }, [isSupabaseConfigured, userProfile]);
+
+  const markCommentAsRead = useCallback(async (id: string) => {
+    // Local state only for now
+    setComments(prev => prev.map(c => c.id === id ? { ...c, isUnreadAdmin: false } : c));
+  }, []);
 
   const deleteComment = useCallback(async (id: string) => {
     if (isSupabaseConfigured) {
@@ -1490,7 +1499,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
   return (
     <CRMContext.Provider value={{ 
       clients, team, products, comments, activities, socialMedia, setSocialMedia, leads, flags, releases, internalTasks, currentAdminId, selectedClientId, setSelectedClientId,
-      addComment, deleteComment, updateClientStage, updateClientAdmin,
+      addComment, deleteComment, markCommentAsRead, updateClientStage, updateClientAdmin,
       updateClient, updateLead, updateInternalTask, updateFlag,
       updateLeadStatus, incrementLeadCalls, addLeadNote, convertLeadToClient, addNewLead,
       addFlag, updateFlagStatus, assignFlagAdmin, addFlagSprintLog,
