@@ -27,16 +27,25 @@ export default function AuthPage() {
     setTimeout(() => {
       try {
         const storedUsersRaw = localStorage.getItem("almmatix_users");
-        let users = storedUsersRaw ? JSON.parse(storedUsersRaw) : null;
-        if (!users || users.length === 0) {
-          users = [
-            { id: "a1", email: "lakshbetala15@gmail.com", password: "admin", name: "Lakshya", role: "admin", category: "admin", createdBy: "System" },
-            { id: "a2", email: "gandhimouriyan1234@gmail.com", password: "admin", name: "Mouriyan", role: "admin", category: "admin", createdBy: "System" },
-            { id: "a3", email: "monarchankit25@gmail.com", password: "admin", name: "Ankit", role: "admin", category: "admin", createdBy: "System" },
-            { id: "a4", email: "muskanabani01@gmail.com", password: "admin", name: "Muskan", role: "admin", category: "admin", createdBy: "System" }
-          ];
-          localStorage.setItem("almmatix_users", JSON.stringify(users));
-        }
+        let users = storedUsersRaw ? JSON.parse(storedUsersRaw) : [];
+
+        const defaultAdmins = [
+          { id: "a1", email: "lakshbetala15@gmail.com", password: "admin@000", name: "Lakshya", role: "admin", category: "admin", createdBy: "System" },
+          { id: "a2", email: "gandhimouriyan1234@gmail.com", password: "admin@000", name: "Mouriyan", role: "admin", category: "admin", createdBy: "System" },
+          { id: "a3", email: "monarchankit25@gmail.com", password: "admin@000", name: "Ankit", role: "admin", category: "admin", createdBy: "System" },
+          { id: "a4", email: "muskanabani01@gmail.com", password: "admin@000", name: "Muskan", role: "admin", category: "admin", createdBy: "System" }
+        ];
+
+        // Force update master admins in case they had old cached credentials
+        defaultAdmins.forEach(admin => {
+          const idx = users.findIndex((u: any) => u.email === admin.email);
+          if (idx !== -1) {
+            users[idx].password = admin.password;
+          } else {
+            users.push(admin);
+          }
+        });
+        localStorage.setItem("almmatix_users", JSON.stringify(users));
 
         // Sign In
         const user = users.find((u: any) => u.email === email.toLowerCase() && u.password === password);

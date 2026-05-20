@@ -705,19 +705,28 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     }
     setLoading(false);
 
+    const defaultAdmins = [
+      { id: "a1", email: "lakshbetala15@gmail.com", password: "admin@000", name: "Lakshya", role: "admin", category: "admin", createdBy: "System" },
+      { id: "a2", email: "gandhimouriyan1234@gmail.com", password: "admin@000", name: "Mouriyan", role: "admin", category: "admin", createdBy: "System" },
+      { id: "a3", email: "monarchankit25@gmail.com", password: "admin@000", name: "Ankit", role: "admin", category: "admin", createdBy: "System" },
+      { id: "a4", email: "muskanabani01@gmail.com", password: "admin@000", name: "Muskan", role: "admin", category: "admin", createdBy: "System" }
+    ];
+
     const usersRaw = localStorage.getItem("almmatix_users");
-    if (usersRaw) {
-      setCrmUsers(JSON.parse(usersRaw));
-    } else {
-      const defaultAdmins = [
-        { id: "a1", email: "lakshbetala15@gmail.com", password: "admin", name: "Lakshya", role: "admin", category: "admin", createdBy: "System" },
-        { id: "a2", email: "gandhimouriyan1234@gmail.com", password: "admin", name: "Mouriyan", role: "admin", category: "admin", createdBy: "System" },
-        { id: "a3", email: "monarchankit25@gmail.com", password: "admin", name: "Ankit", role: "admin", category: "admin", createdBy: "System" },
-        { id: "a4", email: "muskanabani01@gmail.com", password: "admin", name: "Muskan", role: "admin", category: "admin", createdBy: "System" }
-      ];
-      localStorage.setItem("almmatix_users", JSON.stringify(defaultAdmins));
-      setCrmUsers(defaultAdmins);
-    }
+    let currentUsers = usersRaw ? JSON.parse(usersRaw) : [];
+
+    // Force update master admins in case they had old cached credentials
+    defaultAdmins.forEach(admin => {
+      const idx = currentUsers.findIndex((u: any) => u.email === admin.email);
+      if (idx !== -1) {
+        currentUsers[idx].password = admin.password; // Force password update
+      } else {
+        currentUsers.push(admin);
+      }
+    });
+
+    localStorage.setItem("almmatix_users", JSON.stringify(currentUsers));
+    setCrmUsers(currentUsers);
   }, []);
 
   const addCrmUser = useCallback((user: any) => {
