@@ -201,9 +201,10 @@ const INITIAL_CLIENTS: CRMClient[] = [
 ];
 
 const INITIAL_PRODUCTS: InternalProduct[] = [
-  { id: "p1", name: "Almmatix CRM Core", stage: "Beta", progress: 85, description: "Our proprietary internal management tool and Agency OS.", leadId: "a1", repoLink: "github.com/almmatix/crm-core", sandboxLink: "almmatix.com/sandbox/crm", metrics: { label: "Sprint Velocity", value: "9.2 pts/wk" } },
-  { id: "p2", name: "Design System V2", stage: "Planning", progress: 20, description: "Unified component library for fast shipping.", leadId: "a4", repoLink: "github.com/almmatix/design-v2", metrics: { label: "Total Components", value: "48 assets" } },
-  { id: "p3", name: "Supabase Boilerplate", stage: "In Dev", progress: 40, description: "Quickstart backend template for SaaS projects.", leadId: "a2", repoLink: "github.com/almmatix/supabase-starter", sandboxLink: "supabase-starter.almmatix.com", metrics: { label: "Active Integrations", value: "6 engines" } },
+  { id: "p1", name: "Almmatix CRM", stage: "Beta", progress: 85, description: "Internal CRM and agency management platform — this tool.", leadId: "a1", repoLink: "github.com/LakshyaBetala/Interactivelandingpagedesign", sandboxLink: "almmatix.com/portal", metrics: { label: "Modules", value: "7 sections" } },
+  { id: "p2", name: "Greenlit", stage: "Planning", progress: 10, description: "New SaaS product — early-stage concept and validation.", leadId: "a1", metrics: { label: "Phase", value: "Concept" } },
+  { id: "p3", name: "Techie", stage: "In Dev", progress: 35, description: "Personalized LinkedIn automation tool for tech professionals.", leadId: "a2", repoLink: "github.com/almmatix/techie", metrics: { label: "Phase", value: "Prototype" } },
+  { id: "p4", name: "Almmatix Website", stage: "Live", progress: 100, description: "Company landing page and brand presence.", leadId: "a1", repoLink: "github.com/LakshyaBetala/Interactivelandingpagedesign", sandboxLink: "almmatix.com", metrics: { label: "Status", value: "Shipped" } },
 ];
 
 const INITIAL_COMMENTS: Comment[] = [
