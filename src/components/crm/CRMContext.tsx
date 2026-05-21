@@ -19,6 +19,7 @@ export interface CRMClient {
   revenue: number;
   cost?: number;
   amountPaid?: number;
+  margin?: number;
   lastActivity: string;
   avatar: string;
   assignedAdminId?: string;
@@ -396,6 +397,8 @@ const mapClientToTS = (db: any): CRMClient => ({
   stage: db.stage,
   health: db.health ?? 100,
   revenue: Number(db.revenue || 0),
+  amountPaid: Number(db.amount_paid || 0),
+  margin: Number(db.margin || 0),
   lastActivity: db.last_activity || "",
   avatar: db.avatar || "",
   assignedAdminId: db.assigned_admin_id || undefined,
@@ -909,6 +912,8 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     if (updates.stage !== undefined) dbUpdates.stage = updates.stage;
     if (updates.health !== undefined) dbUpdates.health = updates.health;
     if (updates.revenue !== undefined) dbUpdates.revenue = updates.revenue;
+    if (updates.amountPaid !== undefined) dbUpdates.amount_paid = updates.amountPaid;
+    if (updates.margin !== undefined) dbUpdates.margin = updates.margin;
     if (updates.lastActivity !== undefined) dbUpdates.last_activity = updates.lastActivity;
     if (updates.assignedAdminId !== undefined) dbUpdates.assigned_admin_id = updates.assignedAdminId;
 
@@ -1415,6 +1420,8 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         stage: client.stage,
         health: 100,
         revenue: client.revenue,
+        amount_paid: client.amountPaid || 0,
+        margin: client.margin || 0,
         last_activity: "Client workspace initialized",
         avatar,
         assigned_admin_id: client.assignedAdminId || null,

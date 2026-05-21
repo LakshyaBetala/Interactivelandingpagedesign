@@ -121,15 +121,19 @@ export default function AdminDashboard() {
 /* ═══════════════════════ 1. DASHBOARD ═══════════════════════ */
 function Dashboard({crm, navigateTo}:any) {
   const {clients,team,leads,internalTasks,flags,comments,activities}=crm;
-  const active=clients.filter((c:any)=>!["Requirement","Model"].includes(c.stage)).length;
-  const pipe=clients.reduce((s:number,c:any)=>s+c.revenue,0)+leads.reduce((s:number,l:any)=>s+l.estimatedValue,0);
+  const ACTIVE_STAGES = ["Converted", "Dev 1", "Demo 2", "Dev Final", "Final Demo", "Delivery"];
+  const POSSIBLE_STAGES = ["Requirement", "Model", "Demo 1"];
+  const activeClients = clients.filter((c:any) => ACTIVE_STAGES.includes(c.stage));
+  const activeCount = activeClients.length;
+  const pipe = activeClients.reduce((s:number,c:any)=>s+(Number(c.revenue)||0),0);
+  const possibleCount = clients.filter((c:any) => POSSIBLE_STAGES.includes(c.stage)).length;
   const openF=flags.filter((f:any)=>f.status!=="Resolved").length;
   const openT=internalTasks.filter((t:any)=>t.status!=="Resolved").length;
   return (
     <div className="space-y-6 max-w-[1200px] mx-auto">
       {/* stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        {[{l:"Active Projects",v:active,a:"text-[var(--color-ok)]"},{l:"Pipeline",v:fmt(pipe),a:"text-[var(--color-text-primary)]"},{l:"Tasks",v:openT,a:"text-[var(--color-info)]"},{l:"Issues",v:openF,a:openF?"text-[var(--color-bad)]":"text-[var(--color-text-primary)]"},{l:"Leads",v:leads.length,a:"text-[var(--color-text-primary)]"}].map(s=>(
+        {[{l:"Active Projects",v:activeCount,a:"text-[var(--color-ok)]"},{l:"Pipeline",v:fmt(pipe),a:"text-[var(--color-text-primary)]"},{l:"Tasks",v:openT,a:"text-[var(--color-info)]"},{l:"Issues",v:openF,a:openF?"text-[var(--color-bad)]":"text-[var(--color-text-primary)]"},{l:"Possible Projects",v:possibleCount,a:"text-[var(--color-text-primary)]"}].map(s=>(
           <div key={s.l} className="bg-[var(--color-surface)] border border-[var(--color-border-card)] shadow-sm rounded-xl px-4 py-3"><Lbl>{s.l}</Lbl><p className={`text-2xl font-bold mt-1 ${s.a}`}>{s.v}</p></div>
         ))}
       </div>
@@ -155,7 +159,7 @@ function Dashboard({crm, navigateTo}:any) {
             </div>
           </div>
           <div><Lbl>Active Projects</Lbl>
-            <div className="space-y-1.5 mt-2">{clients.map((c:any)=>{const si=PROJECT_STAGES.indexOf(c.stage);return <div key={c.id} className="flex flex-col gap-1.5 py-2 px-3 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border-card)] shadow-sm hover:shadow transition-shadow"><div className="flex justify-between items-center"><span className="text-[12px] font-bold truncate text-[var(--color-card-text)]">{c.name}</span><span className="text-[10px] font-semibold text-[var(--color-ember)]">{c.stage}</span></div><div className="flex gap-1 w-full mt-1">{PROJECT_STAGES.map((_:any,i:number)=><div key={i} className={`h-1.5 flex-1 rounded-full ${i<=si?"bg-[var(--color-ember)] shadow-[0_0_5px_var(--color-ember)]/30":"bg-[var(--color-border)]"}`}/>)}</div></div>;})}</div>
+            <div className="space-y-1.5 mt-2">{activeClients.map((c:any)=>{const si=PROJECT_STAGES.indexOf(c.stage);return <div key={c.id} className="flex flex-col gap-1.5 py-2 px-3 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border-card)] shadow-sm hover:shadow transition-shadow"><div className="flex justify-between items-center"><span className="text-[12px] font-bold truncate text-[var(--color-card-text)]">{c.name}</span><span className="text-[10px] font-semibold text-[var(--color-ember)]">{c.stage}</span></div><div className="flex gap-1 w-full mt-1">{PROJECT_STAGES.map((_:any,i:number)=><div key={i} className={`h-1.5 flex-1 rounded-full ${i<=si?"bg-[var(--color-ember)] shadow-[0_0_5px_var(--color-ember)]/30":"bg-[var(--color-border)]"}`}/>)}</div></div>;})}</div>
           </div>
         </div>
       </div>
@@ -227,6 +231,11 @@ function ProjDrawer({crm,id,onClose}:any){
     <div className="flex items-center justify-between py-1.5 border-b border-[var(--color-border-card)]/30"><Lbl>{l}</Lbl>{ed===f?<input autoFocus value={ev} onChange={e=>setEv(e.target.value)} onBlur={()=>save(f)} onKeyDown={e=>e.key==="Enter"&&save(f)} className="!bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-ember)] shadow-[0_0_5px_var(--color-ember-soft)] rounded-md px-2 py-1 text-[11px] w-40 text-right outline-none font-medium"/>:<span onClick={()=>{setEd(f);setEv(v);}} className="text-[11px] font-bold text-[var(--color-card-text)] cursor-pointer hover:text-[var(--color-ember)] border-b border-dashed border-transparent hover:border-[var(--color-ember)] transition-colors">{v||"—"}</span>}</div>
   );
 
+  const saveN=(f:string)=>{crm.updateClient(id,{[f]:Number(ev)||0});setEd(null);};
+  const ENF=({l,v,f}:{l:string;v:number;f:string})=>(
+    <div className="flex items-center justify-between py-1.5 border-b border-[var(--color-border-card)]/30"><Lbl>{l}</Lbl>{ed===f?<input autoFocus type="number" value={ev} onChange={e=>setEv(e.target.value)} onBlur={()=>saveN(f)} onKeyDown={e=>e.key==="Enter"&&saveN(f)} className="!bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-ember)] shadow-[0_0_5px_var(--color-ember-soft)] rounded-md px-2 py-1 text-[11px] w-24 text-right outline-none font-medium"/>:<span onClick={()=>{setEd(f);setEv(v.toString());}} className="text-[12px] font-black text-[var(--color-card-text)] cursor-pointer hover:text-[var(--color-ember)] border-b border-dashed border-transparent hover:border-[var(--color-ember)] transition-colors">{fmt(v)}</span>}</div>
+  );
+
   const submitRelease = () => {
     if(!relTitle) return;
     const notesArray = relNotes.split('\n').map(s=>s.trim()).filter(s=>s);
@@ -271,11 +280,13 @@ function ProjDrawer({crm,id,onClose}:any){
       </div>
 
       {crm.userProfile?.category === "admin" && (
-        <div className="bg-[var(--color-surface)] rounded-xl p-4 border border-[var(--color-border-card)] shadow-sm">
+        <div className="bg-[var(--color-surface)] rounded-xl p-4 border border-[var(--color-border-card)] shadow-sm space-y-1 mt-6">
           <Lbl>Financials</Lbl>
-          <div className="grid grid-cols-2 gap-3 mt-3">
-            <div className="bg-[var(--color-bg-soft)] rounded-lg p-3 border border-[var(--color-border)]"><p className="text-[9px] font-mono text-[var(--color-text-muted)] uppercase mb-1">Revenue</p><p className="text-[14px] font-black text-[var(--color-card-text)]">{fmt(c.revenue)}</p></div>
-            <div className="bg-[var(--color-bg-soft)] rounded-lg p-3 border border-[var(--color-border)]"><p className="text-[9px] font-mono text-[var(--color-text-muted)] uppercase mb-1">Margin</p><p className="text-[14px] font-black text-[var(--color-ok)]">{fmt(c.revenue-(c.cost||0))}</p></div>
+          <div className="mt-3">
+            <ENF l="Total Revenue" v={c.revenue||0} f="revenue" />
+            <ENF l="Amount Paid" v={c.amountPaid||0} f="amountPaid" />
+            <ENF l="Margin" v={c.margin||0} f="margin" />
+            <div className="flex items-center justify-between py-1.5"><Lbl>Amount Left</Lbl><span className="text-[12px] font-black text-[var(--color-ember)]">{fmt((c.revenue||0) - (c.amountPaid||0))}</span></div>
           </div>
         </div>
       )}
