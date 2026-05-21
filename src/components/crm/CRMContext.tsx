@@ -74,8 +74,10 @@ export type LeadSource = "Cold Call" | "LinkedIn" | "Twitter" | "Email" | "Refer
 export interface OutreachLead {
   id: string;
   companyName: string;
+  companyInfo?: string;
   projectDescription: string;
   source: LeadSource;
+  personContacted?: string;
   status: OutreachStatus;
   estimatedValue: number;
   assignedAdminId: string;
@@ -238,8 +240,8 @@ const INITIAL_SOCIAL_MEDIA: SocialMediaItem[] = [
 ];
 
 const INITIAL_LEADS: OutreachLead[] = [
-  { id: "l1", companyName: "New Prospect A", projectDescription: "Website redesign and digital presence", source: "LinkedIn", status: "Lead", estimatedValue: 50000, assignedAdminId: "a3", callsMade: 2, notes: ["Found via LinkedIn outreach"], lastContacted: "2 days ago", sourcedById: "a3", engagementScore: 40 },
-  { id: "l2", companyName: "New Prospect B", projectDescription: "E-commerce platform development", source: "Cold Call", status: "Contacted", estimatedValue: 150000, assignedAdminId: "a3", callsMade: 5, notes: ["Cold called, showed interest", "Follow up scheduled"], lastContacted: "Yesterday", sourcedById: "a3", engagementScore: 55 },
+  { id: "l1", companyName: "New Prospect A", companyInfo: "Tech startup in Bangalore", projectDescription: "Website redesign and digital presence", source: "LinkedIn", personContacted: "John Doe", status: "Lead", estimatedValue: 50000, assignedAdminId: "a3", callsMade: 2, notes: ["Found via LinkedIn outreach"], lastContacted: "2 days ago", sourcedById: "a3", engagementScore: 40 },
+  { id: "l2", companyName: "New Prospect B", companyInfo: "Retail chain in Mumbai", projectDescription: "E-commerce platform development", source: "Cold Call", personContacted: "Jane Smith", status: "Contacted", estimatedValue: 150000, assignedAdminId: "a3", callsMade: 5, notes: ["Cold called, showed interest", "Follow up scheduled"], lastContacted: "Yesterday", sourcedById: "a3", engagementScore: 55 },
 ];
 
 const INITIAL_FLAGS: ProjectFlag[] = [
@@ -435,8 +437,10 @@ const mapCommentToTS = (db: any): Comment => ({
 const mapLeadToTS = (db: any): OutreachLead => ({
   id: db.id,
   companyName: db.company_name,
+  companyInfo: db.company_info || "",
   projectDescription: db.project_description || "",
   source: db.source,
+  personContacted: db.person_contacted || "",
   status: db.status,
   estimatedValue: Number(db.estimated_value || 0),
   assignedAdminId: db.assigned_admin_id || "",
@@ -1024,8 +1028,10 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     if (isSupabaseConfigured) {
       const { data, error } = await supabase.from("outreach_leads").insert({
         company_name: lead.companyName,
+        company_info: lead.companyInfo,
         project_description: lead.projectDescription,
         source: lead.source,
+        person_contacted: lead.personContacted,
         status: lead.status,
         estimated_value: lead.estimatedValue,
         assigned_admin_id: lead.assignedAdminId || null,

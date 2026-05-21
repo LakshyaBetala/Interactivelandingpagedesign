@@ -445,7 +445,16 @@ function Leads({crm,sel,setSel,showAdd,close}:any){
   const funnel=[{m:["Lead"],l:"Pipeline"},{m:["Contacted"],l:"Contacted"},{m:["Responded","Requirements"],l:"In Talk"},{m:["Demo","Quoted"],l:"Quoted"}];
 
   const downloadTemplate=()=>{
-    const ws=XLSX.utils.json_to_sheet([{"Company Name":"Example Corp","Project Description":"Need a new website","Estimated Value":50000}]);
+    const ws=XLSX.utils.json_to_sheet([{
+      "Comapny_Name": "Example Corp",
+      "est-value": 50000,
+      "company_info": "Tech startup",
+      "needs_identified": "Website redesign",
+      "Contacted_via": "LinkedIn",
+      "Person_Contacted": "John Doe",
+      "status": "Lead",
+      "owner": "a3"
+    }]);
     const wb=XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb,ws,"Leads Template");
     XLSX.writeFile(wb,"Leads_Import_Template.xlsx");
@@ -461,11 +470,25 @@ function Leads({crm,sel,setSel,showAdd,close}:any){
       const ws=wb.Sheets[wsname];
       const data=XLSX.utils.sheet_to_json(ws);
       data.forEach((row:any)=>{
-        const cn=row["Company Name"]||row["Company"]||row["companyName"];
-        const pd=row["Project Description"]||row["Description"]||row["Need"]||"";
-        const ev=Number(row["Estimated Value"]||row["Value"])||0;
+        const cn=row["Comapny_Name"]||row["companyName"]||row["Company Name"];
         if(cn){
-          crm.addNewLead({companyName:cn,projectDescription:pd,source:"Excel Import",status:"Lead",estimatedValue:ev,assignedAdminId:crm.currentAdminId||"a3",sourcedById:crm.currentAdminId||"a3",engagementScore:10});
+          let assignedAdmin = row["owner"] || row["Owner"];
+          // Optional: if they use a name instead of an ID, we could map it, but we'll try ID first
+          const foundAdmin = crm.team.find((t:any)=>t.name.toLowerCase()===String(assignedAdmin).toLowerCase());
+          if (foundAdmin) assignedAdmin = foundAdmin.id;
+
+          crm.addNewLead({
+            companyName: cn,
+            estimatedValue: Number(row["est-value"]||row["Estimated Value"])||0,
+            companyInfo: row["company_info"]||"",
+            projectDescription: row["needs_identified"]||row["Project Description"]||"",
+            source: row["Contacted_via"]||row["Source"]||"Excel Import",
+            personContacted: row["Person_Contacted"]||"",
+            status: row["status"]||row["Status"]||"Lead",
+            assignedAdminId: assignedAdmin||crm.currentAdminId||"a3",
+            sourcedById: crm.currentAdminId||"a3",
+            engagementScore: 10
+          });
         }
       });
     };
@@ -496,18 +519,21 @@ function Leads({crm,sel,setSel,showAdd,close}:any){
       {showAdd&&<QuickAdd title="New Lead" fields={[{k:"companyName",l:"Company",p:"Company name"},{k:"projectDescription",l:"Need",p:"What do they need?"},{k:"estimatedValue",l:"Value (₹)",p:"0",t:"number"},{k:"assignedAdminId",l:"Owner",t:"select",o:crm.team.map((t:any)=>({v:t.id,l:t.name}))}]} onSubmit={(d:any)=>{crm.addNewLead({companyName:d.companyName,projectDescription:d.projectDescription,source:"LinkedIn" as const,status:"Lead" as const,estimatedValue:Number(d.estimatedValue)||0,assignedAdminId:d.assignedAdminId||"a3",sourcedById:d.assignedAdminId||"a3",engagementScore:10});close();}} onClose={close}/>}
       
       <div className="bg-[var(--color-surface)] border border-[var(--color-border-card)] shadow-sm rounded-xl overflow-x-auto">
-        <table className="w-full text-[11.5px] min-w-[700px]">
-          <thead><tr className="border-b border-[var(--color-border-card)] bg-[var(--color-surface)]"><th className="text-left p-3 font-semibold text-[var(--color-text-secondary)]">Company</th><th className="text-left p-3 font-semibold text-[var(--color-text-secondary)]">Need</th><th className="text-left p-3 font-semibold text-[var(--color-text-secondary)]">Value</th><th className="text-left p-3 font-semibold text-[var(--color-text-secondary)]">Status</th><th className="text-left p-3 font-semibold text-[var(--color-text-secondary)]">Owner</th><th className="p-3 w-8"></th></tr></thead>
+        <table className="w-full text-[11.5px] min-w-[1000px]">
+          <thead><tr className="border-b border-[var(--color-border-card)] bg-[var(--color-surface)]"><th className="text-left p-3 font-semibold text-[var(--color-text-secondary)]">Company Name</th><th className="text-left p-3 font-semibold text-[var(--color-text-secondary)]">Company Info</th><th className="text-left p-3 font-semibold text-[var(--color-text-secondary)]">Needs Identified</th><th className="text-left p-3 font-semibold text-[var(--color-text-secondary)]">Contacted Via</th><th className="text-left p-3 font-semibold text-[var(--color-text-secondary)]">Person Contacted</th><th className="text-left p-3 font-semibold text-[var(--color-text-secondary)]">Value</th><th className="text-left p-3 font-semibold text-[var(--color-text-secondary)]">Status</th><th className="text-left p-3 font-semibold text-[var(--color-text-secondary)]">Owner</th><th className="p-3 w-8"></th></tr></thead>
           <tbody>{crm.leads.map((l:any)=>{const ow=crm.team.find((t:any)=>t.id===l.assignedAdminId);return(
             <tr key={l.id} onClick={()=>setSel(l.id)} className={`border-b border-[var(--color-border-card)]/50 cursor-pointer transition-colors ${sel===l.id?"bg-[var(--color-ember-soft)]":"hover:bg-[var(--color-bg-soft)]"}`}>
               <td className="p-3 font-bold text-[var(--color-card-text)]"><EditCell lid={l.id} field="companyName" value={l.companyName}/></td>
-              <td className="p-3 text-[var(--color-text-muted)] max-w-[200px] truncate font-medium"><EditCell lid={l.id} field="projectDescription" value={l.projectDescription}/></td>
+              <td className="p-3 text-[var(--color-text-muted)] max-w-[150px] truncate"><EditCell lid={l.id} field="companyInfo" value={l.companyInfo||""}/></td>
+              <td className="p-3 text-[var(--color-text-muted)] max-w-[150px] truncate"><EditCell lid={l.id} field="projectDescription" value={l.projectDescription}/></td>
+              <td className="p-3 text-[var(--color-text-muted)]"><EditCell lid={l.id} field="source" value={l.source}/></td>
+              <td className="p-3 text-[var(--color-text-muted)]"><EditCell lid={l.id} field="personContacted" value={l.personContacted||""}/></td>
               <td className="p-3 font-black text-[var(--color-card-text)] text-[12px]"><EditCell lid={l.id} field="estimatedValue" value={l.estimatedValue.toString()} t="number" w="w-24"/></td>
               <td className="p-3"><select value={l.status} onClick={e=>e.stopPropagation()} onChange={e=>{e.stopPropagation();crm.updateLeadStatus(l.id,e.target.value);}} className="!bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-border-card)] rounded-md px-2 py-1 outline-none cursor-pointer font-semibold shadow-sm">{LEAD_STATUSES.map(s=><option key={s}>{s}</option>)}</select></td>
               <td className="p-3 text-[var(--color-text-secondary)] font-medium flex items-center gap-2"><Av id={l.assignedAdminId} name={ow?.name||"?"} sz={16}/> {ow?.name||"—"}</td>
               <td className="p-3"><X onClick={()=>crm.deleteLead(l.id)}/></td>
             </tr>
-          );})}{crm.leads.length===0&&<tr><td colSpan={6} className="p-8 text-center text-[var(--color-text-faint)] font-medium text-[12px]">No leads in pipeline.</td></tr>}</tbody>
+          );})}{crm.leads.length===0&&<tr><td colSpan={9} className="p-8 text-center text-[var(--color-text-faint)] font-medium text-[12px]">No leads in pipeline.</td></tr>}</tbody>
         </table>
       </div>
     </div>
