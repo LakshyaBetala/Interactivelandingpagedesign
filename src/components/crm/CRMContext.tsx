@@ -484,10 +484,22 @@ const mapReleaseToTS = (db: any): ChangelogRelease => ({
   version: db.version,
   title: db.title,
   whatWasImproved: db.what_was_improved || [],
-  publishedAt: db.published_at || "",
+  publishedAt: db.published_at || new Date().toISOString(),
   status: db.status,
-  approvedAt: db.approved_at || undefined,
-  releaseNotes: db.release_notes || undefined,
+  approvedAt: db.approved_at,
+  releaseNotes: db.release_notes,
+});
+
+const mapSocialToTS = (db: any): SocialMediaItem => ({
+  id: db.id,
+  platform: db.platform,
+  contentType: db.content_type,
+  description: db.description,
+  status: db.status,
+  assignedAdminId: db.assigned_admin_id,
+  scheduledDate: db.scheduled_date,
+  clientTag: db.client_tag,
+  createdAt: db.created_at
 });
 
 // --- Context Definition ---
@@ -566,6 +578,9 @@ interface CRMContextProps {
   provisionUser: (emailData: Omit<AuthorizedEmail, "createdAt">) => Promise<boolean>;
   deprovisionUser: (email: string) => Promise<boolean>;
   purgeAllMockData: () => Promise<void>;
+  addSocialMedia: (item: SocialMediaItem) => Promise<void>;
+  updateSocialMedia: (id: string, updates: Partial<SocialMediaItem>) => Promise<void>;
+  deleteSocialMedia: (id: string) => Promise<void>;
 }
 
 const CRMContext = createContext<CRMContextProps | undefined>(undefined);
@@ -637,6 +652,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         setFlags([]);
         setReleases([]);
         setInternalTasks([]);
+        setSocialMedia([]);
 
         // Partners fetch all telemetry metrics individually so one missing table doesn't abort the rest
         const safeFetch = async (promise: PromiseLike<any>) => {
@@ -654,6 +670,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         const dbReleases = await safeFetch(supabase.from("releases").select("*"));
         const dbTasks = await safeFetch(supabase.from("internal_tasks").select("*"));
         const dbAuthEmails = await safeFetch(supabase.from("authorized_emails").select("*"));
+        const dbSocial = await safeFetch(supabase.from("social_media").select("*"));
 
         if (dbProfiles) setTeam(dbProfiles.map(mapTeamMemberToTS));
         if (dbClients) setClients(dbClients.map(mapClientToTS));
@@ -664,6 +681,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         if (dbReleases) setReleases(dbReleases.map(mapReleaseToTS));
         if (dbTasks) setInternalTasks(dbTasks.map(mapTaskToTS));
         if (dbAuthEmails) setAuthorizedEmails(dbAuthEmails.map(mapAuthEmailToTS));
+        if (dbSocial) setSocialMedia(dbSocial.map(mapSocialToTS));
       } else {
         // Client sandboxing - fetch ONLY their record
         setClients([]);
@@ -1609,12 +1627,47 @@ export function CRMProvider({ children }: { children: ReactNode }) {
   }, [isSupabaseConfigured]);
 
   const updateCrmUser = useCallback((email: string, updates: any) => {
-    setCrmUsers(prev => {
-      const updated = prev.map(u => u.email === email ? { ...u, ...updates } : u);
-      localStorage.setItem("almmatix_users", JSON.stringify(updated));
-      return updated;
-    });
+    setTeam(prev => prev.map(u => u.email === email ? { ...u, ...updates } : u));
   }, []);
+
+  const addSocialMedia = useCallback(async (item: SocialMediaItem) => {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.from("social_media").insert({
+        id: item.id,
+        platform: item.platform,
+        content_type: item.contentType,
+        description: item.description,
+        status: item.status,
+        assigned_admin_id: item.assignedAdminId,
+        scheduled_date: item.scheduledDate,
+        client_tag: item.clientTag
+      });
+      if (error) console.error("Database insert social media error:", error);
+    }
+    setSocialMedia(prev => [...prev, item]);
+  }, [isSupabaseConfigured]);
+
+  const updateSocialMedia = useCallback(async (id: string, updates: Partial<SocialMediaItem>) => {
+    if (isSupabaseConfigured) {
+      const dbUpdates: any = {};
+      if (updates.status !== undefined) dbUpdates.status = updates.status;
+      if (updates.description !== undefined) dbUpdates.description = updates.description;
+      if (updates.scheduledDate !== undefined) dbUpdates.scheduled_date = updates.scheduledDate;
+      if (Object.keys(dbUpdates).length > 0) {
+        const { error } = await supabase.from("social_media").update(dbUpdates).eq("id", id);
+        if (error) console.error("Database update social media error:", error);
+      }
+    }
+    setSocialMedia(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+  }, [isSupabaseConfigured]);
+
+  const deleteSocialMedia = useCallback(async (id: string) => {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.from("social_media").delete().eq("id", id);
+      if (error) console.error("Database delete social media error:", error);
+    }
+    setSocialMedia(prev => prev.filter(s => s.id !== id));
+  }, [isSupabaseConfigured]);
 
   const addRelease = useCallback((release: Partial<ChangelogRelease>) => {
     setReleases(prev => [...prev, {
@@ -1638,7 +1691,8 @@ export function CRMProvider({ children }: { children: ReactNode }) {
       addFlag, updateFlagStatus, assignFlagAdmin, addFlagSprintLog,
       createRelease, approveRelease,
       addInternalTask, updateInternalTaskStatus, addInternalTaskNote,
-      addNewClient, deleteClient, deleteLead, deleteInternalTask, deleteFlag, deleteRelease,
+      addNewClient, deleteClient, deleteLead, deleteInternalTask, deleteFlag, deleteRelease, deleteProduct,
+      addSocialMedia, updateSocialMedia, deleteSocialMedia,
       userProfile, setUserProfile, loading, isSupabaseConfigured, isSupabaseOnline, signOut,
       authorizedEmails, provisionUser, deprovisionUser, purgeAllMockData, addCrmUser, deleteCrmUser, crmUsers
     }}>

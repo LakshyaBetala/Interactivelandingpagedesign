@@ -411,13 +411,13 @@ function Social({crm,showAdd,close}:any){
   const [editId,setEditId]=useState<string|null>(null);
   const [editDesc,setEditDesc]=useState("");
   const icon:Record<string,string>={Instagram:"📸",Twitter:"𝕏",LinkedIn:"in",Reddit:"🔴",YouTube:"▶"};
-  const moveTo=(status:SocialStatus)=>{if(drag&&setSM){setSM((prev:SocialMediaItem[])=>prev.map(i=>i.id===drag?{...i,status}:i));setDrag(null);}};
-  const del=(id:string)=>{if(setSM)setSM((prev:SocialMediaItem[])=>prev.filter(i=>i.id!==id));};
-  const saveEdit=(id:string)=>{if(setSM)setSM((prev:SocialMediaItem[])=>prev.map(i=>i.id===id?{...i,description:editDesc}:i));setEditId(null);};
+  const moveTo=(status:SocialStatus)=>{if(drag){crm.updateSocialMedia(drag, { status });setDrag(null);}};
+  const del=(id:string)=>{crm.deleteSocialMedia(id);};
+  const saveEdit=(id:string)=>{crm.updateSocialMedia(id, { description: editDesc });setEditId(null);};
 
   return(
     <div className="space-y-4 max-w-[1400px]">
-      {showAdd&&<QuickAdd title="New Content" fields={[{k:"platform",l:"Platform",t:"select",o:["Instagram","Twitter","LinkedIn","Reddit","YouTube"]},{k:"contentType",l:"Type",t:"select",o:["Reel","Post","Story","Tweet","Blog","Thread"]},{k:"description",l:"About",p:"What is this content about?"},{k:"scheduledDate",l:"Date",t:"date"}]} onSubmit={(d:any)=>{if(setSM){const id="sm"+Date.now();setSM((prev:SocialMediaItem[])=>[...prev,{id,platform:d.platform||"Instagram",contentType:d.contentType||"Post",description:d.description||"New content",status:"Idea" as SocialStatus,assignedAdminId:"a4",scheduledDate:d.scheduledDate||"",createdAt:new Date().toISOString().split("T")[0]} as SocialMediaItem]);}close();}} onClose={close}/>}
+      {showAdd&&<QuickAdd title="New Content" fields={[{k:"platform",l:"Platform",t:"select",o:["Instagram","Twitter","LinkedIn","Reddit","YouTube"]},{k:"contentType",l:"Type",t:"select",o:["Reel","Post","Story","Tweet","Blog","Thread"]},{k:"description",l:"About",p:"What is this content about?"},{k:"scheduledDate",l:"Date",t:"date"}]} onSubmit={(d:any)=>{const id="sm"+Date.now();crm.addSocialMedia({id,platform:d.platform||"Instagram",contentType:d.contentType||"Post",description:d.description||"New content",status:"Idea" as SocialStatus,assignedAdminId:"a4",scheduledDate:d.scheduledDate||"",createdAt:new Date().toISOString().split("T")[0]} as SocialMediaItem);close();}} onClose={close}/>}
       <div className="flex gap-3 overflow-x-auto pb-4 crm-scroll" style={{minHeight:"calc(100vh - 140px)"}}>
         {SOCIAL_COLS.map(col=>{const items=sm.filter(i=>i.status===col.s);return(
           <div key={col.s} onDrop={e=>{e.preventDefault();moveTo(col.s);}} onDragOver={e=>{e.preventDefault();e.dataTransfer.dropEffect="move";}}
@@ -434,6 +434,7 @@ function Social({crm,showAdd,close}:any){
                   <textarea autoFocus value={editDesc} onChange={e=>setEditDesc(e.target.value)} onBlur={()=>saveEdit(item.id)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();saveEdit(item.id);}}} className="w-full text-[11px] !bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-ember)] shadow-sm outline-none rounded p-1 font-medium resize-none" rows={2}/>
                 ):(
                   <p onDoubleClick={()=>{setEditId(item.id);setEditDesc(item.description);}} className="text-[11px] text-[var(--color-card-text)] leading-snug font-medium cursor-text">{item.description}</p>
+
                 )}
                 {item.clientTag&&<span className="inline-block mt-2 text-[9px] font-bold px-2 py-0.5 bg-[var(--color-surface-muted)] rounded-md text-[var(--color-card-text-secondary)]">{item.clientTag}</span>}
               </div>
