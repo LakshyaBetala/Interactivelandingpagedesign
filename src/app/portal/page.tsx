@@ -41,7 +41,13 @@ function PortalContent() {
   const showSwitcher = userProfile && userProfile.category === "admin";
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen relative">
+      {showSwitcher && (
+        <div className="fixed bottom-4 right-4 z-[9999] bg-[var(--color-surface)] border border-[var(--color-border-card)] shadow-lg rounded-full p-1 flex gap-1">
+          <button onClick={() => setActiveView("admin")} className={`px-4 py-1.5 rounded-full text-[11px] font-bold transition-colors ${activeView === "admin" ? "bg-[var(--color-ember)] text-white" : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"}`}>Admin View</button>
+          <button onClick={() => setActiveView("client")} className={`px-4 py-1.5 rounded-full text-[11px] font-bold transition-colors ${activeView === "client" ? "bg-[var(--color-ember)] text-white" : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"}`}>Client View</button>
+        </div>
+      )}
       {/* Content */}
       <AnimatePresence mode="wait">
         <motion.div
