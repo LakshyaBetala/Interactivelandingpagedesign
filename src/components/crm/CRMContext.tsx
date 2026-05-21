@@ -208,10 +208,10 @@ const INITIAL_CLIENTS: CRMClient[] = [
 ];
 
 const INITIAL_PRODUCTS: InternalProduct[] = [
-  { id: "p1", name: "Almmatix CRM", stage: "Beta", progress: 85, description: "Internal CRM and agency management platform — this tool.", leadId: "a1", repoLink: "github.com/LakshyaBetala/Interactivelandingpagedesign", sandboxLink: "almmatix.com/portal", metrics: { label: "Modules", value: "7 sections" } },
-  { id: "p2", name: "Greenlit", stage: "Planning", progress: 10, description: "New SaaS product — early-stage concept and validation.", leadId: "a1", metrics: { label: "Phase", value: "Concept" } },
-  { id: "p3", name: "Techie", stage: "In Dev", progress: 35, description: "Personalized LinkedIn automation tool for tech professionals.", leadId: "a2", repoLink: "github.com/almmatix/techie", metrics: { label: "Phase", value: "Prototype" } },
-  { id: "p4", name: "Almmatix Website", stage: "Live", progress: 100, description: "Company landing page and brand presence.", leadId: "a1", repoLink: "github.com/LakshyaBetala/Interactivelandingpagedesign", sandboxLink: "almmatix.com", metrics: { label: "Status", value: "Shipped" } },
+  { id: "p1", name: "Almmatix CRM", stage: "Demo", progress: 85, description: "Internal CRM and agency management platform — this tool.", leadId: "a1", repoLink: "github.com/LakshyaBetala/Interactivelandingpagedesign", sandboxLink: "almmatix.com/portal", metrics: { label: "Modules", value: "7 sections" } },
+  { id: "p2", name: "Greenlit", stage: "Ideation", progress: 10, description: "New SaaS product — early-stage concept and validation.", leadId: "a1", metrics: { label: "Phase", value: "Concept" } },
+  { id: "p3", name: "Techie", stage: "Dev", progress: 35, description: "Personalized LinkedIn automation tool for tech professionals.", leadId: "a2", repoLink: "github.com/almmatix/techie", metrics: { label: "Phase", value: "Prototype" } },
+  { id: "p4", name: "Almmatix Website", stage: "Distribution", progress: 100, description: "Company landing page and brand presence.", leadId: "a1", repoLink: "github.com/LakshyaBetala/Interactivelandingpagedesign", sandboxLink: "almmatix.com", metrics: { label: "Status", value: "Shipped" } },
 ];
 
 const INITIAL_COMMENTS: Comment[] = [
@@ -1515,27 +1515,74 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     setActivities([]);
   }, [isSupabaseConfigured]);
 
-  const updateProduct = useCallback((id: string, updates: Partial<InternalProduct>) => {
+  const updateProduct = useCallback(async (id: string, updates: Partial<InternalProduct>) => {
+    if (isSupabaseConfigured) {
+      const dbUpdates = {
+        name: updates.name,
+        stage: updates.stage,
+        progress: updates.progress,
+        description: updates.description,
+        lead_id: updates.leadId,
+        repo_link: updates.repoLink,
+        sandbox_link: updates.sandboxLink,
+        metrics: updates.metrics,
+      };
+      // Clean up undefined values
+      Object.keys(dbUpdates).forEach(key => (dbUpdates as any)[key] === undefined && delete (dbUpdates as any)[key]);
+      
+      const { error } = await supabase.from("products").update(dbUpdates).eq("id", id);
+      if (error) {
+        console.error("Database update product error:", error);
+        return;
+      }
+    }
     setProducts(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
-  }, []);
+  }, [isSupabaseConfigured]);
 
-  const addProduct = useCallback((product: Partial<InternalProduct>) => {
-    setProducts(prev => [...prev, {
+  const addProduct = useCallback(async (product: Partial<InternalProduct>) => {
+    const newProduct: InternalProduct = {
       id: "p" + Date.now(),
       name: product.name || "New Product",
-      stage: product.stage || "Planning",
+      stage: product.stage || "Ideation",
       progress: product.progress || 0,
       description: product.description || "",
       leadId: product.leadId || "a1",
       repoLink: product.repoLink,
       sandboxLink: product.sandboxLink,
       metrics: product.metrics
-    } as InternalProduct]);
-  }, []);
+    };
 
-  const deleteProduct = useCallback((id: string) => {
+    if (isSupabaseConfigured) {
+      const dbItem = {
+        name: newProduct.name,
+        stage: newProduct.stage,
+        progress: newProduct.progress,
+        description: newProduct.description,
+        lead_id: newProduct.leadId,
+        repo_link: newProduct.repoLink,
+        sandbox_link: newProduct.sandboxLink,
+        metrics: newProduct.metrics,
+      };
+      const { data, error } = await supabase.from("products").insert(dbItem).select().single();
+      if (error) {
+        console.error("Database insert product error:", error);
+        return;
+      }
+      if (data) newProduct.id = data.id;
+    }
+    setProducts(prev => [...prev, newProduct]);
+  }, [isSupabaseConfigured]);
+
+  const deleteProduct = useCallback(async (id: string) => {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.from("products").delete().eq("id", id);
+      if (error) {
+        console.error("Database delete product error:", error);
+        return;
+      }
+    }
     setProducts(prev => prev.filter(p => p.id !== id));
-  }, []);
+  }, [isSupabaseConfigured]);
 
   const updateCrmUser = useCallback((email: string, updates: any) => {
     setCrmUsers(prev => {

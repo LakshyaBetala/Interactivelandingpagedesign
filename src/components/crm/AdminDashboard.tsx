@@ -118,7 +118,7 @@ export default function AdminDashboard() {
 }
 
 /* ═══════════════════════ 1. DASHBOARD ═══════════════════════ */
-function Dashboard({crm}:any) {
+function Dashboard({crm, navigateTo}:any) {
   const {clients,team,leads,internalTasks,flags,comments,activities}=crm;
   const active=clients.filter((c:any)=>!["Requirement","Model"].includes(c.stage)).length;
   const pipe=clients.reduce((s:number,c:any)=>s+c.revenue,0)+leads.reduce((s:number,l:any)=>s+l.estimatedValue,0);
@@ -565,7 +565,7 @@ function FlagDrawer({crm,id,onClose}:any){
 
 /* ═══════════════════════ 7. PRODUCTS ═══════════════════════ */
 function Products({crm, showAdd, close}:any){
-  const sc=(s:string)=>s==="Beta"||s==="Live"?"bg-[var(--color-ok)] shadow-[0_0_5px_var(--color-ok)]":s==="In Dev"?"bg-[var(--color-warn)]":"bg-[var(--color-border)]";
+  const sc=(s:string)=>s==="Demo"||s==="Distribution"?"bg-[var(--color-ok)] shadow-[0_0_5px_var(--color-ok)]":s==="Dev"||s==="Post-Demo Dev"?"bg-[var(--color-warn)]":"bg-[var(--color-border)]";
   
   const [editId,setEditId]=useState<string|null>(null);
   const [editField,setEditField]=useState<string|null>(null);
@@ -588,7 +588,7 @@ function Products({crm, showAdd, close}:any){
 
   return(
     <div className="space-y-4 max-w-[1000px] mx-auto">
-      {showAdd&&<QuickAdd title="New Product" fields={[{k:"name",l:"Name",p:"Product name"},{k:"description",l:"Description",p:"Short description"},{k:"stage",l:"Stage",t:"select",o:["Planning","In Dev","Beta","Live"]},{k:"leadId",l:"Lead",t:"select",o:crm.team.map((t:any)=>({v:t.id,l:t.name}))}]} onSubmit={(d:any)=>{crm.addProduct({name:d.name,description:d.description,stage:d.stage||"Planning",leadId:d.leadId||"a1",progress:0});close();}} onClose={close}/>}
+      {showAdd&&<QuickAdd title="New Product" fields={[{k:"name",l:"Name",p:"Product name"},{k:"description",l:"Description",p:"Short description"},{k:"stage",l:"Stage",t:"select",o:["Ideation", "Dev", "Demo", "Post-Demo Dev", "Distribution"]},{k:"leadId",l:"Lead",t:"select",o:crm.team.map((t:any)=>({v:t.id,l:t.name}))}]} onSubmit={(d:any)=>{crm.addProduct({name:d.name,description:d.description,stage:d.stage||"Ideation",leadId:d.leadId||"a1",progress:0});close();}} onClose={close}/>}
       
       <Lbl>Internal Products Portfolio</Lbl>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-2">
@@ -601,7 +601,7 @@ function Products({crm, showAdd, close}:any){
             </div>
             
             <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2"><span className={`w-2.5 h-2.5 rounded-full ${sc(p.stage)}`}/><select value={p.stage} onChange={e=>crm.updateProduct(p.id,{stage:e.target.value})} className="!bg-transparent text-[11px] font-bold text-[var(--color-text-secondary)] outline-none cursor-pointer p-0 border-none">{["Planning","In Dev","Beta","Live"].map(s=><option key={s}>{s}</option>)}</select></div>
+              <div className="flex items-center gap-2"><span className={`w-2.5 h-2.5 rounded-full ${sc(p.stage)}`}/><select value={p.stage} onChange={e=>crm.updateProduct(p.id,{stage:e.target.value})} className="!bg-transparent text-[11px] font-bold text-[var(--color-text-secondary)] outline-none cursor-pointer p-0 border-none">{["Ideation", "Dev", "Demo", "Post-Demo Dev", "Distribution"].map(s=><option key={s}>{s}</option>)}</select></div>
               <div className="flex items-center gap-1 font-bold text-[11px] text-[var(--color-ember)]"><EditP pid={p.id} field="progress" value={p.progress.toString()} t="number" w="w-12 text-right"/>%</div>
             </div>
             
