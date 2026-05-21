@@ -30,6 +30,7 @@ export default function AdminDashboard() {
   const [showAdd,setShowAdd] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const go = (s:Section)=>{setSec(s);setSel(null);setShowAdd(false);setSidebarOpen(false);};
+  const navigateTo = (s:Section, id?: string | number)=>{setSec(s);setSel(id ?? null);setShowAdd(false);setSidebarOpen(false);};
   const navItems:{id:Section;l:string;i:string;c?:number}[] = [
     {id:"dashboard",l:"Dashboard",i:"◉"},
     {id:"projects",l:"Projects",i:"◫",c:clients.length},
@@ -89,13 +90,13 @@ export default function AdminDashboard() {
         <div className="flex-1 flex overflow-hidden">
           <div className="flex-1 overflow-y-auto crm-scroll p-4 md:p-6">
             <AnimatePresence mode="wait"><motion.div key={sec} initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} exit={{opacity:0}} transition={{duration:0.2,ease:[0.16,1,0.3,1]}}>
-              {sec==="dashboard"&&<Dashboard crm={crm}/>}
-              {sec==="projects"&&<Projects crm={crm} clients={clients} sel={sel} setSel={setSel} showAdd={showAdd} close={()=>setShowAdd(false)}/>}
-              {sec==="tasks"&&<Tasks crm={crm} showAdd={showAdd} close={()=>setShowAdd(false)}/>}
-              {sec==="social"&&<Social crm={crm} showAdd={showAdd} close={()=>setShowAdd(false)}/>}
-              {sec==="leads"&&<Leads crm={crm} sel={sel} setSel={setSel} showAdd={showAdd} close={()=>setShowAdd(false)}/>}
-              {sec==="support"&&<Support crm={crm} sel={sel} setSel={setSel} showAdd={showAdd} close={()=>setShowAdd(false)}/>}
-              {sec==="products"&&<Products crm={crm} clients={clients} showAdd={showAdd} close={()=>setShowAdd(false)}/>}
+              {sec==="dashboard"&&<Dashboard crm={crm} navigateTo={navigateTo}/>}
+              {sec==="projects"&&<Projects crm={crm} clients={clients} sel={sel} setSel={setSel} showAdd={showAdd} close={()=>setShowAdd(false)} navigateTo={navigateTo}/>}
+              {sec==="tasks"&&<Tasks crm={crm} showAdd={showAdd} close={()=>setShowAdd(false)} navigateTo={navigateTo}/>}
+              {sec==="social"&&<Social crm={crm} showAdd={showAdd} close={()=>setShowAdd(false)} navigateTo={navigateTo}/>}
+              {sec==="leads"&&<Leads crm={crm} sel={sel} setSel={setSel} showAdd={showAdd} close={()=>setShowAdd(false)} navigateTo={navigateTo}/>}
+              {sec==="support"&&<Support crm={crm} sel={sel} setSel={setSel} showAdd={showAdd} close={()=>setShowAdd(false)} navigateTo={navigateTo}/>}
+              {sec==="products"&&<Products crm={crm} clients={clients} showAdd={showAdd} close={()=>setShowAdd(false)} navigateTo={navigateTo}/>}
               {sec==="access"&&<AccessManagement crm={crm} clients={clients}/>}
             </motion.div></AnimatePresence>
           </div>
@@ -148,7 +149,7 @@ function Dashboard({crm}:any) {
           <div className="bg-[var(--color-surface)] p-4 rounded-xl border border-[var(--color-border-card)] shadow-sm"><Lbl>Needs Attention</Lbl>
             <div className="space-y-2 mt-3">
               {comments.filter((c:any)=>c.role==="client"&&c.isUnreadAdmin).slice(0,3).map((c:any)=>{const cl=clients.find((x:any)=>x.id===c.clientId);return <div key={c.id} onClick={()=>crm.markCommentAsRead(c.id)} className="flex items-start gap-2 bg-[var(--color-ember-soft)] border border-[var(--color-ember)]/30 rounded-lg p-3 cursor-pointer hover:bg-[var(--color-ember)]/10 transition-colors"><Dot c="bg-[var(--color-ember)] mt-1.5 animate-pulse shadow-[0_0_5px_var(--color-ember)]"/><div className="min-w-0 flex-1"><p className="text-[11px] font-bold text-[var(--color-ember)] mb-0.5">Reply needed: {cl?.name}</p><p className="text-[11px] text-[var(--color-text-secondary)] line-clamp-2 leading-snug">{c.text}</p></div></div>;})}
-              {flags.filter((f:any)=>f.status==="Open").slice(0,2).map((f:any)=><div key={f.id} className="flex items-center gap-2 bg-[var(--color-surface)] border border-[var(--color-border-card)] rounded-lg p-3 shadow-sm"><Dot c="bg-[var(--color-bad)] shadow-[0_0_5px_var(--color-bad)]"/><p className="text-[11px] font-bold text-[var(--color-card-text)] truncate flex-1">{f.title}</p></div>)}
+              {flags.filter((f:any)=>f.status==="Open").slice(0,2).map((f:any)=><div key={f.id} onClick={() => navigateTo("support", f.id)} className="flex items-center gap-2 bg-[var(--color-surface)] border border-[var(--color-border-card)] rounded-lg p-3 shadow-sm cursor-pointer hover:border-[var(--color-ember)] hover:shadow-md transition-all"><Dot c="bg-[var(--color-bad)] shadow-[0_0_5px_var(--color-bad)]"/><p className="text-[11px] font-bold text-[var(--color-card-text)] truncate flex-1">{f.title}</p></div>)}
               {comments.filter((c:any)=>c.role==="client"&&c.isUnreadAdmin).length===0&&flags.filter((f:any)=>f.status==="Open").length===0&&<div className="flex flex-col items-center justify-center py-6 opacity-30"><span className="text-2xl mb-1">✨</span><p className="text-[11px] font-medium">All clear</p></div>}
             </div>
           </div>
@@ -499,20 +500,20 @@ function LeadDrawer({crm,id,onClose}:any){
 }
 
 /* ═══════════════════════ 6. SUPPORT ═══════════════════════ */
-function Support({crm,sel,setSel,showAdd,close}:any){
+function Support({crm,sel,setSel,showAdd,close,navigateTo}:any){
   const open=crm.flags.filter((f:any)=>f.status!=="Resolved");const done=crm.flags.filter((f:any)=>f.status==="Resolved");
   const maint=crm.clients.filter((c:any)=>["Maintenance","Delivery"].includes(c.stage));
-  const dot=(s:string)=>s==="Critical"?"bg-[var(--color-bad)] shadow-[0_0_5px_var(--color-bad)]":s==="High"?"bg-[var(--color-warn)]":"bg-[var(--color-text-faint)]";
+  const sv=(s:string)=>s==="Critical"?"var(--color-bad)":s==="High"?"var(--color-warn)":"var(--color-text-faint)";
   return(
     <div className="space-y-6 max-w-[800px] mx-auto">
-      {maint.length>0&&<div><Lbl>Maintenance Tier</Lbl><div className="flex flex-wrap gap-3 mt-2">{maint.map((c:any)=><div key={c.id} className="bg-[var(--color-surface)] border border-[var(--color-border-card)] shadow-sm rounded-xl px-4 py-3 min-w-[200px]"><p className="text-[12px] font-bold text-[var(--color-card-text)] mb-0.5">{c.name}</p><p className="text-[10px] font-medium text-[var(--color-text-muted)]">{c.project}</p></div>)}</div></div>}
+      {maint.length>0&&<div><Lbl>Maintenance Tier</Lbl><div className="flex flex-wrap gap-3 mt-2">{maint.map((c:any)=><div key={c.id} onClick={() => navigateTo("projects", c.id)} className="bg-[var(--color-surface)] border border-[var(--color-border-card)] shadow-sm rounded-xl px-4 py-3 min-w-[200px] cursor-pointer hover:border-[var(--color-ember)] hover:shadow-md transition-all"><p className="text-[12px] font-bold text-[var(--color-card-text)] mb-0.5">{c.name}</p><p className="text-[10px] font-medium text-[var(--color-text-muted)]">{c.project}</p></div>)}</div></div>}
       {showAdd&&<QuickAdd title="Report Issue" fields={[{k:"title",l:"Title",p:"Issue title"},{k:"description",l:"Description",p:"Describe the issue",t:"textarea"},{k:"severity",l:"Severity",t:"select",o:["Low","Medium","High","Critical"]},{k:"clientId",l:"Project",t:"select",o:crm.clients.map((c:any)=>({v:String(c.id),l:c.name}))},{k:"assignedAdminId",l:"Assign",t:"select",o:crm.team.map((t:any)=>({v:t.id,l:t.name}))}]} onSubmit={(d:any)=>{crm.addFlag({clientId:Number(d.clientId)||crm.clients[0]?.id,title:d.title,description:d.description,severity:d.severity||"Medium",assignedAdminId:d.assignedAdminId||"a1"});close();}} onClose={close}/>}
       <div>
         <Lbl>Open Tickets ({open.length})</Lbl>
-        <div className="space-y-2 mt-2">
+        <div className="mt-2 space-y-2">
           {open.map((f:any)=>{const cl=crm.clients.find((c:any)=>c.id===f.clientId);return (
             <div key={f.id} onClick={()=>setSel(f.id)} className={`w-full text-left flex items-center gap-3 bg-[var(--color-surface)] border rounded-xl p-3 md:p-4 cursor-pointer transition-all shadow-sm ${sel===f.id?"border-[var(--color-ember)] ring-1 ring-[var(--color-ember)]":"border-[var(--color-border-card)] hover:shadow-md"}`}>
-              <span className={`w-3 h-3 rounded-full flex-shrink-0 ${dot(f.severity)}`}/>
+              <span className={`w-3 h-3 rounded-full flex-shrink-0`} style={{backgroundColor:sv(f.severity)}}/>
               <div className="flex-1 min-w-0"><p className="text-[13px] font-bold text-[var(--color-card-text)] truncate">{f.title}</p><p className="text-[10px] font-medium text-[var(--color-text-muted)] mt-0.5">{cl?.name} · {f.status}</p></div>
               <span className="text-[10px] font-bold bg-[var(--color-surface-muted)] text-[var(--color-card-text)] px-2 py-1 rounded-md">{f.severity}</span>
             </div>
@@ -520,7 +521,7 @@ function Support({crm,sel,setSel,showAdd,close}:any){
           {open.length===0&&<p className="text-[12px] font-medium text-[var(--color-text-faint)] py-6 text-center">All clear ✨</p>}
         </div>
       </div>
-      {done.length>0&&<div><Lbl>Recently Resolved</Lbl><div className="mt-2 space-y-1">{done.slice(0,5).map((f:any)=><div key={f.id} className="flex items-center gap-3 px-4 py-2.5 bg-[var(--color-surface)] border border-[var(--color-border-card)] rounded-lg shadow-sm"><Dot c="bg-[var(--color-ok)] shadow-[0_0_5px_var(--color-ok)]"/><span className="text-[11px] font-medium text-[var(--color-text-muted)] line-through flex-1">{f.title}</span></div>)}</div></div>}
+      {done.length>0&&<div><Lbl>Recently Resolved</Lbl><div className="mt-2 space-y-1">{done.slice(0,5).map((f:any)=><div key={f.id} onClick={() => setSel(f.id)} className="flex items-center gap-3 px-4 py-2.5 bg-[var(--color-surface)] border border-[var(--color-border-card)] rounded-lg shadow-sm cursor-pointer hover:border-[var(--color-ember)] transition-all"><Dot c="bg-[var(--color-ok)] shadow-[0_0_5px_var(--color-ok)]"/><span className="text-[11px] font-medium text-[var(--color-text-muted)] line-through flex-1">{f.title}</span></div>)}</div></div>}
     </div>
   );
 }
