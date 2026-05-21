@@ -1530,7 +1530,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
       // Clean up undefined values
       Object.keys(dbUpdates).forEach(key => (dbUpdates as any)[key] === undefined && delete (dbUpdates as any)[key]);
       
-      const { error } = await supabase.from("products").update(dbUpdates).eq("id", id);
+      const { error } = await supabase.from("internal_products").update(dbUpdates).eq("id", id);
       if (error) {
         console.error("Database update product error:", error);
         return;
@@ -1563,7 +1563,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         sandbox_link: newProduct.sandboxLink,
         metrics: newProduct.metrics,
       };
-      const { data, error } = await supabase.from("products").insert(dbItem).select().single();
+      const { data, error } = await supabase.from("internal_products").insert(dbItem).select().single();
       if (error) {
         console.error("Database insert product error:", error);
         return;
@@ -1575,7 +1575,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
 
   const deleteProduct = useCallback(async (id: string) => {
     if (isSupabaseConfigured) {
-      const { error } = await supabase.from("products").delete().eq("id", id);
+      const { error } = await supabase.from("internal_products").delete().eq("id", id);
       if (error) {
         console.error("Database delete product error:", error);
         return;
