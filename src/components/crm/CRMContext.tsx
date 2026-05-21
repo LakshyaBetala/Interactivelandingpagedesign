@@ -639,7 +639,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         setInternalTasks([]);
 
         // Partners fetch all telemetry metrics individually so one missing table doesn't abort the rest
-        const safeFetch = async (promise: Promise<any>) => {
+        const safeFetch = async (promise: PromiseLike<any>) => {
           const res = await promise;
           if (res.error) console.warn("Supabase fetch error:", res.error.message);
           return res.data || null;
@@ -684,7 +684,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
           setSelectedClientId(clientData.id);
 
           // Isolated subqueries
-          const safeFetch = async (promise: Promise<any>) => {
+          const safeFetch = async (promise: PromiseLike<any>) => {
             const res = await promise;
             if (res.error) console.warn("Supabase isolated fetch error:", res.error.message);
             return res.data || null;
