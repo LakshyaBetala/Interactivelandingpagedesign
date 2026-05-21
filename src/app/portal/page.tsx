@@ -42,25 +42,6 @@ function PortalContent() {
 
   return (
     <div className="min-h-screen">
-      {/* Floating switcher */}
-      {showSwitcher && (
-        <div className="fixed bottom-4 right-4 z-[999] flex gap-0.5 bg-zinc-900 border border-zinc-800 p-0.5 rounded-lg shadow-2xl">
-          {(["admin", "client"] as const).map(r => (
-            <button
-              key={r}
-              onClick={() => setActiveView(r)}
-              className={`px-3 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
-                activeView === r
-                  ? "bg-[var(--color-accent)] text-white"
-                  : "text-zinc-400 hover:text-zinc-200"
-              }`}
-            >
-              {r === "admin" ? "Admin" : "Client View"}
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* Content */}
       <AnimatePresence mode="wait">
         <motion.div

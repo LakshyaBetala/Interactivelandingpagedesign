@@ -56,6 +56,7 @@ export interface Comment {
   timeElapsed: string;
   clientId: number; // Linked to client portal view
   isUnreadAdmin?: boolean;
+  videoTimestamp?: number; // Optional timestamp in seconds for video feedback
 }
 
 export interface Activity {
@@ -135,6 +136,7 @@ export interface ChangelogRelease {
   status: "Draft" | "Awaiting Review" | "Approved";
   approvedAt?: string;
   releaseNotes?: string; // High-level admin signoff summary
+  videoUrl?: string; // Optional URL for video demos
 }
 
 // --- Social Media Pipeline ---
@@ -510,6 +512,11 @@ interface CRMContextProps {
   updateLead: (leadId: string, updates: Partial<OutreachLead>) => void;
   updateInternalTask: (taskId: string, updates: Partial<InternalTask>) => void;
   updateFlag: (flagId: string, updates: Partial<ProjectFlag>) => void;
+  updateProduct: (id: string, updates: Partial<InternalProduct>) => void;
+  addProduct: (product: Partial<InternalProduct>) => void;
+  deleteProduct: (id: string) => void;
+  updateCrmUser: (email: string, updates: any) => void;
+  addRelease: (release: Partial<ChangelogRelease>) => void;
   
   // Outreach Pipeline Callbacks
   updateLeadStatus: (leadId: string, status: OutreachStatus) => void;
@@ -709,7 +716,8 @@ export function CRMProvider({ children }: { children: ReactNode }) {
       { id: "a1", email: "lakshbetala15@gmail.com", password: "admin@000", name: "Lakshya", role: "admin", category: "admin", createdBy: "System" },
       { id: "a2", email: "gandhimouriyan1234@gmail.com", password: "admin@000", name: "Mouriyan", role: "admin", category: "admin", createdBy: "System" },
       { id: "a3", email: "monarchankit25@gmail.com", password: "admin@000", name: "Ankit", role: "admin", category: "admin", createdBy: "System" },
-      { id: "a4", email: "muskanabani01@gmail.com", password: "admin@000", name: "Muskan", role: "admin", category: "admin", createdBy: "System" }
+      { id: "a4", email: "muskanabani01@gmail.com", password: "admin@000", name: "Muskan", role: "admin", category: "admin", createdBy: "System" },
+      { id: "c1", email: "client@almmatix.com", password: "client123", name: "UPKEM Client", role: "client", category: "client", assignedClientId: 1, createdBy: "System" }
     ];
 
     const usersRaw = localStorage.getItem("almmatix_users");
@@ -1507,11 +1515,54 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     setActivities([]);
   }, [isSupabaseConfigured]);
 
+  const updateProduct = useCallback((id: string, updates: Partial<InternalProduct>) => {
+    setProducts(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+  }, []);
+
+  const addProduct = useCallback((product: Partial<InternalProduct>) => {
+    setProducts(prev => [...prev, {
+      id: "p" + Date.now(),
+      name: product.name || "New Product",
+      stage: product.stage || "Planning",
+      progress: product.progress || 0,
+      description: product.description || "",
+      leadId: product.leadId || "a1",
+      repoLink: product.repoLink,
+      sandboxLink: product.sandboxLink,
+      metrics: product.metrics
+    } as InternalProduct]);
+  }, []);
+
+  const deleteProduct = useCallback((id: string) => {
+    setProducts(prev => prev.filter(p => p.id !== id));
+  }, []);
+
+  const updateCrmUser = useCallback((email: string, updates: any) => {
+    setCrmUsers(prev => {
+      const updated = prev.map(u => u.email === email ? { ...u, ...updates } : u);
+      localStorage.setItem("almmatix_users", JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  const addRelease = useCallback((release: Partial<ChangelogRelease>) => {
+    setReleases(prev => [...prev, {
+      id: "r" + Date.now(),
+      clientId: release.clientId || 1,
+      version: release.version || "1.0",
+      title: release.title || "New Release",
+      whatWasImproved: release.whatWasImproved || [],
+      publishedAt: new Date().toISOString(),
+      status: "Awaiting Review",
+      videoUrl: release.videoUrl
+    } as ChangelogRelease]);
+  }, []);
+
   return (
     <CRMContext.Provider value={{ 
       clients, team, products, comments, activities, socialMedia, setSocialMedia, leads, flags, releases, internalTasks, currentAdminId, selectedClientId, setSelectedClientId,
       addComment, deleteComment, markCommentAsRead, updateClientStage, updateClientAdmin,
-      updateClient, updateLead, updateInternalTask, updateFlag,
+      updateClient, updateLead, updateInternalTask, updateFlag, updateProduct, addProduct, deleteProduct, updateCrmUser, addRelease,
       updateLeadStatus, incrementLeadCalls, addLeadNote, convertLeadToClient, addNewLead,
       addFlag, updateFlagStatus, assignFlagAdmin, addFlagSprintLog,
       createRelease, approveRelease,

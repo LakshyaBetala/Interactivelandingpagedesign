@@ -33,7 +33,8 @@ export default function AuthPage() {
           { id: "a1", email: "lakshbetala15@gmail.com", password: "admin@000", name: "Lakshya", role: "admin", category: "admin", createdBy: "System" },
           { id: "a2", email: "gandhimouriyan1234@gmail.com", password: "admin@000", name: "Mouriyan", role: "admin", category: "admin", createdBy: "System" },
           { id: "a3", email: "monarchankit25@gmail.com", password: "admin@000", name: "Ankit", role: "admin", category: "admin", createdBy: "System" },
-          { id: "a4", email: "muskanabani01@gmail.com", password: "admin@000", name: "Muskan", role: "admin", category: "admin", createdBy: "System" }
+          { id: "a4", email: "muskanabani01@gmail.com", password: "admin@000", name: "Muskan", role: "admin", category: "admin", createdBy: "System" },
+          { id: "c1", email: "client@almmatix.com", password: "client123", name: "UPKEM Client", role: "client", category: "client", assignedClientId: 1, createdBy: "System" }
         ];
 
         // Force update master admins in case they had old cached credentials
