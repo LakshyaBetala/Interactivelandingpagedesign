@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import * as XLSX from "xlsx";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCRM, ClientStage, OutreachStatus, TaskStatus, FlagSeverity, FlagStatus, SocialStatus, SocialPlatform, SocialContentType, SocialMediaItem } from "./CRMContext";
 
@@ -438,8 +439,39 @@ function Leads({crm,sel,setSel,showAdd,close}:any){
   const [editId,setEditId]=useState<string|null>(null);
   const [editField,setEditField]=useState<string|null>(null);
   const [editVal,setEditVal]=useState("");
+  const fileInputRef=useRef<HTMLInputElement>(null);
+
   const saveLead=(id:string,field:string)=>{crm.updateLead(id,{[field]:field==="estimatedValue"?Number(editVal):editVal});setEditId(null);setEditField(null);};
   const funnel=[{m:["Lead"],l:"Pipeline"},{m:["Contacted"],l:"Contacted"},{m:["Responded","Requirements"],l:"In Talk"},{m:["Demo","Quoted"],l:"Quoted"}];
+
+  const downloadTemplate=()=>{
+    const ws=XLSX.utils.json_to_sheet([{"Company Name":"Example Corp","Project Description":"Need a new website","Estimated Value":50000}]);
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,"Leads Template");
+    XLSX.writeFile(wb,"Leads_Import_Template.xlsx");
+  };
+
+  const handleFileUpload=(e:React.ChangeEvent<HTMLInputElement>)=>{
+    const file=e.target.files?.[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=(evt)=>{
+      const bstr=evt.target?.result;
+      const wb=XLSX.read(bstr,{type:"binary"});
+      const wsname=wb.SheetNames[0];
+      const ws=wb.Sheets[wsname];
+      const data=XLSX.utils.sheet_to_json(ws);
+      data.forEach((row:any)=>{
+        const cn=row["Company Name"]||row["Company"]||row["companyName"];
+        const pd=row["Project Description"]||row["Description"]||row["Need"]||"";
+        const ev=Number(row["Estimated Value"]||row["Value"])||0;
+        if(cn){
+          crm.addNewLead({companyName:cn,projectDescription:pd,source:"Excel Import",status:"Lead",estimatedValue:ev,assignedAdminId:crm.currentAdminId||"a3",sourcedById:crm.currentAdminId||"a3",engagementScore:10});
+        }
+      });
+    };
+    reader.readAsBinaryString(file);
+    if(fileInputRef.current)fileInputRef.current.value="";
+  };
 
   const EditCell=({lid,field,value,w,t="text"}:{lid:string;field:string;value:string;w?:string;t?:string})=>(
     editId===lid&&editField===field?(
@@ -451,7 +483,16 @@ function Leads({crm,sel,setSel,showAdd,close}:any){
 
   return(
     <div className="space-y-6 max-w-[1200px] mx-auto">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">{funnel.map(f=>{const c=crm.leads.filter((l:any)=>f.m.includes(l.status)).length;return <div key={f.l} className="bg-[var(--color-surface)] border border-[var(--color-border-card)] shadow-sm rounded-xl p-3 md:p-4 text-center"><p className="text-xl md:text-2xl font-black text-[var(--color-card-text)] mb-1">{c}</p><Lbl>{f.l}</Lbl></div>;})}</div>
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="flex flex-1 w-full grid grid-cols-2 md:grid-cols-4 gap-3">{funnel.map(f=>{const c=crm.leads.filter((l:any)=>f.m.includes(l.status)).length;return <div key={f.l} className="bg-[var(--color-surface)] border border-[var(--color-border-card)] shadow-sm rounded-xl p-3 md:p-4 text-center"><p className="text-xl md:text-2xl font-black text-[var(--color-card-text)] mb-1">{c}</p><Lbl>{f.l}</Lbl></div>;})}</div>
+        <div className="flex flex-col items-end gap-2 shrink-0 w-full md:w-auto">
+          <button onClick={downloadTemplate} className="text-[11px] font-bold text-[var(--color-text-muted)] hover:text-[var(--color-card-text)] transition-colors">⬇️ Download Template</button>
+          <div className="relative">
+            <input type="file" accept=".xlsx, .xls, .csv" onChange={handleFileUpload} ref={fileInputRef} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"/>
+            <button className="bg-[var(--color-surface)] border border-[var(--color-border-card)] text-[var(--color-card-text)] text-[12px] font-bold px-4 py-2 rounded-lg shadow-sm hover:border-[var(--color-ember)] transition-all">⬆️ Import Excel</button>
+          </div>
+        </div>
+      </div>
       {showAdd&&<QuickAdd title="New Lead" fields={[{k:"companyName",l:"Company",p:"Company name"},{k:"projectDescription",l:"Need",p:"What do they need?"},{k:"estimatedValue",l:"Value (₹)",p:"0",t:"number"},{k:"assignedAdminId",l:"Owner",t:"select",o:crm.team.map((t:any)=>({v:t.id,l:t.name}))}]} onSubmit={(d:any)=>{crm.addNewLead({companyName:d.companyName,projectDescription:d.projectDescription,source:"LinkedIn" as const,status:"Lead" as const,estimatedValue:Number(d.estimatedValue)||0,assignedAdminId:d.assignedAdminId||"a3",sourcedById:d.assignedAdminId||"a3",engagementScore:10});close();}} onClose={close}/>}
       
       <div className="bg-[var(--color-surface)] border border-[var(--color-border-card)] shadow-sm rounded-xl overflow-x-auto">
