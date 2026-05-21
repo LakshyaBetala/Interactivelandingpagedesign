@@ -610,7 +610,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     const pingSupabase = async () => {
       if (checkSupabaseStatus()) {
         try {
-          const { error } = await supabase.from("profiles").select("count", { count: "exact", head: true });
+          const { error } = await supabase.from("clients").select("count", { count: "exact", head: true });
           if (!error) {
             setIsSupabaseOnline(true);
             return;
@@ -628,28 +628,32 @@ export function CRMProvider({ children }: { children: ReactNode }) {
   const fetchOperationalData = useCallback(async (profile: UserProfile) => {
     try {
       if (profile.category === "admin") {
-        // Partners fetch all telemetry metrics
-        const [
-          { data: dbProfiles },
-          { data: dbClients },
-          { data: dbProducts },
-          { data: dbComments },
-          { data: dbLeads },
-          { data: dbFlags },
-          { data: dbReleases },
-          { data: dbTasks },
-          { data: dbAuthEmails },
-        ] = await Promise.all([
-          supabase.from("profiles").select("*"),
-          supabase.from("clients").select("*"),
-          supabase.from("internal_products").select("*"),
-          supabase.from("comments").select("*").order("created_at", { ascending: false }),
-          supabase.from("outreach_leads").select("*"),
-          supabase.from("project_flags").select("*"),
-          supabase.from("releases").select("*"),
-          supabase.from("internal_tasks").select("*"),
-          supabase.from("authorized_emails").select("*"),
-        ]);
+        // Clear mock data so we don't confuse users with dummy data returning on refresh
+        setTeam([]);
+        setClients([]);
+        setProducts([]);
+        setComments([]);
+        setLeads([]);
+        setFlags([]);
+        setReleases([]);
+        setInternalTasks([]);
+
+        // Partners fetch all telemetry metrics individually so one missing table doesn't abort the rest
+        const safeFetch = async (promise: Promise<any>) => {
+          const res = await promise;
+          if (res.error) console.warn("Supabase fetch error:", res.error.message);
+          return res.data || null;
+        };
+
+        const dbProfiles = await safeFetch(supabase.from("profiles").select("*"));
+        const dbClients = await safeFetch(supabase.from("clients").select("*"));
+        const dbProducts = await safeFetch(supabase.from("internal_products").select("*"));
+        const dbComments = await safeFetch(supabase.from("comments").select("*").order("created_at", { ascending: false }));
+        const dbLeads = await safeFetch(supabase.from("outreach_leads").select("*"));
+        const dbFlags = await safeFetch(supabase.from("project_flags").select("*"));
+        const dbReleases = await safeFetch(supabase.from("releases").select("*"));
+        const dbTasks = await safeFetch(supabase.from("internal_tasks").select("*"));
+        const dbAuthEmails = await safeFetch(supabase.from("authorized_emails").select("*"));
 
         if (dbProfiles) setTeam(dbProfiles.map(mapTeamMemberToTS));
         if (dbClients) setClients(dbClients.map(mapClientToTS));
@@ -662,10 +666,17 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         if (dbAuthEmails) setAuthorizedEmails(dbAuthEmails.map(mapAuthEmailToTS));
       } else {
         // Client sandboxing - fetch ONLY their record
-        const { data: dbClients } = await supabase
+        setClients([]);
+        setComments([]);
+        setFlags([]);
+        setReleases([]);
+
+        const { data: dbClients, error: clientErr } = await supabase
           .from("clients")
           .select("*")
           .eq("profile_id", profile.id);
+
+        if (clientErr) console.warn("Client fetch error:", clientErr.message);
 
         if (dbClients && dbClients.length > 0) {
           const clientData = mapClientToTS(dbClients[0]);
@@ -673,15 +684,15 @@ export function CRMProvider({ children }: { children: ReactNode }) {
           setSelectedClientId(clientData.id);
 
           // Isolated subqueries
-          const [
-            { data: dbComments },
-            { data: dbFlags },
-            { data: dbReleases },
-          ] = await Promise.all([
-            supabase.from("comments").select("*").eq("client_id", clientData.id),
-            supabase.from("project_flags").select("*").eq("client_id", clientData.id),
-            supabase.from("releases").select("*").eq("client_id", clientData.id),
-          ]);
+          const safeFetch = async (promise: Promise<any>) => {
+            const res = await promise;
+            if (res.error) console.warn("Supabase isolated fetch error:", res.error.message);
+            return res.data || null;
+          };
+
+          const dbComments = await safeFetch(supabase.from("comments").select("*").eq("client_id", clientData.id));
+          const dbFlags = await safeFetch(supabase.from("project_flags").select("*").eq("client_id", clientData.id));
+          const dbReleases = await safeFetch(supabase.from("releases").select("*").eq("client_id", clientData.id));
 
           if (dbComments) setComments(dbComments.map(mapCommentToTS));
           if (dbFlags) setFlags(dbFlags.map(mapFlagToTS));
