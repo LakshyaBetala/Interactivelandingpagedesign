@@ -572,11 +572,16 @@ function Products({crm, showAdd, close}:any){
   
   const saveP=(id:string,field:string)=>{crm.updateProduct(id,{[field]:field==="progress"?Number(editVal):editVal});setEditId(null);setEditField(null);};
   
-  const EditP=({pid,field,value,w,t="text",c="text-[12px] font-bold"}:{pid:string;field:string;value:string;w?:string;t?:string;c?:string})=>(
+  const EditP=({pid,field,value,w,t="text",c="text-[12px] font-bold",isLink=false}:{pid:string;field:string;value:string;w?:string;t?:string;c?:string;isLink?:boolean})=>(
     editId===pid&&editField===field?(
       <input autoFocus type={t} value={editVal} onChange={e=>setEditVal(e.target.value)} onBlur={()=>saveP(pid,field)} onKeyDown={e=>e.key==="Enter"&&saveP(pid,field)} className={`!bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-ember)] shadow-[0_0_5px_var(--color-ember-soft)] rounded px-1.5 py-0.5 outline-none font-medium ${c} ${w||"w-full"}`}/>
     ):(
-      <span onDoubleClick={()=>{setEditId(pid);setEditField(field);setEditVal(value);}} className={`cursor-text hover:text-[var(--color-ember)] border-b border-dashed border-transparent hover:border-[var(--color-ember)] transition-colors inline-block ${c}`}>{value}</span>
+      <span className={`inline-flex items-center gap-1 max-w-full ${w||""}`}>
+        <span onDoubleClick={()=>{setEditId(pid);setEditField(field);setEditVal(value);}} className={`cursor-text hover:text-[var(--color-ember)] border-b border-dashed border-transparent hover:border-[var(--color-ember)] transition-colors inline-block truncate ${c}`} title="Double-click to edit">{value}</span>
+        {isLink && value && !value.includes("Add ") && (
+          <a href={value.startsWith("http") ? value : `https://${value}`} target="_blank" rel="noopener noreferrer" className="text-[10px] text-[var(--color-text-secondary)] hover:text-white bg-[var(--color-border)] hover:bg-[var(--color-ember)] px-1.5 py-0.5 rounded transition-colors flex-shrink-0" title="Open in new tab">↗</a>
+        )}
+      </span>
     )
   );
 
@@ -585,9 +590,9 @@ function Products({crm, showAdd, close}:any){
       {showAdd&&<QuickAdd title="New Product" fields={[{k:"name",l:"Name",p:"Product name"},{k:"description",l:"Description",p:"Short description"},{k:"stage",l:"Stage",t:"select",o:["Planning","In Dev","Beta","Live"]},{k:"leadId",l:"Lead",t:"select",o:crm.team.map((t:any)=>({v:t.id,l:t.name}))}]} onSubmit={(d:any)=>{crm.addProduct({name:d.name,description:d.description,stage:d.stage||"Planning",leadId:d.leadId||"a1",progress:0});close();}} onClose={close}/>}
       
       <Lbl>Internal Products Portfolio</Lbl>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-2">
         {crm.products.map((p:any)=>{const ld=crm.team.find((t:any)=>t.id===p.leadId);return(
-          <div key={p.id} className="bg-[var(--color-surface)] border border-[var(--color-border-card)] shadow-sm rounded-2xl p-5 hover:shadow-md transition-shadow relative group">
+          <div key={p.id} className="bg-[var(--color-surface)] border border-[var(--color-border-card)] shadow-sm rounded-2xl p-4 md:p-5 hover:shadow-md transition-shadow relative group">
             <button onClick={()=>crm.deleteProduct(p.id)} className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 text-[var(--color-text-faint)] hover:text-[var(--color-bad)] transition-all">×</button>
             <div className="flex flex-col mb-4 pr-6">
               <EditP pid={p.id} field="name" value={p.name} c="text-[16px] font-black text-[var(--color-card-text)] mb-1"/>
@@ -601,12 +606,12 @@ function Products({crm, showAdd, close}:any){
             
             <div className="h-2 bg-[var(--color-surface-deep)] rounded-full overflow-hidden mb-4 border border-[var(--color-border-subtle)]"><div className="h-full bg-gradient-to-r from-[var(--color-ember-soft)] to-[var(--color-ember)] rounded-full transition-all duration-500" style={{width:`${p.progress}%`}}/></div>
             
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[var(--color-border-card)]/50">
-              <div className="flex flex-col gap-1 w-1/2">
-                <EditP pid={p.id} field="repoLink" value={p.repoLink||"Add repo"} c="text-[10px] font-mono text-[var(--color-text-muted)] hover:text-blue-500 bg-[var(--color-surface-muted)] px-1.5 py-0.5 rounded overflow-hidden max-w-full"/>
-                <EditP pid={p.id} field="sandboxLink" value={p.sandboxLink||"Add url"} c="text-[10px] font-mono text-[var(--color-text-muted)] hover:text-blue-500 bg-[var(--color-surface-muted)] px-1.5 py-0.5 rounded overflow-hidden max-w-full"/>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-3 border-t border-[var(--color-border-card)]/50">
+              <div className="flex flex-col gap-1.5 w-full sm:w-auto min-w-0">
+                <EditP pid={p.id} field="repoLink" value={p.repoLink||"Add repo"} c="text-[10px] font-mono text-[var(--color-text-muted)] hover:text-[var(--color-ember)] bg-[var(--color-surface-muted)] px-1.5 py-0.5 rounded max-w-[200px]" isLink/>
+                <EditP pid={p.id} field="sandboxLink" value={p.sandboxLink||"Add url"} c="text-[10px] font-mono text-[var(--color-text-muted)] hover:text-[var(--color-ember)] bg-[var(--color-surface-muted)] px-1.5 py-0.5 rounded max-w-[200px]" isLink/>
               </div>
-              <div className="flex items-center gap-2 bg-[var(--color-bg)] px-2 py-1.5 rounded-lg border border-[var(--color-border)]"><Av id={p.leadId} name={ld?.name||"?"} sz={18}/><select value={p.leadId} onChange={e=>crm.updateProduct(p.id,{leadId:e.target.value})} className="!bg-transparent text-[10px] font-bold text-[var(--color-card-text)] outline-none cursor-pointer p-0 border-none">{crm.team.map((t:any)=><option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
+              <div className="flex items-center gap-2 bg-[var(--color-bg)] px-2 py-1.5 rounded-lg border border-[var(--color-border)] w-full sm:w-auto mt-2 sm:mt-0"><Av id={p.leadId} name={ld?.name||"?"} sz={18}/><select value={p.leadId} onChange={e=>crm.updateProduct(p.id,{leadId:e.target.value})} className="!bg-transparent text-[10px] font-bold text-[var(--color-card-text)] outline-none cursor-pointer p-0 border-none w-full">{crm.team.map((t:any)=><option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
             </div>
           </div>
         );})}
