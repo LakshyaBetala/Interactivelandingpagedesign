@@ -59,7 +59,7 @@ export default function AdminDashboard() {
           {navItems.map(n=>(
             <button key={n.id} onClick={()=>go(n.id)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] transition-all font-medium ${sec===n.id?"bg-[var(--color-ember)] text-white shadow-md":"text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-soft)]"}`}>
               <span className="text-[14px] w-5 text-center opacity-70">{n.i}</span><span className="flex-1 text-left">{n.l}</span>
-              {n.c!==undefined&&<span className={`text-[10px] min-w-[20px] text-center px-1.5 py-0.5 rounded-full ${sec===n.id?"bg-white/20 text-white font-bold":"bg-[var(--color-border)] text-[var(--color-text-muted)]"}`}>{n.c}</span>}
+              {n.c!==undefined&&<span className={`text-[10px] min-w-[20px] text-center px-1.5 py-0.5 rounded-full ${sec===n.id?"bg-[var(--color-surface)]/20 text-white font-bold":"bg-[var(--color-border)] text-[var(--color-text-muted)]"}`}>{n.c}</span>}
             </button>
           ))}
         </nav>
@@ -138,8 +138,8 @@ function Dashboard({crm}:any) {
             <div key={m.id} className="bg-[var(--color-surface)] rounded-xl p-4 border border-[var(--color-border-card)] shadow-sm hover:shadow-md transition-shadow">
               <div className="flex items-center gap-3 mb-3"><Av id={m.id} name={m.name} sz={32}/><div className="flex-1 min-w-0"><p className="text-[14px] font-bold text-[var(--color-card-text)] leading-none mb-1">{m.name}</p><div className="flex items-center gap-1.5"><span className={`w-2 h-2 rounded-full ${cap} shadow-sm`}/><p className="text-[11px] font-medium text-[var(--color-card-text-muted)]">{m.role} · {pj.length} projects · {ts.length} tasks</p></div></div></div>
               <div className="grid grid-cols-2 gap-2">
-                <div className="bg-white rounded-lg p-3 border border-[var(--color-border-card)]"><p className="text-[9px] font-mono uppercase tracking-wider text-[var(--color-ok)] mb-1">NOW</p><p className="text-[12px] text-[var(--color-card-text)] font-bold truncate">{now?.title||"—"}</p></div>
-                <div className="bg-white rounded-lg p-3 border border-[var(--color-border-card)]"><p className="text-[9px] font-mono uppercase tracking-wider text-[var(--color-info)] mb-1">NEXT</p><p className="text-[12px] text-[var(--color-card-text)] font-bold truncate">{nx?.title||"—"}</p></div>
+                <div className="bg-[var(--color-surface)] rounded-lg p-3 border border-[var(--color-border-card)]"><p className="text-[9px] font-mono uppercase tracking-wider text-[var(--color-ok)] mb-1">NOW</p><p className="text-[12px] text-[var(--color-card-text)] font-bold truncate">{now?.title||"—"}</p></div>
+                <div className="bg-[var(--color-surface)] rounded-lg p-3 border border-[var(--color-border-card)]"><p className="text-[9px] font-mono uppercase tracking-wider text-[var(--color-info)] mb-1">NEXT</p><p className="text-[12px] text-[var(--color-card-text)] font-bold truncate">{nx?.title||"—"}</p></div>
               </div>
             </div>
           );})}
@@ -148,7 +148,7 @@ function Dashboard({crm}:any) {
           <div className="bg-[var(--color-surface)] p-4 rounded-xl border border-[var(--color-border-card)] shadow-sm"><Lbl>Needs Attention</Lbl>
             <div className="space-y-2 mt-3">
               {comments.filter((c:any)=>c.role==="client"&&c.isUnreadAdmin).slice(0,3).map((c:any)=>{const cl=clients.find((x:any)=>x.id===c.clientId);return <div key={c.id} onClick={()=>crm.markCommentAsRead(c.id)} className="flex items-start gap-2 bg-[var(--color-ember-soft)] border border-[var(--color-ember)]/30 rounded-lg p-3 cursor-pointer hover:bg-[var(--color-ember)]/10 transition-colors"><Dot c="bg-[var(--color-ember)] mt-1.5 animate-pulse shadow-[0_0_5px_var(--color-ember)]"/><div className="min-w-0 flex-1"><p className="text-[11px] font-bold text-[var(--color-ember)] mb-0.5">Reply needed: {cl?.name}</p><p className="text-[11px] text-[var(--color-text-secondary)] line-clamp-2 leading-snug">{c.text}</p></div></div>;})}
-              {flags.filter((f:any)=>f.status==="Open").slice(0,2).map((f:any)=><div key={f.id} className="flex items-center gap-2 bg-white border border-[var(--color-border-card)] rounded-lg p-3 shadow-sm"><Dot c="bg-[var(--color-bad)] shadow-[0_0_5px_var(--color-bad)]"/><p className="text-[11px] font-bold text-[var(--color-card-text)] truncate flex-1">{f.title}</p></div>)}
+              {flags.filter((f:any)=>f.status==="Open").slice(0,2).map((f:any)=><div key={f.id} className="flex items-center gap-2 bg-[var(--color-surface)] border border-[var(--color-border-card)] rounded-lg p-3 shadow-sm"><Dot c="bg-[var(--color-bad)] shadow-[0_0_5px_var(--color-bad)]"/><p className="text-[11px] font-bold text-[var(--color-card-text)] truncate flex-1">{f.title}</p></div>)}
               {comments.filter((c:any)=>c.role==="client"&&c.isUnreadAdmin).length===0&&flags.filter((f:any)=>f.status==="Open").length===0&&<div className="flex flex-col items-center justify-center py-6 opacity-30"><span className="text-2xl mb-1">✨</span><p className="text-[11px] font-medium">All clear</p></div>}
             </div>
           </div>
@@ -185,7 +185,7 @@ function Projects({crm,sel,setSel,showAdd,close,clients}:any) {
               <div className="space-y-2.5">
                 {cards.map((c:any)=>{const ow=crm.team.find((t:any)=>t.id===c.assignedAdminId);return(
                   <div key={c.id} draggable onDragStart={e=>{setDrag(c.id);e.dataTransfer.effectAllowed="move";}} onClick={()=>setSel(c.id)}
-                    className={`bg-white border rounded-xl p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all ${sel===c.id?"border-[var(--color-ember)] ring-2 ring-[var(--color-ember)]/20 shadow-lg scale-[1.02]":"border-[var(--color-border-card)] shadow-sm"} ${drag===c.id?"opacity-40 scale-95":""}`}>
+                    className={`bg-[var(--color-surface)] border rounded-xl p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all ${sel===c.id?"border-[var(--color-ember)] ring-2 ring-[var(--color-ember)]/20 shadow-lg scale-[1.02]":"border-[var(--color-border-card)] shadow-sm"} ${drag===c.id?"opacity-40 scale-95":""}`}>
                     <div className="flex items-start justify-between mb-1 gap-2">
                       <span className="text-[12px] font-bold text-[var(--color-card-text)] leading-tight line-clamp-2">{c.name}</span>
                       <X onClick={()=>crm.deleteClient(c.id)}/>
@@ -222,7 +222,7 @@ function ProjDrawer({crm,id,onClose}:any){
 
   const save=(f:string)=>{crm.updateClient(id,{[f]:ev});setEd(null);};
   const EF=({l,v,f}:{l:string;v:string;f:string})=>(
-    <div className="flex items-center justify-between py-1.5 border-b border-[var(--color-border-card)]/30"><Lbl>{l}</Lbl>{ed===f?<input autoFocus value={ev} onChange={e=>setEv(e.target.value)} onBlur={()=>save(f)} onKeyDown={e=>e.key==="Enter"&&save(f)} className="!bg-white !text-[var(--color-card-text)] border border-[var(--color-ember)] shadow-[0_0_5px_var(--color-ember-soft)] rounded-md px-2 py-1 text-[11px] w-40 text-right outline-none font-medium"/>:<span onClick={()=>{setEd(f);setEv(v);}} className="text-[11px] font-bold text-[var(--color-card-text)] cursor-pointer hover:text-[var(--color-ember)] border-b border-dashed border-transparent hover:border-[var(--color-ember)] transition-colors">{v||"—"}</span>}</div>
+    <div className="flex items-center justify-between py-1.5 border-b border-[var(--color-border-card)]/30"><Lbl>{l}</Lbl>{ed===f?<input autoFocus value={ev} onChange={e=>setEv(e.target.value)} onBlur={()=>save(f)} onKeyDown={e=>e.key==="Enter"&&save(f)} className="!bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-ember)] shadow-[0_0_5px_var(--color-ember-soft)] rounded-md px-2 py-1 text-[11px] w-40 text-right outline-none font-medium"/>:<span onClick={()=>{setEd(f);setEv(v);}} className="text-[11px] font-bold text-[var(--color-card-text)] cursor-pointer hover:text-[var(--color-ember)] border-b border-dashed border-transparent hover:border-[var(--color-ember)] transition-colors">{v||"—"}</span>}</div>
   );
 
   const submitRelease = () => {
@@ -256,20 +256,20 @@ function ProjDrawer({crm,id,onClose}:any){
         <X onClick={onClose}/>
       </div>
       
-      <div className="bg-white rounded-xl p-4 border border-[var(--color-border-card)] shadow-sm">
+      <div className="bg-[var(--color-surface)] rounded-xl p-4 border border-[var(--color-border-card)] shadow-sm">
         <div className="flex gap-1 mb-3">{PROJECT_STAGES.map((_:any,i:number)=><div key={i} className={`h-2 flex-1 rounded-full ${i<=si?"bg-[var(--color-ember)] shadow-[0_0_5px_var(--color-ember-soft)]":"bg-[var(--color-border)]"}`}/>)}</div>
-        <div className="flex justify-between items-center"><span className="text-[10px] font-bold text-[var(--color-text-muted)] bg-[var(--color-surface-muted)] px-2 py-1 rounded-md">{si+1}/{PROJECT_STAGES.length}</span><select value={c.stage} onChange={e=>crm.updateClientStage(id,e.target.value)} className="!bg-white !text-[var(--color-card-text)] border border-[var(--color-border-card)] font-bold shadow-sm rounded-md px-2 py-1 text-[11px] outline-none cursor-pointer hover:border-[var(--color-ember)] transition-colors">{PROJECT_STAGES.map(s=><option key={s}>{s}</option>)}</select></div>
+        <div className="flex justify-between items-center"><span className="text-[10px] font-bold text-[var(--color-text-muted)] bg-[var(--color-surface-muted)] px-2 py-1 rounded-md">{si+1}/{PROJECT_STAGES.length}</span><select value={c.stage} onChange={e=>crm.updateClientStage(id,e.target.value)} className="!bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-border-card)] font-bold shadow-sm rounded-md px-2 py-1 text-[11px] outline-none cursor-pointer hover:border-[var(--color-ember)] transition-colors">{PROJECT_STAGES.map(s=><option key={s}>{s}</option>)}</select></div>
       </div>
 
-      <div className="bg-white rounded-xl p-4 border border-[var(--color-border-card)] shadow-sm space-y-1">
+      <div className="bg-[var(--color-surface)] rounded-xl p-4 border border-[var(--color-border-card)] shadow-sm space-y-1">
         <EF l="Project" v={c.project} f="project"/>
         <EF l="Location" v={c.location} f="location"/>
-        <div className="flex items-center justify-between py-1.5 border-b border-[var(--color-border-card)]/30"><Lbl>Owner</Lbl><select value={c.assignedAdminId||""} onChange={e=>crm.updateClientAdmin(id,e.target.value)} className="!bg-white !text-[var(--color-card-text)] font-bold border border-[var(--color-border-card)] shadow-sm rounded-md px-2 py-1 text-[11px] outline-none cursor-pointer">{crm.team.map((t:any)=><option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
+        <div className="flex items-center justify-between py-1.5 border-b border-[var(--color-border-card)]/30"><Lbl>Owner</Lbl><select value={c.assignedAdminId||""} onChange={e=>crm.updateClientAdmin(id,e.target.value)} className="!bg-[var(--color-bg)] !text-[var(--color-text-primary)] font-bold border border-[var(--color-border-card)] shadow-sm rounded-md px-2 py-1 text-[11px] outline-none cursor-pointer">{crm.team.map((t:any)=><option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
         <div className="flex items-center justify-between py-1.5"><Lbl>Health</Lbl><span className="text-[12px] font-black text-[var(--color-ok)]">{c.health}%</span></div>
       </div>
 
       {crm.userProfile?.category === "admin" && (
-        <div className="bg-white rounded-xl p-4 border border-[var(--color-border-card)] shadow-sm">
+        <div className="bg-[var(--color-surface)] rounded-xl p-4 border border-[var(--color-border-card)] shadow-sm">
           <Lbl>Financials</Lbl>
           <div className="grid grid-cols-2 gap-3 mt-3">
             <div className="bg-[var(--color-bg-soft)] rounded-lg p-3 border border-[var(--color-border)]"><p className="text-[9px] font-mono text-[var(--color-text-muted)] uppercase mb-1">Revenue</p><p className="text-[14px] font-black text-[var(--color-card-text)]">{fmt(c.revenue)}</p></div>
@@ -279,7 +279,7 @@ function ProjDrawer({crm,id,onClose}:any){
       )}
 
       {/* Demo Releases Section */}
-      <div className="bg-white rounded-xl p-4 border border-[var(--color-border-card)] shadow-sm">
+      <div className="bg-[var(--color-surface)] rounded-xl p-4 border border-[var(--color-border-card)] shadow-sm">
         <div className="flex items-center justify-between mb-3"><Lbl>Demos & Releases</Lbl>
           <button onClick={()=>setShowReleaseForm(!showReleaseForm)} className="text-[9px] font-bold bg-[var(--color-ember)] text-white px-2 py-1 rounded hover:bg-[var(--color-ember-hover)] transition-colors">
             {showReleaseForm ? "Cancel" : "+ New Demo"}
@@ -292,11 +292,11 @@ function ProjDrawer({crm,id,onClose}:any){
             onDrop={handleDrop}
             className="bg-[var(--color-surface-muted)] rounded-lg p-3 border-2 border-dashed border-[var(--color-border-card)] mb-4 space-y-3 transition-colors hover:border-[var(--color-ember)]/50"
           >
-            <input value={relTitle} onChange={e=>setRelTitle(e.target.value)} placeholder="Demo Title (e.g. Sprint 1)" className="w-full !bg-white !text-[var(--color-card-text)] border border-[var(--color-border-card)] rounded-md px-2.5 py-1.5 text-[11px] font-medium outline-none focus:!border-[var(--color-ember)] shadow-sm"/>
+            <input value={relTitle} onChange={e=>setRelTitle(e.target.value)} placeholder="Demo Title (e.g. Sprint 1)" className="w-full !bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-border-card)] rounded-md px-2.5 py-1.5 text-[11px] font-medium outline-none focus:!border-[var(--color-ember)] shadow-sm"/>
             <div className="flex gap-2">
-              <input value={relVer} onChange={e=>setRelVer(e.target.value)} placeholder="Version" className="w-1/4 !bg-white !text-[var(--color-card-text)] border border-[var(--color-border-card)] rounded-md px-2.5 py-1.5 text-[11px] font-medium outline-none focus:!border-[var(--color-ember)] shadow-sm"/>
+              <input value={relVer} onChange={e=>setRelVer(e.target.value)} placeholder="Version" className="w-1/4 !bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-border-card)] rounded-md px-2.5 py-1.5 text-[11px] font-medium outline-none focus:!border-[var(--color-ember)] shadow-sm"/>
               
-              <div className="flex-1 flex gap-2 items-center bg-white border border-[var(--color-border-card)] rounded-md px-2 shadow-sm focus-within:border-[var(--color-ember)] transition-colors">
+              <div className="flex-1 flex gap-2 items-center bg-[var(--color-surface)] border border-[var(--color-border-card)] rounded-md px-2 shadow-sm focus-within:border-[var(--color-ember)] transition-colors">
                 <input value={relVideo} onChange={e=>setRelVideo(e.target.value)} placeholder="Paste Video URL or Drop File ➡️" className="w-full bg-transparent text-[11px] text-[var(--color-card-text)] font-medium outline-none py-1.5"/>
                 <input type="file" accept="video/*" ref={fileInputRef} onChange={e => { if(e.target.files && e.target.files[0]) handleVideoFile(e.target.files[0]); }} className="hidden" />
                 <button onClick={() => fileInputRef.current?.click()} title="Upload Video" className="text-[12px] bg-[var(--color-surface-muted)] px-2 py-0.5 rounded text-[var(--color-text-secondary)] hover:text-[var(--color-card-text)] border border-[var(--color-border-subtle)]">📁</button>
@@ -310,7 +310,7 @@ function ProjDrawer({crm,id,onClose}:any){
               </div>
             )}
 
-            <textarea value={relNotes} onChange={e=>setRelNotes(e.target.value)} placeholder="Release notes (one per line)..." rows={3} className="w-full !bg-white !text-[var(--color-card-text)] border border-[var(--color-border-card)] rounded-md px-2.5 py-1.5 text-[11px] font-medium outline-none resize-none focus:!border-[var(--color-ember)] shadow-sm"/>
+            <textarea value={relNotes} onChange={e=>setRelNotes(e.target.value)} placeholder="Release notes (one per line)..." rows={3} className="w-full !bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-border-card)] rounded-md px-2.5 py-1.5 text-[11px] font-medium outline-none resize-none focus:!border-[var(--color-ember)] shadow-sm"/>
             <button onClick={submitRelease} className="w-full bg-[var(--color-charcoal)] text-white text-[11px] font-bold py-1.5 rounded-md hover:bg-[var(--color-charcoal-mid)] shadow-md transition-colors">Publish to Portal</button>
           </div>
         )}
@@ -323,7 +323,7 @@ function ProjDrawer({crm,id,onClose}:any){
         ))}
       </div>
 
-      <div className="bg-white rounded-xl p-4 border border-[var(--color-border-card)] shadow-sm">
+      <div className="bg-[var(--color-surface)] rounded-xl p-4 border border-[var(--color-border-card)] shadow-sm">
         <Lbl>Feedback Discussions</Lbl>
         <div className="mt-3 space-y-3">
           {crm.comments.filter((m:any)=>m.clientId===id).slice(-5).map((m:any)=>(
@@ -367,9 +367,9 @@ function Tasks({crm,showAdd,close}:any){
             <div className="flex items-center justify-between mb-4 px-1"><h4 className="text-[12px] font-bold text-[var(--color-text-secondary)]">{col.l}</h4><span className="text-[10px] font-bold text-[var(--color-text-muted)] bg-[var(--color-border)] px-2 py-0.5 rounded-full">{items.length}</span></div>
             <div className="space-y-3">{items.map((t:any)=>{const ow=crm.team.find((m:any)=>m.id===t.assignedAdminId);const pj=crm.clients.find((c:any)=>c.id===t.clientId);return(
               <div key={t.id} draggable onDragStart={e=>{setDrag(t.id);e.dataTransfer.effectAllowed="move";}}
-                className={`bg-white border rounded-xl p-3.5 cursor-grab active:cursor-grabbing hover:shadow-md transition-all group ${drag===t.id?"opacity-40 scale-95":"border-[var(--color-border-card)] shadow-sm"}`}>
+                className={`bg-[var(--color-surface)] border rounded-xl p-3.5 cursor-grab active:cursor-grabbing hover:shadow-md transition-all group ${drag===t.id?"opacity-40 scale-95":"border-[var(--color-border-card)] shadow-sm"}`}>
                 {editId===t.id?(
-                  <input autoFocus value={editTitle} onChange={e=>setEditTitle(e.target.value)} onBlur={()=>{crm.updateInternalTask(t.id,{title:editTitle});setEditId(null);}} onKeyDown={e=>{if(e.key==="Enter"){crm.updateInternalTask(t.id,{title:editTitle});setEditId(null);}}} className="w-full text-[12px] !bg-white !text-[var(--color-card-text)] border border-[var(--color-ember)] shadow-sm outline-none rounded p-1 font-medium mb-2"/>
+                  <input autoFocus value={editTitle} onChange={e=>setEditTitle(e.target.value)} onBlur={()=>{crm.updateInternalTask(t.id,{title:editTitle});setEditId(null);}} onKeyDown={e=>{if(e.key==="Enter"){crm.updateInternalTask(t.id,{title:editTitle});setEditId(null);}}} className="w-full text-[12px] !bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-ember)] shadow-sm outline-none rounded p-1 font-medium mb-2"/>
                 ):(
                   <p onDoubleClick={()=>{setEditId(t.id);setEditTitle(t.title);}} className="text-[12px] font-bold text-[var(--color-card-text)] leading-snug cursor-text mb-2 line-clamp-3">{t.title}</p>
                 )}
@@ -412,13 +412,13 @@ function Social({crm,showAdd,close}:any){
             <div className="flex items-center justify-between mb-3 px-1"><h4 className="text-[12px] font-bold text-[var(--color-text-secondary)]">{col.l}</h4><span className="text-[10px] font-bold text-[var(--color-text-muted)] bg-[var(--color-border)] px-2 py-0.5 rounded-full">{items.length}</span></div>
             <div className="space-y-2.5">{items.map(item=>(
               <div key={item.id} draggable onDragStart={e=>{setDrag(item.id);e.dataTransfer.effectAllowed="move";}}
-                className={`bg-white border rounded-xl p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all group ${drag===item.id?"opacity-40 scale-95":"border-[var(--color-border-card)] shadow-sm"}`}>
+                className={`bg-[var(--color-surface)] border rounded-xl p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all group ${drag===item.id?"opacity-40 scale-95":"border-[var(--color-border-card)] shadow-sm"}`}>
                 <div className="flex items-center justify-between mb-2 pb-2 border-b border-[var(--color-border-card)]/50">
                   <div className="flex items-center gap-1.5"><span className="text-[12px]">{icon[item.platform]||"•"}</span><span className="text-[9px] font-bold text-[var(--color-card-text-muted)] uppercase tracking-wider">{item.platform} · {item.contentType}</span></div>
                   <span className="opacity-0 group-hover:opacity-100 transition-opacity"><X onClick={()=>del(item.id)}/></span>
                 </div>
                 {editId===item.id?(
-                  <textarea autoFocus value={editDesc} onChange={e=>setEditDesc(e.target.value)} onBlur={()=>saveEdit(item.id)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();saveEdit(item.id);}}} className="w-full text-[11px] !bg-white !text-[var(--color-card-text)] border border-[var(--color-ember)] shadow-sm outline-none rounded p-1 font-medium resize-none" rows={2}/>
+                  <textarea autoFocus value={editDesc} onChange={e=>setEditDesc(e.target.value)} onBlur={()=>saveEdit(item.id)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();saveEdit(item.id);}}} className="w-full text-[11px] !bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-ember)] shadow-sm outline-none rounded p-1 font-medium resize-none" rows={2}/>
                 ):(
                   <p onDoubleClick={()=>{setEditId(item.id);setEditDesc(item.description);}} className="text-[11px] text-[var(--color-card-text)] leading-snug font-medium cursor-text">{item.description}</p>
                 )}
@@ -442,7 +442,7 @@ function Leads({crm,sel,setSel,showAdd,close}:any){
 
   const EditCell=({lid,field,value,w,t="text"}:{lid:string;field:string;value:string;w?:string;t?:string})=>(
     editId===lid&&editField===field?(
-      <input autoFocus type={t} value={editVal} onChange={e=>setEditVal(e.target.value)} onBlur={()=>saveLead(lid,field)} onKeyDown={e=>e.key==="Enter"&&saveLead(lid,field)} className={`!bg-white !text-[var(--color-card-text)] border border-[var(--color-ember)] shadow-[0_0_5px_var(--color-ember-soft)] rounded-md px-2 py-1 text-[11px] font-medium outline-none ${w||"w-full"}`}/>
+      <input autoFocus type={t} value={editVal} onChange={e=>setEditVal(e.target.value)} onBlur={()=>saveLead(lid,field)} onKeyDown={e=>e.key==="Enter"&&saveLead(lid,field)} className={`!bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-ember)] shadow-[0_0_5px_var(--color-ember-soft)] rounded-md px-2 py-1 text-[11px] font-medium outline-none ${w||"w-full"}`}/>
     ):(
       <span onDoubleClick={()=>{setEditId(lid);setEditField(field);setEditVal(value);}} className="cursor-text hover:text-[var(--color-ember)] border-b border-dashed border-transparent hover:border-[var(--color-ember)] transition-colors">{value}</span>
     )
@@ -453,7 +453,7 @@ function Leads({crm,sel,setSel,showAdd,close}:any){
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">{funnel.map(f=>{const c=crm.leads.filter((l:any)=>f.m.includes(l.status)).length;return <div key={f.l} className="bg-[var(--color-surface)] border border-[var(--color-border-card)] shadow-sm rounded-xl p-3 md:p-4 text-center"><p className="text-xl md:text-2xl font-black text-[var(--color-card-text)] mb-1">{c}</p><Lbl>{f.l}</Lbl></div>;})}</div>
       {showAdd&&<QuickAdd title="New Lead" fields={[{k:"companyName",l:"Company",p:"Company name"},{k:"projectDescription",l:"Need",p:"What do they need?"},{k:"estimatedValue",l:"Value (₹)",p:"0",t:"number"},{k:"assignedAdminId",l:"Owner",t:"select",o:crm.team.map((t:any)=>({v:t.id,l:t.name}))}]} onSubmit={(d:any)=>{crm.addNewLead({companyName:d.companyName,projectDescription:d.projectDescription,source:"LinkedIn" as const,status:"Lead" as const,estimatedValue:Number(d.estimatedValue)||0,assignedAdminId:d.assignedAdminId||"a3",sourcedById:d.assignedAdminId||"a3",engagementScore:10});close();}} onClose={close}/>}
       
-      <div className="bg-white border border-[var(--color-border-card)] shadow-sm rounded-xl overflow-x-auto">
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border-card)] shadow-sm rounded-xl overflow-x-auto">
         <table className="w-full text-[11.5px] min-w-[700px]">
           <thead><tr className="border-b border-[var(--color-border-card)] bg-[var(--color-surface)]"><th className="text-left p-3 font-semibold text-[var(--color-text-secondary)]">Company</th><th className="text-left p-3 font-semibold text-[var(--color-text-secondary)]">Need</th><th className="text-left p-3 font-semibold text-[var(--color-text-secondary)]">Value</th><th className="text-left p-3 font-semibold text-[var(--color-text-secondary)]">Status</th><th className="text-left p-3 font-semibold text-[var(--color-text-secondary)]">Owner</th><th className="p-3 w-8"></th></tr></thead>
           <tbody>{crm.leads.map((l:any)=>{const ow=crm.team.find((t:any)=>t.id===l.assignedAdminId);return(
@@ -461,7 +461,7 @@ function Leads({crm,sel,setSel,showAdd,close}:any){
               <td className="p-3 font-bold text-[var(--color-card-text)]"><EditCell lid={l.id} field="companyName" value={l.companyName}/></td>
               <td className="p-3 text-[var(--color-text-muted)] max-w-[200px] truncate font-medium"><EditCell lid={l.id} field="projectDescription" value={l.projectDescription}/></td>
               <td className="p-3 font-black text-[var(--color-card-text)] text-[12px]"><EditCell lid={l.id} field="estimatedValue" value={l.estimatedValue.toString()} t="number" w="w-24"/></td>
-              <td className="p-3"><select value={l.status} onClick={e=>e.stopPropagation()} onChange={e=>{e.stopPropagation();crm.updateLeadStatus(l.id,e.target.value);}} className="!bg-white !text-[var(--color-card-text)] border border-[var(--color-border-card)] rounded-md px-2 py-1 outline-none cursor-pointer font-semibold shadow-sm">{LEAD_STATUSES.map(s=><option key={s}>{s}</option>)}</select></td>
+              <td className="p-3"><select value={l.status} onClick={e=>e.stopPropagation()} onChange={e=>{e.stopPropagation();crm.updateLeadStatus(l.id,e.target.value);}} className="!bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-border-card)] rounded-md px-2 py-1 outline-none cursor-pointer font-semibold shadow-sm">{LEAD_STATUSES.map(s=><option key={s}>{s}</option>)}</select></td>
               <td className="p-3 text-[var(--color-text-secondary)] font-medium flex items-center gap-2"><Av id={l.assignedAdminId} name={ow?.name||"?"} sz={16}/> {ow?.name||"—"}</td>
               <td className="p-3"><X onClick={()=>crm.deleteLead(l.id)}/></td>
             </tr>
@@ -477,18 +477,18 @@ function LeadDrawer({crm,id,onClose}:any){
   return(
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between mb-2"><h3 className="text-[18px] font-black text-[var(--color-card-text)]">{l.companyName}</h3><X onClick={onClose}/></div>
-      <div className="bg-white rounded-xl p-4 border border-[var(--color-border-card)] shadow-sm space-y-2">
+      <div className="bg-[var(--color-surface)] rounded-xl p-4 border border-[var(--color-border-card)] shadow-sm space-y-2">
         <p className="text-[12px] font-medium text-[var(--color-text-secondary)] leading-relaxed">{l.projectDescription}</p>
-        <div className="flex items-center justify-between py-1.5 border-t border-[var(--color-border-card)]/30 mt-3 pt-3"><Lbl>Status</Lbl><select value={l.status} onChange={e=>crm.updateLeadStatus(id,e.target.value)} className="!bg-white !text-[var(--color-card-text)] border border-[var(--color-border-card)] font-bold shadow-sm rounded-md px-2 py-1 text-[11px] outline-none">{LEAD_STATUSES.map(s=><option key={s}>{s}</option>)}</select></div>
+        <div className="flex items-center justify-between py-1.5 border-t border-[var(--color-border-card)]/30 mt-3 pt-3"><Lbl>Status</Lbl><select value={l.status} onChange={e=>crm.updateLeadStatus(id,e.target.value)} className="!bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-border-card)] font-bold shadow-sm rounded-md px-2 py-1 text-[11px] outline-none">{LEAD_STATUSES.map(s=><option key={s}>{s}</option>)}</select></div>
         <div className="flex items-center justify-between py-1.5"><Lbl>Value</Lbl><span className="text-[14px] font-black">{fmt(l.estimatedValue)}</span></div>
         <div className="flex items-center justify-between py-1.5"><Lbl>Calls</Lbl><div className="flex items-center gap-2"><span className="text-[12px] font-bold">{l.callsMade}</span><button onClick={()=>crm.incrementLeadCalls(id)} className="text-[10px] font-bold px-2 py-1 bg-[var(--color-surface-muted)] text-[var(--color-card-text)] rounded hover:bg-[var(--color-ember)] hover:text-white transition-colors">+1</button></div></div>
-        <div className="flex items-center justify-between py-1.5"><Lbl>Owner</Lbl><select value={l.assignedAdminId} onChange={e=>crm.updateLead(id,{assignedAdminId:e.target.value})} className="!bg-white !text-[var(--color-card-text)] font-bold border border-[var(--color-border-card)] shadow-sm rounded-md px-2 py-1 text-[11px] outline-none">{crm.team.map((t:any)=><option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
+        <div className="flex items-center justify-between py-1.5"><Lbl>Owner</Lbl><select value={l.assignedAdminId} onChange={e=>crm.updateLead(id,{assignedAdminId:e.target.value})} className="!bg-[var(--color-bg)] !text-[var(--color-text-primary)] font-bold border border-[var(--color-border-card)] shadow-sm rounded-md px-2 py-1 text-[11px] outline-none">{crm.team.map((t:any)=><option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
       </div>
-      <div className="bg-white rounded-xl p-4 border border-[var(--color-border-card)] shadow-sm"><Lbl>Notes</Lbl>
+      <div className="bg-[var(--color-surface)] rounded-xl p-4 border border-[var(--color-border-card)] shadow-sm"><Lbl>Notes</Lbl>
         <div className="space-y-2 mt-3">
           {l.notes.map((n:string,i:number)=><p key={i} className="text-[11px] text-[var(--color-card-text)] font-medium p-2.5 bg-[var(--color-surface-muted)] rounded-lg">{n}</p>)}
         </div>
-        <div className="flex gap-2 mt-3"><input value={note} onChange={e=>setNote(e.target.value)} placeholder="Add note..." className="flex-1 !bg-white !text-[var(--color-card-text)] border border-[var(--color-border-card)] shadow-sm rounded-lg px-3 py-2 text-[11px] font-medium outline-none focus:!border-[var(--color-ember)]" onKeyDown={e=>{if(e.key==="Enter"&&note.trim()){crm.addLeadNote(id,note.trim());setNote("");}}}/><button onClick={()=>{if(note.trim()){crm.addLeadNote(id,note.trim());setNote("");}}} className="px-3 py-2 bg-[var(--color-charcoal)] text-white text-[11px] font-bold rounded-lg shadow-md hover:bg-[var(--color-charcoal-mid)] transition-colors">Add</button></div>
+        <div className="flex gap-2 mt-3"><input value={note} onChange={e=>setNote(e.target.value)} placeholder="Add note..." className="flex-1 !bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-border-card)] shadow-sm rounded-lg px-3 py-2 text-[11px] font-medium outline-none focus:!border-[var(--color-ember)]" onKeyDown={e=>{if(e.key==="Enter"&&note.trim()){crm.addLeadNote(id,note.trim());setNote("");}}}/><button onClick={()=>{if(note.trim()){crm.addLeadNote(id,note.trim());setNote("");}}} className="px-3 py-2 bg-[var(--color-charcoal)] text-white text-[11px] font-bold rounded-lg shadow-md hover:bg-[var(--color-charcoal-mid)] transition-colors">Add</button></div>
       </div>
       {!["Converted","Lost"].includes(l.status)&&<div className="pt-2 space-y-2">
         <button onClick={()=>{crm.convertLeadToClient(id);onClose();}} className="w-full bg-[var(--color-ok)] text-white text-[12px] font-bold py-2.5 rounded-xl shadow-md hover:opacity-90 transition-opacity">Convert to Project</button>
@@ -505,13 +505,13 @@ function Support({crm,sel,setSel,showAdd,close}:any){
   const dot=(s:string)=>s==="Critical"?"bg-[var(--color-bad)] shadow-[0_0_5px_var(--color-bad)]":s==="High"?"bg-[var(--color-warn)]":"bg-[var(--color-text-faint)]";
   return(
     <div className="space-y-6 max-w-[800px] mx-auto">
-      {maint.length>0&&<div><Lbl>Maintenance Tier</Lbl><div className="flex flex-wrap gap-3 mt-2">{maint.map((c:any)=><div key={c.id} className="bg-white border border-[var(--color-border-card)] shadow-sm rounded-xl px-4 py-3 min-w-[200px]"><p className="text-[12px] font-bold text-[var(--color-card-text)] mb-0.5">{c.name}</p><p className="text-[10px] font-medium text-[var(--color-text-muted)]">{c.project}</p></div>)}</div></div>}
+      {maint.length>0&&<div><Lbl>Maintenance Tier</Lbl><div className="flex flex-wrap gap-3 mt-2">{maint.map((c:any)=><div key={c.id} className="bg-[var(--color-surface)] border border-[var(--color-border-card)] shadow-sm rounded-xl px-4 py-3 min-w-[200px]"><p className="text-[12px] font-bold text-[var(--color-card-text)] mb-0.5">{c.name}</p><p className="text-[10px] font-medium text-[var(--color-text-muted)]">{c.project}</p></div>)}</div></div>}
       {showAdd&&<QuickAdd title="Report Issue" fields={[{k:"title",l:"Title",p:"Issue title"},{k:"description",l:"Description",p:"Describe the issue",t:"textarea"},{k:"severity",l:"Severity",t:"select",o:["Low","Medium","High","Critical"]},{k:"clientId",l:"Project",t:"select",o:crm.clients.map((c:any)=>({v:String(c.id),l:c.name}))},{k:"assignedAdminId",l:"Assign",t:"select",o:crm.team.map((t:any)=>({v:t.id,l:t.name}))}]} onSubmit={(d:any)=>{crm.addFlag({clientId:Number(d.clientId)||crm.clients[0]?.id,title:d.title,description:d.description,severity:d.severity||"Medium",assignedAdminId:d.assignedAdminId||"a1"});close();}} onClose={close}/>}
       <div>
         <Lbl>Open Tickets ({open.length})</Lbl>
         <div className="space-y-2 mt-2">
           {open.map((f:any)=>{const cl=crm.clients.find((c:any)=>c.id===f.clientId);return (
-            <div key={f.id} onClick={()=>setSel(f.id)} className={`w-full text-left flex items-center gap-3 bg-white border rounded-xl p-3 md:p-4 cursor-pointer transition-all shadow-sm ${sel===f.id?"border-[var(--color-ember)] ring-1 ring-[var(--color-ember)]":"border-[var(--color-border-card)] hover:shadow-md"}`}>
+            <div key={f.id} onClick={()=>setSel(f.id)} className={`w-full text-left flex items-center gap-3 bg-[var(--color-surface)] border rounded-xl p-3 md:p-4 cursor-pointer transition-all shadow-sm ${sel===f.id?"border-[var(--color-ember)] ring-1 ring-[var(--color-ember)]":"border-[var(--color-border-card)] hover:shadow-md"}`}>
               <span className={`w-3 h-3 rounded-full flex-shrink-0 ${dot(f.severity)}`}/>
               <div className="flex-1 min-w-0"><p className="text-[13px] font-bold text-[var(--color-card-text)] truncate">{f.title}</p><p className="text-[10px] font-medium text-[var(--color-text-muted)] mt-0.5">{cl?.name} · {f.status}</p></div>
               <span className="text-[10px] font-bold bg-[var(--color-surface-muted)] text-[var(--color-card-text)] px-2 py-1 rounded-md">{f.severity}</span>
@@ -520,7 +520,7 @@ function Support({crm,sel,setSel,showAdd,close}:any){
           {open.length===0&&<p className="text-[12px] font-medium text-[var(--color-text-faint)] py-6 text-center">All clear ✨</p>}
         </div>
       </div>
-      {done.length>0&&<div><Lbl>Recently Resolved</Lbl><div className="mt-2 space-y-1">{done.slice(0,5).map((f:any)=><div key={f.id} className="flex items-center gap-3 px-4 py-2.5 bg-white border border-[var(--color-border-card)] rounded-lg shadow-sm"><Dot c="bg-[var(--color-ok)] shadow-[0_0_5px_var(--color-ok)]"/><span className="text-[11px] font-medium text-[var(--color-text-muted)] line-through flex-1">{f.title}</span></div>)}</div></div>}
+      {done.length>0&&<div><Lbl>Recently Resolved</Lbl><div className="mt-2 space-y-1">{done.slice(0,5).map((f:any)=><div key={f.id} className="flex items-center gap-3 px-4 py-2.5 bg-[var(--color-surface)] border border-[var(--color-border-card)] rounded-lg shadow-sm"><Dot c="bg-[var(--color-ok)] shadow-[0_0_5px_var(--color-ok)]"/><span className="text-[11px] font-medium text-[var(--color-text-muted)] line-through flex-1">{f.title}</span></div>)}</div></div>}
     </div>
   );
 }
@@ -534,28 +534,28 @@ function FlagDrawer({crm,id,onClose}:any){
   return(
     <div className="p-6 space-y-6">
       <div className="flex items-start justify-between mb-2 gap-3">
-        {edT?(<input autoFocus value={vT} onChange={e=>setVT(e.target.value)} onBlur={saveT} onKeyDown={e=>e.key==="Enter"&&saveT()} className="flex-1 !bg-white !text-[var(--color-card-text)] border border-[var(--color-ember)] shadow-[0_0_5px_var(--color-ember-soft)] rounded-md px-2 py-1 text-[16px] font-black outline-none"/>):(
+        {edT?(<input autoFocus value={vT} onChange={e=>setVT(e.target.value)} onBlur={saveT} onKeyDown={e=>e.key==="Enter"&&saveT()} className="flex-1 !bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-ember)] shadow-[0_0_5px_var(--color-ember-soft)] rounded-md px-2 py-1 text-[16px] font-black outline-none"/>):(
           <h3 onDoubleClick={()=>setEdT(true)} className="text-[18px] font-black text-[var(--color-card-text)] leading-tight cursor-text hover:text-[var(--color-ember)] border-b border-dashed border-transparent hover:border-[var(--color-ember)] transition-colors">{f.title}</h3>
         )}
         <X onClick={onClose}/>
       </div>
       
-      {edD?(<textarea autoFocus value={vD} onChange={e=>setVD(e.target.value)} onBlur={saveD} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();saveD();}}} rows={3} className="w-full !bg-white !text-[var(--color-card-text)] border border-[var(--color-ember)] shadow-[0_0_5px_var(--color-ember-soft)] rounded-md px-3 py-2 text-[12px] font-medium outline-none resize-none"/>):(
+      {edD?(<textarea autoFocus value={vD} onChange={e=>setVD(e.target.value)} onBlur={saveD} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();saveD();}}} rows={3} className="w-full !bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-ember)] shadow-[0_0_5px_var(--color-ember-soft)] rounded-md px-3 py-2 text-[12px] font-medium outline-none resize-none"/>):(
         <p onDoubleClick={()=>setEdD(true)} className="text-[12px] font-medium text-[var(--color-text-secondary)] leading-relaxed cursor-text hover:text-[var(--color-card-text)] border border-dashed border-transparent hover:border-[var(--color-border)] rounded p-2 -m-2 transition-colors">{f.description||"Double click to add description..."}</p>
       )}
 
-      <div className="bg-white rounded-xl p-4 border border-[var(--color-border-card)] shadow-sm space-y-1">
+      <div className="bg-[var(--color-surface)] rounded-xl p-4 border border-[var(--color-border-card)] shadow-sm space-y-1">
         <div className="flex items-center justify-between py-1.5 border-b border-[var(--color-border-card)]/30"><Lbl>Project</Lbl><span className="text-[12px] font-bold">{cl?.name||"—"}</span></div>
-        <div className="flex items-center justify-between py-1.5 border-b border-[var(--color-border-card)]/30"><Lbl>Severity</Lbl><select value={f.severity} onChange={e=>crm.updateFlag(id,{severity:e.target.value as FlagSeverity})} className="!bg-white !text-[var(--color-card-text)] font-bold border border-[var(--color-border-card)] shadow-sm rounded-md px-2 py-1 text-[11px] outline-none">{["Low","Medium","High","Critical"].map(s=><option key={s}>{s}</option>)}</select></div>
-        <div className="flex items-center justify-between py-1.5 border-b border-[var(--color-border-card)]/30"><Lbl>Status</Lbl><select value={f.status} onChange={e=>crm.updateFlagStatus(id,e.target.value)} className="!bg-white !text-[var(--color-card-text)] font-bold border border-[var(--color-border-card)] shadow-sm rounded-md px-2 py-1 text-[11px] outline-none">{(["Open","Investigating","In Dev","Resolved"] as FlagStatus[]).map(s=><option key={s}>{s}</option>)}</select></div>
-        <div className="flex items-center justify-between py-1.5"><Lbl>Assigned</Lbl><select value={f.assignedAdminId||""} onChange={e=>crm.assignFlagAdmin(id,e.target.value)} className="!bg-white !text-[var(--color-card-text)] font-bold border border-[var(--color-border-card)] shadow-sm rounded-md px-2 py-1 text-[11px] outline-none">{crm.team.map((t:any)=><option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
+        <div className="flex items-center justify-between py-1.5 border-b border-[var(--color-border-card)]/30"><Lbl>Severity</Lbl><select value={f.severity} onChange={e=>crm.updateFlag(id,{severity:e.target.value as FlagSeverity})} className="!bg-[var(--color-bg)] !text-[var(--color-text-primary)] font-bold border border-[var(--color-border-card)] shadow-sm rounded-md px-2 py-1 text-[11px] outline-none">{["Low","Medium","High","Critical"].map(s=><option key={s}>{s}</option>)}</select></div>
+        <div className="flex items-center justify-between py-1.5 border-b border-[var(--color-border-card)]/30"><Lbl>Status</Lbl><select value={f.status} onChange={e=>crm.updateFlagStatus(id,e.target.value)} className="!bg-[var(--color-bg)] !text-[var(--color-text-primary)] font-bold border border-[var(--color-border-card)] shadow-sm rounded-md px-2 py-1 text-[11px] outline-none">{(["Open","Investigating","In Dev","Resolved"] as FlagStatus[]).map(s=><option key={s}>{s}</option>)}</select></div>
+        <div className="flex items-center justify-between py-1.5"><Lbl>Assigned</Lbl><select value={f.assignedAdminId||""} onChange={e=>crm.assignFlagAdmin(id,e.target.value)} className="!bg-[var(--color-bg)] !text-[var(--color-text-primary)] font-bold border border-[var(--color-border-card)] shadow-sm rounded-md px-2 py-1 text-[11px] outline-none">{crm.team.map((t:any)=><option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
       </div>
       
-      <div className="bg-white rounded-xl p-4 border border-[var(--color-border-card)] shadow-sm"><Lbl>Dev Log</Lbl>
+      <div className="bg-[var(--color-surface)] rounded-xl p-4 border border-[var(--color-border-card)] shadow-sm"><Lbl>Dev Log</Lbl>
         <div className="space-y-2 mt-3 mb-3">
           {f.sprintLogs.map((l:any)=><div key={l.id} className="p-2.5 rounded-lg bg-[var(--color-surface-muted)]"><div className="flex items-baseline gap-2 mb-1"><span className="text-[10px] font-black text-[var(--color-card-text)]">{l.author}</span><span className="text-[8px] font-medium text-[var(--color-text-faint)]">{l.timestamp}</span></div><p className="text-[11px] text-[var(--color-card-text)] font-medium leading-relaxed">{l.text}</p></div>)}
         </div>
-        <div className="flex gap-2"><input value={log} onChange={e=>setLog(e.target.value)} placeholder="Add update..." className="flex-1 !bg-white !text-[var(--color-card-text)] border border-[var(--color-border-card)] shadow-sm rounded-lg px-3 py-2 text-[11px] font-medium outline-none focus:!border-[var(--color-ember)]" onKeyDown={e=>{if(e.key==="Enter"&&log.trim()){crm.addFlagSprintLog(id,crm.userProfile?.name||"Admin",log.trim());setLog("");}}}/><button onClick={()=>{if(log.trim()){crm.addFlagSprintLog(id,crm.userProfile?.name||"Admin",log.trim());setLog("");}}} className="px-4 py-2 bg-[var(--color-charcoal)] text-white text-[11px] font-bold rounded-lg shadow-md hover:bg-[var(--color-charcoal-mid)] transition-colors">Add</button></div>
+        <div className="flex gap-2"><input value={log} onChange={e=>setLog(e.target.value)} placeholder="Add update..." className="flex-1 !bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-border-card)] shadow-sm rounded-lg px-3 py-2 text-[11px] font-medium outline-none focus:!border-[var(--color-ember)]" onKeyDown={e=>{if(e.key==="Enter"&&log.trim()){crm.addFlagSprintLog(id,crm.userProfile?.name||"Admin",log.trim());setLog("");}}}/><button onClick={()=>{if(log.trim()){crm.addFlagSprintLog(id,crm.userProfile?.name||"Admin",log.trim());setLog("");}}} className="px-4 py-2 bg-[var(--color-charcoal)] text-white text-[11px] font-bold rounded-lg shadow-md hover:bg-[var(--color-charcoal-mid)] transition-colors">Add</button></div>
       </div>
       <div className="pt-2"><button onClick={()=>{crm.deleteFlag(id);onClose();}} className="text-[10px] text-center w-full font-bold text-[var(--color-bad)] hover:bg-[var(--color-bad-soft)] py-2 rounded-md transition-colors">Delete Issue</button></div>
     </div>
@@ -574,7 +574,7 @@ function Products({crm, showAdd, close}:any){
   
   const EditP=({pid,field,value,w,t="text",c="text-[12px] font-bold"}:{pid:string;field:string;value:string;w?:string;t?:string;c?:string})=>(
     editId===pid&&editField===field?(
-      <input autoFocus type={t} value={editVal} onChange={e=>setEditVal(e.target.value)} onBlur={()=>saveP(pid,field)} onKeyDown={e=>e.key==="Enter"&&saveP(pid,field)} className={`!bg-white !text-[var(--color-card-text)] border border-[var(--color-ember)] shadow-[0_0_5px_var(--color-ember-soft)] rounded px-1.5 py-0.5 outline-none font-medium ${c} ${w||"w-full"}`}/>
+      <input autoFocus type={t} value={editVal} onChange={e=>setEditVal(e.target.value)} onBlur={()=>saveP(pid,field)} onKeyDown={e=>e.key==="Enter"&&saveP(pid,field)} className={`!bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-ember)] shadow-[0_0_5px_var(--color-ember-soft)] rounded px-1.5 py-0.5 outline-none font-medium ${c} ${w||"w-full"}`}/>
     ):(
       <span onDoubleClick={()=>{setEditId(pid);setEditField(field);setEditVal(value);}} className={`cursor-text hover:text-[var(--color-ember)] border-b border-dashed border-transparent hover:border-[var(--color-ember)] transition-colors inline-block ${c}`}>{value}</span>
     )
@@ -587,7 +587,7 @@ function Products({crm, showAdd, close}:any){
       <Lbl>Internal Products Portfolio</Lbl>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
         {crm.products.map((p:any)=>{const ld=crm.team.find((t:any)=>t.id===p.leadId);return(
-          <div key={p.id} className="bg-white border border-[var(--color-border-card)] shadow-sm rounded-2xl p-5 hover:shadow-md transition-shadow relative group">
+          <div key={p.id} className="bg-[var(--color-surface)] border border-[var(--color-border-card)] shadow-sm rounded-2xl p-5 hover:shadow-md transition-shadow relative group">
             <button onClick={()=>crm.deleteProduct(p.id)} className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 text-[var(--color-text-faint)] hover:text-[var(--color-bad)] transition-all">×</button>
             <div className="flex flex-col mb-4 pr-6">
               <EditP pid={p.id} field="name" value={p.name} c="text-[16px] font-black text-[var(--color-card-text)] mb-1"/>
@@ -595,7 +595,7 @@ function Products({crm, showAdd, close}:any){
             </div>
             
             <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2"><span className={`w-2.5 h-2.5 rounded-full ${sc(p.stage)}`}/><select value={p.stage} onChange={e=>crm.updateProduct(p.id,{stage:e.target.value})} className="!bg-transparent text-[11px] font-bold text-[var(--color-card-text-secondary)] outline-none cursor-pointer p-0 border-none">{["Planning","In Dev","Beta","Live"].map(s=><option key={s}>{s}</option>)}</select></div>
+              <div className="flex items-center gap-2"><span className={`w-2.5 h-2.5 rounded-full ${sc(p.stage)}`}/><select value={p.stage} onChange={e=>crm.updateProduct(p.id,{stage:e.target.value})} className="!bg-transparent text-[11px] font-bold text-[var(--color-text-secondary)] outline-none cursor-pointer p-0 border-none">{["Planning","In Dev","Beta","Live"].map(s=><option key={s}>{s}</option>)}</select></div>
               <div className="flex items-center gap-1 font-bold text-[11px] text-[var(--color-ember)]"><EditP pid={p.id} field="progress" value={p.progress.toString()} t="number" w="w-12 text-right"/>%</div>
             </div>
             
@@ -603,8 +603,8 @@ function Products({crm, showAdd, close}:any){
             
             <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[var(--color-border-card)]/50">
               <div className="flex flex-col gap-1 w-1/2">
-                <EditP pid={p.id} field="repoLink" value={p.repoLink||"Add repo"} c="text-[10px] font-mono text-[var(--color-text-muted)] hover:text-blue-500 truncate bg-[var(--color-surface-muted)] px-1.5 py-0.5 rounded"/>
-                <EditP pid={p.id} field="sandboxLink" value={p.sandboxLink||"Add url"} c="text-[10px] font-mono text-[var(--color-text-muted)] hover:text-blue-500 truncate bg-[var(--color-surface-muted)] px-1.5 py-0.5 rounded"/>
+                <EditP pid={p.id} field="repoLink" value={p.repoLink||"Add repo"} c="text-[10px] font-mono text-[var(--color-text-muted)] hover:text-blue-500 bg-[var(--color-surface-muted)] px-1.5 py-0.5 rounded overflow-hidden max-w-full"/>
+                <EditP pid={p.id} field="sandboxLink" value={p.sandboxLink||"Add url"} c="text-[10px] font-mono text-[var(--color-text-muted)] hover:text-blue-500 bg-[var(--color-surface-muted)] px-1.5 py-0.5 rounded overflow-hidden max-w-full"/>
               </div>
               <div className="flex items-center gap-2 bg-[var(--color-bg)] px-2 py-1.5 rounded-lg border border-[var(--color-border)]"><Av id={p.leadId} name={ld?.name||"?"} sz={18}/><select value={p.leadId} onChange={e=>crm.updateProduct(p.id,{leadId:e.target.value})} className="!bg-transparent text-[10px] font-bold text-[var(--color-card-text)] outline-none cursor-pointer p-0 border-none">{crm.team.map((t:any)=><option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
             </div>
@@ -646,17 +646,17 @@ function AccessManagement({crm, clients}:any) {
   
   const EditU=({uemail,field,value,c="font-medium"}:{uemail:string;field:string;value:string;c?:string})=>(
     editE===uemail&&editF===field?(
-      <input autoFocus value={editV} onChange={e=>setEditV(e.target.value)} onBlur={()=>saveU(uemail,field)} onKeyDown={e=>e.key==="Enter"&&saveU(uemail,field)} className={`!bg-white !text-[var(--color-card-text)] border border-[var(--color-ember)] shadow-[0_0_5px_var(--color-ember-soft)] rounded px-2 py-0.5 outline-none font-bold text-[11px] w-full`}/>
+      <input autoFocus value={editV} onChange={e=>setEditV(e.target.value)} onBlur={()=>saveU(uemail,field)} onKeyDown={e=>e.key==="Enter"&&saveU(uemail,field)} className={`!bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-ember)] shadow-[0_0_5px_var(--color-ember-soft)] rounded px-2 py-0.5 outline-none font-bold text-[11px] w-full`}/>
     ):(
       <span onDoubleClick={()=>{setEditE(uemail);setEditF(field);setEditV(value);}} className={`cursor-text hover:text-[var(--color-ember)] border-b border-dashed border-transparent hover:border-[var(--color-ember)] transition-colors block ${c}`}>{value}</span>
     )
   );
 
-  const inputCls = "w-full mt-1.5 !bg-white !text-[var(--color-card-text)] border border-[var(--color-border-card)] shadow-sm rounded-lg px-3 py-2 text-[12px] font-medium outline-none focus:!border-[var(--color-ember)] transition-colors !placeholder:text-[var(--color-card-text-muted)]";
+  const inputCls = "w-full mt-1.5 !bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-border-card)] shadow-sm rounded-lg px-3 py-2 text-[12px] font-medium outline-none focus:!border-[var(--color-ember)] transition-colors !placeholder:text-[var(--color-card-text-muted)]";
 
   return (
     <div className="space-y-8 max-w-[1200px] mx-auto">
-      <div className="bg-white border border-[var(--color-border-card)] rounded-2xl p-6 md:p-8 shadow-sm max-w-2xl">
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border-card)] rounded-2xl p-6 md:p-8 shadow-sm max-w-2xl">
         <h3 className="text-[16px] font-black text-[var(--color-card-text)] mb-6">Provision New Account</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
           <div><Lbl>Full Name</Lbl><input value={name} onChange={e=>setName(e.target.value)} className={inputCls} placeholder="John Doe"/></div>
@@ -683,7 +683,7 @@ function AccessManagement({crm, clients}:any) {
 
       <div>
         <Lbl>Active Provisioned Accounts</Lbl>
-        <div className="bg-white border border-[var(--color-border-card)] rounded-xl overflow-x-auto shadow-sm mt-2">
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border-card)] rounded-xl overflow-x-auto shadow-sm mt-2">
           <table className="w-full text-left border-collapse text-[11px] min-w-[700px]">
             <thead><tr className="border-b border-[var(--color-border-card)] bg-[var(--color-surface)]"><th className="p-4 font-bold text-[var(--color-text-secondary)]">User</th><th className="p-4 font-bold text-[var(--color-text-secondary)]">Email</th><th className="p-4 font-bold text-[var(--color-text-secondary)]">Role</th><th className="p-4 font-bold text-[var(--color-text-secondary)]">Restriction / Password</th><th className="p-4 font-bold text-[var(--color-text-secondary)]">Created By</th><th className="p-4"></th></tr></thead>
             <tbody>
@@ -725,9 +725,9 @@ function AccessManagement({crm, clients}:any) {
 function QuickAdd({title,fields,onSubmit,onClose}:{title:string;fields:any[];onSubmit:(d:any)=>void;onClose:()=>void}){
   const [d,setD]=useState<Record<string,any>>(()=>{const init:Record<string,any>={};fields.forEach(f=>{if(f.t==="select"){const o=f.o;if(o?.length)init[f.k]=typeof o[0]==="object"?o[0].v:o[0];}else init[f.k]="";});return init;});
   const set=(k:string,v:any)=>setD(p=>({...p,[k]:v}));
-  const cls="w-full !bg-white !text-[var(--color-card-text)] border border-[var(--color-border-card)] shadow-sm rounded-lg px-3 py-2 text-[12px] font-medium outline-none focus:!border-[var(--color-ember)] !placeholder:text-[var(--color-card-text-muted)]";
+  const cls="w-full !bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-border-card)] shadow-sm rounded-lg px-3 py-2 text-[12px] font-medium outline-none focus:!border-[var(--color-ember)] !placeholder:text-[var(--color-card-text-muted)]";
   return(
-    <div className="bg-white border border-[var(--color-border-card)] shadow-md rounded-2xl p-5 md:p-6 mb-6">
+    <div className="bg-[var(--color-surface)] border border-[var(--color-border-card)] shadow-md rounded-2xl p-5 md:p-6 mb-6">
       <div className="flex items-center justify-between mb-4"><h3 className="text-[16px] font-black text-[var(--color-card-text)]">{title}</h3><X onClick={onClose}/></div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
         {fields.map((f:any)=>{

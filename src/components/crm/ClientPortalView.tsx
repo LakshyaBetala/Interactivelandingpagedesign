@@ -184,7 +184,7 @@ export default function ClientPortalView() {
                           <span className="text-[8px] font-medium text-[var(--color-card-text-muted)]">{c.timeElapsed}</span>
                           {c.role === "client" && <span className="text-[10px] font-bold text-[var(--color-card-text)]">You</span>}
                         </div>
-                        <div className={`px-3.5 py-2.5 rounded-2xl text-[12px] max-w-[90%] shadow-sm ${c.role === "client" ? "bg-[var(--color-charcoal)] text-white rounded-tr-sm border border-[var(--color-charcoal-soft)]" : "bg-white border border-[var(--color-border-card)] text-[var(--color-card-text)] rounded-tl-sm"}`}>
+                        <div className={`px-3.5 py-2.5 rounded-2xl text-[12px] max-w-[90%] shadow-sm ${c.role === "client" ? "bg-[var(--color-charcoal)] text-white rounded-tr-sm border border-[var(--color-charcoal-soft)]" : "bg-[var(--color-surface)] border border-[var(--color-border-card)] text-[var(--color-card-text)] rounded-tl-sm"}`}>
                           {c.videoTimestamp !== undefined && (
                             <button onClick={() => seekVideo(c.videoTimestamp!)} className={`block mb-1.5 text-[9px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 transition-colors ${c.role === "client" ? "bg-[var(--color-ember)] text-white hover:bg-[var(--color-ember-hover)]" : "bg-[var(--color-bg-soft)] text-white hover:bg-[var(--color-charcoal-soft)]"}`}>
                               <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
@@ -222,7 +222,7 @@ export default function ClientPortalView() {
                   <h3 className="text-[11px] font-semibold font-mono uppercase tracking-widest text-[var(--color-text-secondary)] mb-4">Open Issues</h3>
                   <div className="space-y-3">
                     {clientFlags.map((f: any) => (
-                      <div key={f.id} className="bg-white border border-[var(--color-border-card)] rounded-lg p-3 shadow-sm hover:shadow transition-shadow">
+                      <div key={f.id} className="bg-[var(--color-surface)] border border-[var(--color-border-card)] rounded-lg p-3 shadow-sm hover:shadow transition-shadow">
                         <div className="flex items-center gap-2 mb-1.5">
                           <span className={`w-2 h-2 rounded-full ${f.severity === "Critical" ? "bg-[var(--color-bad)] shadow-[0_0_5px_var(--color-bad)]" : f.severity === "High" ? "bg-[var(--color-warn)]" : "bg-[var(--color-text-muted)]"}`} />
                           <p className="text-[11px] font-bold text-[var(--color-card-text)] truncate flex-1">{f.title}</p>
@@ -300,7 +300,7 @@ function FeedbackInput({ crm, client, videoRef }: any) {
           value={text} 
           onChange={e => setText(e.target.value)} 
           placeholder={pendingTimestamp !== undefined ? "What needs changing here?" : "Message the team..."} 
-          className="flex-1 !bg-white !text-[var(--color-card-text)] border border-[var(--color-border-card)] rounded-xl px-3 py-2 text-[12px] outline-none focus:!border-[var(--color-ember)] shadow-sm transition-colors !placeholder:text-[var(--color-card-text-muted)]" 
+          className="flex-1 !bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-border-card)] rounded-xl px-3 py-2 text-[12px] outline-none focus:!border-[var(--color-ember)] shadow-sm transition-colors !placeholder:text-[var(--color-card-text-muted)]" 
           onKeyDown={e => e.key === "Enter" && send()} 
         />
         <button onClick={send} className="px-4 py-2 bg-[var(--color-ember)] text-white text-[12px] font-bold rounded-xl hover:bg-[var(--color-ember-hover)] transition-colors shadow-md">Send</button>
@@ -313,14 +313,14 @@ function SupportForm({ crm, client }: any) {
   const [title, setTitle] = useState(""); const [desc, setDesc] = useState(""); const [severity, setSeverity] = useState<FlagSeverity>("Medium");
   const submit = () => { if (!title) return; crm.addFlag({ clientId: client.id, title, description: desc, severity, assignedAdminId: client.assignedAdminId }); setTitle(""); setDesc(""); };
   
-  const inputClass = "w-full !bg-white !text-[var(--color-card-text)] border border-[var(--color-border-card)] rounded-lg px-3 py-2 text-[11px] outline-none focus:!border-[var(--color-ember)] shadow-sm transition-colors !placeholder:text-[var(--color-card-text-muted)] font-medium";
+  const inputClass = "w-full !bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-border-card)] rounded-lg px-3 py-2 text-[11px] outline-none focus:!border-[var(--color-ember)] shadow-sm transition-colors !placeholder:text-[var(--color-card-text-muted)] font-medium";
 
   return (
     <div className="space-y-3">
       <input placeholder="What's the issue?" value={title} onChange={e => setTitle(e.target.value)} className={inputClass} />
       <textarea placeholder="Additional details..." value={desc} onChange={e => setDesc(e.target.value)} rows={3} className={inputClass + " resize-none"} />
       <div className="flex gap-2">
-        <select value={severity} onChange={e => setSeverity(e.target.value as FlagSeverity)} className="!bg-white !text-[var(--color-card-text)] border border-[var(--color-border-card)] rounded-lg px-2 py-1 text-[11px] font-bold outline-none cursor-pointer shadow-sm">
+        <select value={severity} onChange={e => setSeverity(e.target.value as FlagSeverity)} className="!bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-border-card)] rounded-lg px-2 py-1 text-[11px] font-bold outline-none cursor-pointer shadow-sm">
           {(["Low", "Medium", "High", "Critical"] as FlagSeverity[]).map(s => <option key={s}>{s}</option>)}
         </select>
         <button onClick={submit} className="flex-1 bg-[var(--color-charcoal)] text-white text-[11px] font-bold py-2 rounded-lg hover:bg-[var(--color-charcoal-mid)] transition-colors shadow-md">Submit Ticket</button>

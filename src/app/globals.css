@@ -1,33 +1,33 @@
 @import "tailwindcss";
 
 @theme {
-  /* Almmatix CRM — Warm Dark + Reserved Ember */
+  /* Almmatix CRM — Deep Obsidian + Reserved Ember */
   /* Foundation */
-  --color-bg: #0C0A09;
-  --color-bg-raised: #171412;
-  --color-bg-soft: #1C1917;
+  --color-bg: #0A0A0A;
+  --color-bg-raised: #121212;
+  --color-bg-soft: #1A1A1A;
 
-  /* Sand surfaces (cards) */
-  --color-surface: #F5F0EB;
-  --color-surface-hover: #EDE8E0;
-  --color-surface-muted: #E6DFD5;
-  --color-surface-deep: #D9CFC2;
+  /* Surfaces (cards) */
+  --color-surface: #121212;
+  --color-surface-hover: #1A1A1A;
+  --color-surface-muted: #1F1F1F;
+  --color-surface-deep: #262626;
 
   /* Borders */
-  --color-border: #292524;
-  --color-border-subtle: #1F1D1B;
-  --color-border-card: #DDD6CC;
+  --color-border: #262626;
+  --color-border-subtle: #171717;
+  --color-border-card: #2A2A2A;
 
   /* Text on dark */
-  --color-text-primary: #FAF9F6;
-  --color-text-secondary: #A8A29E;
-  --color-text-muted: #78716C;
-  --color-text-faint: #57534E;
+  --color-text-primary: #FAFAFA;
+  --color-text-secondary: #A3A3A3;
+  --color-text-muted: #737373;
+  --color-text-faint: #525252;
 
-  /* Text on sand cards */
-  --color-card-text: #1C1917;
-  --color-card-text-secondary: #57534E;
-  --color-card-text-muted: #A8A29E;
+  /* Text on cards (now same as text on dark for dark mode) */
+  --color-card-text: #FAFAFA;
+  --color-card-text-secondary: #A3A3A3;
+  --color-card-text-muted: #737373;
 
   /* Accent — Ember (RESERVED: CTAs + active only) */
   --color-ember: #FF5A1F;
