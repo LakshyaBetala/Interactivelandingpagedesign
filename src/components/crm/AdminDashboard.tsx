@@ -218,6 +218,7 @@ function ProjDrawer({crm,id,onClose}:any){
   const [relVer, setRelVer] = useState("1.0");
   const [relVideo, setRelVideo] = useState("");
   const [relNotes, setRelNotes] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const save=(f:string)=>{crm.updateClient(id,{[f]:ev});setEd(null);};
   const EF=({l,v,f}:{l:string;v:string;f:string})=>(
@@ -230,6 +231,22 @@ function ProjDrawer({crm,id,onClose}:any){
     crm.addRelease({ clientId: id, title: relTitle, version: relVer, videoUrl: relVideo, whatWasImproved: notesArray });
     setShowReleaseForm(false);
     setRelTitle(""); setRelVer("1.0"); setRelVideo(""); setRelNotes("");
+  };
+
+  const handleVideoFile = (file: File) => {
+    if (file && file.type.startsWith("video/")) {
+      const url = URL.createObjectURL(file);
+      setRelVideo(url);
+    } else {
+      alert("Please select a valid video file.");
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleVideoFile(e.dataTransfer.files[0]);
+    }
   };
 
   return (
@@ -270,12 +287,29 @@ function ProjDrawer({crm,id,onClose}:any){
         </div>
         
         {showReleaseForm && (
-          <div className="bg-[var(--color-surface-muted)] rounded-lg p-3 border border-[var(--color-border-card)] mb-4 space-y-2">
+          <div 
+            onDragOver={e=>e.preventDefault()} 
+            onDrop={handleDrop}
+            className="bg-[var(--color-surface-muted)] rounded-lg p-3 border-2 border-dashed border-[var(--color-border-card)] mb-4 space-y-3 transition-colors hover:border-[var(--color-ember)]/50"
+          >
             <input value={relTitle} onChange={e=>setRelTitle(e.target.value)} placeholder="Demo Title (e.g. Sprint 1)" className="w-full !bg-white !text-[var(--color-card-text)] border border-[var(--color-border-card)] rounded-md px-2.5 py-1.5 text-[11px] font-medium outline-none focus:!border-[var(--color-ember)] shadow-sm"/>
             <div className="flex gap-2">
-              <input value={relVer} onChange={e=>setRelVer(e.target.value)} placeholder="Version" className="w-1/3 !bg-white !text-[var(--color-card-text)] border border-[var(--color-border-card)] rounded-md px-2.5 py-1.5 text-[11px] font-medium outline-none focus:!border-[var(--color-ember)] shadow-sm"/>
-              <input value={relVideo} onChange={e=>setRelVideo(e.target.value)} placeholder="Video URL (optional)" className="flex-1 !bg-white !text-[var(--color-card-text)] border border-[var(--color-border-card)] rounded-md px-2.5 py-1.5 text-[11px] font-medium outline-none focus:!border-[var(--color-ember)] shadow-sm"/>
+              <input value={relVer} onChange={e=>setRelVer(e.target.value)} placeholder="Version" className="w-1/4 !bg-white !text-[var(--color-card-text)] border border-[var(--color-border-card)] rounded-md px-2.5 py-1.5 text-[11px] font-medium outline-none focus:!border-[var(--color-ember)] shadow-sm"/>
+              
+              <div className="flex-1 flex gap-2 items-center bg-white border border-[var(--color-border-card)] rounded-md px-2 shadow-sm focus-within:border-[var(--color-ember)] transition-colors">
+                <input value={relVideo} onChange={e=>setRelVideo(e.target.value)} placeholder="Paste Video URL or Drop File ➡️" className="w-full bg-transparent text-[11px] text-[var(--color-card-text)] font-medium outline-none py-1.5"/>
+                <input type="file" accept="video/*" ref={fileInputRef} onChange={e => { if(e.target.files && e.target.files[0]) handleVideoFile(e.target.files[0]); }} className="hidden" />
+                <button onClick={() => fileInputRef.current?.click()} title="Upload Video" className="text-[12px] bg-[var(--color-surface-muted)] px-2 py-0.5 rounded text-[var(--color-text-secondary)] hover:text-[var(--color-card-text)] border border-[var(--color-border-subtle)]">📁</button>
+              </div>
             </div>
+            
+            {relVideo && relVideo.startsWith("blob:") && (
+              <div className="flex items-center gap-2 bg-[var(--color-ok)]/10 text-[var(--color-ok)] border border-[var(--color-ok)]/20 px-2 py-1.5 rounded-md text-[10px] font-bold">
+                ✓ Local video attached. (Will be wiped if you refresh)
+                <button onClick={()=>setRelVideo("")} className="ml-auto text-red-500 hover:underline">Remove</button>
+              </div>
+            )}
+
             <textarea value={relNotes} onChange={e=>setRelNotes(e.target.value)} placeholder="Release notes (one per line)..." rows={3} className="w-full !bg-white !text-[var(--color-card-text)] border border-[var(--color-border-card)] rounded-md px-2.5 py-1.5 text-[11px] font-medium outline-none resize-none focus:!border-[var(--color-ember)] shadow-sm"/>
             <button onClick={submitRelease} className="w-full bg-[var(--color-charcoal)] text-white text-[11px] font-bold py-1.5 rounded-md hover:bg-[var(--color-charcoal-mid)] shadow-md transition-colors">Publish to Portal</button>
           </div>
