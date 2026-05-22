@@ -1627,7 +1627,11 @@ export function CRMProvider({ children }: { children: ReactNode }) {
   }, [isSupabaseConfigured]);
 
   const updateCrmUser = useCallback((email: string, updates: any) => {
-    setTeam(prev => prev.map(u => u.email === email ? { ...u, ...updates } : u));
+    setCrmUsers(prev => {
+      const updated = prev.map(u => u.email === email ? { ...u, ...updates } : u);
+      localStorage.setItem("almmatix_users", JSON.stringify(updated));
+      return updated;
+    });
   }, []);
 
   const addSocialMedia = useCallback(async (item: SocialMediaItem) => {
