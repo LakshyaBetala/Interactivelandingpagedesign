@@ -1695,7 +1695,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
       addFlag, updateFlagStatus, assignFlagAdmin, addFlagSprintLog,
       createRelease, approveRelease,
       addInternalTask, updateInternalTaskStatus, addInternalTaskNote,
-      addNewClient, deleteClient, deleteLead, deleteInternalTask, deleteFlag, deleteRelease, deleteProduct,
+      addNewClient, deleteClient, deleteLead, deleteInternalTask, deleteFlag, deleteRelease,
       addSocialMedia, updateSocialMedia, deleteSocialMedia,
       userProfile, setUserProfile, loading, isSupabaseConfigured, isSupabaseOnline, signOut,
       authorizedEmails, provisionUser, deprovisionUser, purgeAllMockData, addCrmUser, deleteCrmUser, crmUsers
