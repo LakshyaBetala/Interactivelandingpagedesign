@@ -1622,14 +1622,24 @@ export function CRMProvider({ children }: { children: ReactNode }) {
   }, [isSupabaseConfigured]);
 
   const deleteProduct = useCallback(async (id: string) => {
-    if (isSupabaseConfigured) {
-      const { error } = await supabase.from("internal_products").delete().eq("id", id);
-      if (error) {
-        console.error("Database delete product error:", error);
-        return;
+    // Find the product to get its name as a fallback deletion method
+    // In case the 'id' column in Supabase is of a different type and silently fails to match
+    setProducts(prev => {
+      const pToDelete = prev.find(p => p.id === id);
+      
+      if (isSupabaseConfigured && pToDelete) {
+        // Delete by name since it's guaranteed to be a text match
+        supabase.from("internal_products").delete().eq("name", pToDelete.name).then(({ error }) => {
+          if (error) console.error("Database delete product error:", error);
+        });
+      } else if (isSupabaseConfigured) {
+        supabase.from("internal_products").delete().eq("id", id).then(({ error }) => {
+          if (error) console.error("Database delete product error:", error);
+        });
       }
-    }
-    setProducts(prev => prev.filter(p => p.id !== id));
+      
+      return prev.filter(p => p.id !== id);
+    });
   }, [isSupabaseConfigured]);
 
   const updateCrmUser = useCallback((email: string, updates: any) => {
@@ -1672,11 +1682,21 @@ export function CRMProvider({ children }: { children: ReactNode }) {
   }, [isSupabaseConfigured]);
 
   const deleteSocialMedia = useCallback(async (id: string) => {
-    if (isSupabaseConfigured) {
-      const { error } = await supabase.from("social_media").delete().eq("id", id);
-      if (error) console.error("Database delete social media error:", error);
-    }
-    setSocialMedia(prev => prev.filter(s => s.id !== id));
+    setSocialMedia(prev => {
+      const sToDelete = prev.find(s => s.id === id);
+      
+      if (isSupabaseConfigured && sToDelete) {
+        supabase.from("social_media").delete().eq("description", sToDelete.description).then(({ error }) => {
+          if (error) console.error("Database delete social media error:", error);
+        });
+      } else if (isSupabaseConfigured) {
+        supabase.from("social_media").delete().eq("id", id).then(({ error }) => {
+          if (error) console.error("Database delete social media error:", error);
+        });
+      }
+      
+      return prev.filter(s => s.id !== id);
+    });
   }, [isSupabaseConfigured]);
 
   const addRelease = useCallback((release: Partial<ChangelogRelease>) => {
