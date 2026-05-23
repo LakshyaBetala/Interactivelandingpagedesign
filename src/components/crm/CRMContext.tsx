@@ -641,6 +641,12 @@ export function CRMProvider({ children }: { children: ReactNode }) {
 
   // Fetch complete operational schema or client isolated records
   const fetchOperationalData = useCallback(async (profile: UserProfile) => {
+    // If Supabase is not configured (e.g., missing Vercel env vars), stay in Mock Data / Offline Mode
+    if (!checkSupabaseStatus()) {
+      setIsSupabaseOnline(false);
+      return;
+    }
+
     try {
       if (profile.category === "admin") {
         // Clear mock data so we don't confuse users with dummy data returning on refresh
