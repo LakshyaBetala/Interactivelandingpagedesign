@@ -10,7 +10,7 @@ const fmt = (n: number) => n > 0 ? "₹" + n.toLocaleString("en-IN") : "—";
 const fmtTime = (s: number) => { const m = Math.floor(s / 60); const sc = Math.floor(s % 60); return `${m.toString().padStart(2, '0')}:${sc.toString().padStart(2, '0')}`; };
 const PROJECT_STAGES: ClientStage[] = ["Requirement","Model","Demo 1","Converted","Dev 1","Demo 2","Dev Final","Final Demo","Delivery","Maintenance"];
 const TASK_COLS: { s: TaskStatus; l: string }[] = [{s:"Todo",l:"To Do"},{s:"In Progress",l:"In Progress"},{s:"In Review",l:"Review"},{s:"Resolved",l:"Done"}];
-const SOCIAL_COLS: { s: SocialStatus; l: string }[] = [{s:"Idea",l:"Ideas"},{s:"Planned",l:"Planned"},{s:"In Progress",l:"Creating"},{s:"Scheduled",l:"Scheduled"},{s:"Posted",l:"Done"}];
+const SOCIAL_COLS: { s: SocialStatus; l: string }[] = [{s:"Idea and Create",l:"Idea & Create"},{s:"Schedule",l:"Scheduled"},{s:"Done",l:"Done"}];
 const LEAD_STATUSES: OutreachStatus[] = ["Lead","Contacted","Responded","Requirements","Demo","Quoted","Converted","Lost"];
 type Section = "dashboard"|"projects"|"tasks"|"social"|"leads"|"support"|"products"|"access";
 const pc: Record<string,string> = {a1:"#FF5A1F",a2:"#0D9488",a3:"#65A30D",a4:"#9333EA"};
@@ -417,7 +417,7 @@ function Social({crm,showAdd,close}:any){
 
   return(
     <div className="space-y-4 max-w-[1400px]">
-      {showAdd&&<QuickAdd title="New Content" fields={[{k:"platform",l:"Platform",t:"select",o:["Instagram","Twitter","LinkedIn","Reddit","YouTube"]},{k:"contentType",l:"Type",t:"select",o:["Reel","Post","Story","Tweet","Blog","Thread"]},{k:"description",l:"About",p:"What is this content about?"},{k:"scheduledDate",l:"Date",t:"date"}]} onSubmit={(d:any)=>{const id="sm"+Date.now();crm.addSocialMedia({id,platform:d.platform||"Instagram",contentType:d.contentType||"Post",description:d.description||"New content",status:"Idea" as SocialStatus,assignedAdminId:"a4",scheduledDate:d.scheduledDate||"",createdAt:new Date().toISOString().split("T")[0]} as SocialMediaItem);close();}} onClose={close}/>}
+      {showAdd&&<QuickAdd title="New Content" fields={[{k:"platform",l:"Platform",t:"select",o:["Instagram","Twitter","LinkedIn","Reddit","YouTube"]},{k:"contentType",l:"Type",t:"select",o:["Reel","Post","Story","Tweet","Blog","Thread"]},{k:"description",l:"About",p:"What is this content about?"},{k:"scheduledDate",l:"Date",t:"date"}]} onSubmit={(d:any)=>{const id="sm"+Date.now();crm.addSocialMedia({id,platform:d.platform||"Instagram",contentType:d.contentType||"Post",description:d.description||"New content",status:"Idea and Create" as SocialStatus,assignedAdminId:"a4",scheduledDate:d.scheduledDate||"",createdAt:new Date().toISOString().split("T")[0]} as SocialMediaItem);close();}} onClose={close}/>}
       <div className="flex gap-3 overflow-x-auto pb-4 crm-scroll" style={{minHeight:"calc(100vh - 140px)"}}>
         {SOCIAL_COLS.map(col=>{const items=sm.filter(i=>i.status===col.s);return(
           <div key={col.s} onDrop={e=>{e.preventDefault();moveTo(col.s);}} onDragOver={e=>{e.preventDefault();e.dataTransfer.dropEffect="move";}}

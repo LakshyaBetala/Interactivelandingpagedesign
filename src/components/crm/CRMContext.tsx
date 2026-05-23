@@ -145,7 +145,7 @@ export interface ChangelogRelease {
 // --- Social Media Pipeline ---
 export type SocialPlatform = "Instagram" | "Twitter" | "LinkedIn" | "Reddit" | "YouTube";
 export type SocialContentType = "Reel" | "Post" | "Story" | "Tweet" | "Blog" | "Thread";
-export type SocialStatus = "Idea" | "Planned" | "In Progress" | "Scheduled" | "Posted";
+export type SocialStatus = "Idea and Create" | "Schedule" | "Done";
 
 export interface SocialMediaItem {
   id: string;
@@ -155,7 +155,7 @@ export interface SocialMediaItem {
   status: SocialStatus;
   assignedAdminId: string;
   clientTag?: string;
-  scheduledDate?: string;
+  scheduledDate: string;
   createdAt: string;
 }
 
@@ -232,12 +232,12 @@ const INITIAL_ACTIVITY: Activity[] = [
 ];
 
 const INITIAL_SOCIAL_MEDIA: SocialMediaItem[] = [
-  { id: "sm1", platform: "Instagram", contentType: "Reel", description: "UPKEM app development behind-the-scenes", status: "Posted", assignedAdminId: "a4", clientTag: "UPKEM", scheduledDate: "2026-05-19", createdAt: "2026-05-18" },
-  { id: "sm2", platform: "LinkedIn", contentType: "Post", description: "Almmatix case study — SPC dashboard project", status: "In Progress", assignedAdminId: "a4", clientTag: "SPC", scheduledDate: "2026-05-20", createdAt: "2026-05-19" },
-  { id: "sm3", platform: "Twitter", contentType: "Tweet", description: "Thread on AI agents for business automation", status: "Planned", assignedAdminId: "a4", scheduledDate: "2026-05-21", createdAt: "2026-05-20" },
-  { id: "sm4", platform: "Instagram", contentType: "Story", description: "Team work culture at Almmatix", status: "Scheduled", assignedAdminId: "a4", scheduledDate: "2026-05-20", createdAt: "2026-05-19" },
-  { id: "sm5", platform: "Reddit", contentType: "Post", description: "How we built a CRM for our agency in 2 weeks", status: "Idea", assignedAdminId: "a3", scheduledDate: "2026-05-23", createdAt: "2026-05-20" },
-  { id: "sm6", platform: "LinkedIn", contentType: "Post", description: "NJ Jewellers gold price board showcase", status: "Planned", assignedAdminId: "a4", clientTag: "NJ Jewellers", scheduledDate: "2026-05-22", createdAt: "2026-05-20" },
+  { id: "sm1", platform: "Instagram", contentType: "Reel", description: "UPKEM app development behind-the-scenes", status: "Done", assignedAdminId: "a4", clientTag: "UPKEM", scheduledDate: "2026-05-19", createdAt: "2026-05-18" },
+  { id: "sm2", platform: "LinkedIn", contentType: "Post", description: "Almmatix case study — SPC dashboard project", status: "Idea and Create", assignedAdminId: "a4", clientTag: "SPC", scheduledDate: "2026-05-20", createdAt: "2026-05-19" },
+  { id: "sm3", platform: "Twitter", contentType: "Tweet", description: "Thread on AI agents for business automation", status: "Idea and Create", assignedAdminId: "a4", scheduledDate: "2026-05-21", createdAt: "2026-05-20" },
+  { id: "sm4", platform: "Instagram", contentType: "Story", description: "Team work culture at Almmatix", status: "Schedule", assignedAdminId: "a4", scheduledDate: "2026-05-20", createdAt: "2026-05-19" },
+  { id: "sm5", platform: "Reddit", contentType: "Post", description: "How we built a CRM for our agency in 2 weeks", status: "Idea and Create", assignedAdminId: "a3", scheduledDate: "2026-05-23", createdAt: "2026-05-20" },
+  { id: "sm6", platform: "LinkedIn", contentType: "Post", description: "NJ Jewellers gold price board showcase", status: "Idea and Create", assignedAdminId: "a4", clientTag: "NJ Jewellers", scheduledDate: "2026-05-22", createdAt: "2026-05-20" },
 ];
 
 const INITIAL_LEADS: OutreachLead[] = [
