@@ -421,7 +421,7 @@ function Social({crm,showAdd,close}:any){
       <div className="flex gap-3 overflow-x-auto pb-4 crm-scroll" style={{minHeight:"calc(100vh - 140px)"}}>
         {SOCIAL_COLS.map(col=>{const items=sm.filter(i=>i.status===col.s);return(
           <div key={col.s} onDrop={e=>{e.preventDefault();moveTo(col.s);}} onDragOver={e=>{e.preventDefault();e.dataTransfer.dropEffect="move";}}
-            className={`flex-shrink-0 w-[240px] rounded-2xl p-2.5 border-2 transition-colors ${drag?"border-[var(--color-ember)]/20 bg-[var(--color-ember-soft)]/20":"border-[var(--color-border-card)]/50 bg-[var(--color-surface)] shadow-sm"}`}>
+            className={`flex-1 min-w-[240px] rounded-2xl p-2.5 border-2 transition-colors ${drag?"border-[var(--color-ember)]/20 bg-[var(--color-ember-soft)]/20":"border-[var(--color-border-card)]/50 bg-[var(--color-surface)] shadow-sm"}`}>
             <div className="flex items-center justify-between mb-3 px-1"><h4 className="text-[12px] font-bold text-[var(--color-text-secondary)]">{col.l}</h4><span className="text-[10px] font-bold text-[var(--color-text-muted)] bg-[var(--color-border)] px-2 py-0.5 rounded-full">{items.length}</span></div>
             <div className="space-y-2.5">{items.map(item=>(
               <div key={item.id} draggable onDragStart={e=>{setDrag(item.id);e.dataTransfer.effectAllowed="move";}}
