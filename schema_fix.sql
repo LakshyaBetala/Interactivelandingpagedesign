@@ -37,9 +37,14 @@ ALTER TABLE IF EXISTS public.social_media ADD COLUMN IF NOT EXISTS content_type 
 ALTER TABLE IF EXISTS public.social_media ADD COLUMN IF NOT EXISTS scheduled_date text;
 
 -- Internal Products
+ALTER TABLE IF EXISTS public.internal_products ADD COLUMN IF NOT EXISTS name text;
+ALTER TABLE IF EXISTS public.internal_products ADD COLUMN IF NOT EXISTS description text;
 ALTER TABLE IF EXISTS public.internal_products ADD COLUMN IF NOT EXISTS stage text;
 ALTER TABLE IF EXISTS public.internal_products ADD COLUMN IF NOT EXISTS lead_id uuid REFERENCES public.profiles(id);
 ALTER TABLE IF EXISTS public.internal_products ADD COLUMN IF NOT EXISTS progress bigint DEFAULT 0;
+ALTER TABLE IF EXISTS public.internal_products ADD COLUMN IF NOT EXISTS repo_link text;
+ALTER TABLE IF EXISTS public.internal_products ADD COLUMN IF NOT EXISTS sandbox_link text;
+ALTER TABLE IF EXISTS public.internal_products ADD COLUMN IF NOT EXISTS metrics jsonb DEFAULT '{}'::jsonb;
 
 -- Releases
 ALTER TABLE IF EXISTS public.releases ADD COLUMN IF NOT EXISTS status text;
