@@ -593,19 +593,19 @@ export function CRMProvider({ children }: { children: ReactNode }) {
   const [isSupabaseConfigured, setIsSupabaseConfigured] = useState<boolean>(false);
   const [isSupabaseOnline, setIsSupabaseOnline] = useState<boolean>(false);
 
-  // Database application states
-  const [clients, setClients] = useState<CRMClient[]>(INITIAL_CLIENTS);
+  // Database application states — start empty; populated by fetchOperationalData or offline fallback
+  const [clients, setClients] = useState<CRMClient[]>([]);
   const [authorizedEmails, setAuthorizedEmails] = useState<AuthorizedEmail[]>(INITIAL_AUTH_EMAILS);
   const [team, setTeam] = useState<TeamMember[]>(INITIAL_TEAM);
-  const [products, setProducts] = useState<InternalProduct[]>(INITIAL_PRODUCTS);
-  const [comments, setComments] = useState<Comment[]>(INITIAL_COMMENTS);
-  const [activities, setActivities] = useState<Activity[]>(INITIAL_ACTIVITY);
-  const [socialMedia, setSocialMedia] = useState<SocialMediaItem[]>(INITIAL_SOCIAL_MEDIA);
-  const [leads, setLeads] = useState<OutreachLead[]>(INITIAL_LEADS);
-  const [flags, setFlags] = useState<ProjectFlag[]>(INITIAL_FLAGS);
-  const [releases, setReleases] = useState<ChangelogRelease[]>(INITIAL_RELEASES);
-  const [internalTasks, setInternalTasks] = useState<InternalTask[]>(INITIAL_INTERNAL_TASKS);
-  const [selectedClientId, setSelectedClientId] = useState<number>(1); // Default to Supreme Petro
+  const [products, setProducts] = useState<InternalProduct[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [socialMedia, setSocialMedia] = useState<SocialMediaItem[]>([]);
+  const [leads, setLeads] = useState<OutreachLead[]>([]);
+  const [flags, setFlags] = useState<ProjectFlag[]>([]);
+  const [releases, setReleases] = useState<ChangelogRelease[]>([]);
+  const [internalTasks, setInternalTasks] = useState<InternalTask[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<number>(1);
 
   // If Supabase is unconfigured, fall back to "a1" (Lakshya) for admin operations.
   const currentAdminId = userProfile?.id || "a1";
@@ -668,17 +668,17 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         const dbAuthEmails = await safeFetch(supabase.from("authorized_emails").select("*"));
         const dbSocial = await safeFetch(supabase.from("social_media").select("*"));
 
-        // Fallback to initial mock data when Supabase tables are empty (fresh setup)
+        // Supabase is the single source of truth — use DB data only, empty = empty
         setTeam(dbProfiles && dbProfiles.length > 0 ? dbProfiles.map(mapTeamMemberToTS) : INITIAL_TEAM);
-        setClients(dbClients && dbClients.length > 0 ? dbClients.map(mapClientToTS) : INITIAL_CLIENTS);
-        setProducts(dbProducts && dbProducts.length > 0 ? dbProducts.map(mapProductToTS) : INITIAL_PRODUCTS);
-        setComments(dbComments && dbComments.length > 0 ? dbComments.map(mapCommentToTS) : INITIAL_COMMENTS);
-        setLeads(dbLeads && dbLeads.length > 0 ? dbLeads.map(mapLeadToTS) : INITIAL_LEADS);
-        setFlags(dbFlags && dbFlags.length > 0 ? dbFlags.map(mapFlagToTS) : INITIAL_FLAGS);
-        setReleases(dbReleases && dbReleases.length > 0 ? dbReleases.map(mapReleaseToTS) : INITIAL_RELEASES);
-        setInternalTasks(dbTasks && dbTasks.length > 0 ? dbTasks.map(mapTaskToTS) : INITIAL_INTERNAL_TASKS);
+        setClients(dbClients ? dbClients.map(mapClientToTS) : []);
+        setProducts(dbProducts ? dbProducts.map(mapProductToTS) : []);
+        setComments(dbComments ? dbComments.map(mapCommentToTS) : []);
+        setLeads(dbLeads ? dbLeads.map(mapLeadToTS) : []);
+        setFlags(dbFlags ? dbFlags.map(mapFlagToTS) : []);
+        setReleases(dbReleases ? dbReleases.map(mapReleaseToTS) : []);
+        setInternalTasks(dbTasks ? dbTasks.map(mapTaskToTS) : []);
         if (dbAuthEmails && dbAuthEmails.length > 0) setAuthorizedEmails(dbAuthEmails.map(mapAuthEmailToTS));
-        setSocialMedia(dbSocial && dbSocial.length > 0 ? dbSocial.map(mapSocialToTS) : INITIAL_SOCIAL_MEDIA);
+        setSocialMedia(dbSocial ? dbSocial.map(mapSocialToTS) : []);
       } else {
         // Client sandboxing - fetch ONLY their record
         setClients([]);
@@ -743,6 +743,18 @@ export function CRMProvider({ children }: { children: ReactNode }) {
       fetchOperationalData(session);
     } else {
       setUserProfile(null);
+      // No session — load mock data for offline/dev mode only if Supabase is not configured
+      if (!checkSupabaseStatus()) {
+        setClients(INITIAL_CLIENTS);
+        setProducts(INITIAL_PRODUCTS);
+        setComments(INITIAL_COMMENTS);
+        setActivities(INITIAL_ACTIVITY);
+        setSocialMedia(INITIAL_SOCIAL_MEDIA);
+        setLeads(INITIAL_LEADS);
+        setFlags(INITIAL_FLAGS);
+        setReleases(INITIAL_RELEASES);
+        setInternalTasks(INITIAL_INTERNAL_TASKS);
+      }
     }
     setLoading(false);
 
