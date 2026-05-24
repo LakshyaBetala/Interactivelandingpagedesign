@@ -541,18 +541,47 @@ function Social({crm,showAdd,close,setConfirm}:any){
 
   return(
     <div className="space-y-4 max-w-[1400px]">
-      {showAdd&&<QuickAdd title="New Content" fields={[{k:"platform",l:"Platform",t:"select",o:["Instagram","Twitter","LinkedIn","Reddit","YouTube"]},{k:"contentType",l:"Type",t:"select",o:["Reel","Post","Story","Tweet","Blog","Thread"]},{k:"description",l:"About",p:"What is this content about?"},{k:"scheduledDate",l:"Date",t:"date"}]} onSubmit={(d:any)=>{const id="sm"+Date.now();crm.addSocialMedia({id,platform:d.platform||"Instagram",contentType:d.contentType||"Post",description:d.description||"New content",status:"Idea and Create" as SocialStatus,assignedAdminId:"a4",scheduledDate:d.scheduledDate||"",createdAt:new Date().toISOString().split("T")[0]} as SocialMediaItem);close();}} onClose={close}/>}
+      {showAdd&&<QuickAdd title="New Content" fields={[
+        {k:"platform",l:"Platform",t:"select",o:["Instagram","Twitter","LinkedIn","Reddit","YouTube"]},
+        {k:"contentType",l:"Type",t:"select",o:["Reel","Post","Story","Tweet","Blog","Thread"]},
+        {k:"description",l:"About",p:"What is this content about?"},
+        {k:"deadlineDays",l:"Deadline (in days)",p:"e.g. 5",t:"number"}
+      ]} onSubmit={(d:any)=>{
+        const id="sm"+Date.now();
+        const days = Number(d.deadlineDays) || 0;
+        const now = new Date();
+        now.setDate(now.getDate() + days);
+        const scheduledDate = now.toISOString().split("T")[0];
+        crm.addSocialMedia({
+          id,
+          platform:d.platform||"Instagram",
+          contentType:d.contentType||"Post",
+          description:d.description||"New content",
+          status:"Idea and Create" as SocialStatus,
+          assignedAdminId:"a4",
+          scheduledDate:scheduledDate,
+          createdAt:new Date().toISOString().split("T")[0]
+        } as SocialMediaItem);
+        close();
+      }} onClose={close}/>}
       <div className="flex gap-3 overflow-x-auto pb-4 crm-scroll" style={{minHeight:"calc(100vh - 140px)"}}>
         {SOCIAL_COLS.map(col=>{const items=sm.filter(i=>i.status===col.s);return(
           <div key={col.s} onDrop={e=>{e.preventDefault();moveTo(col.s);}} onDragOver={e=>{e.preventDefault();e.dataTransfer.dropEffect="move";}}
             className={`flex-1 min-w-[240px] rounded-2xl p-2.5 border-2 transition-colors ${drag?"border-[var(--color-ember)]/20 bg-[var(--color-ember-soft)]/20":"border-[var(--color-border-card)]/50 bg-[var(--color-surface)] shadow-sm"}`}>
             <div className="flex items-center justify-between mb-3 px-1"><h4 className="text-[12px] font-bold text-[var(--color-text-secondary)]">{col.l}</h4><span className="text-[10px] font-bold text-[var(--color-text-muted)] bg-[var(--color-border)] px-2 py-0.5 rounded-full">{items.length}</span></div>
-            <div className="space-y-2.5">{items.map(item=>(
+            <div className="space-y-2.5">{items.map(item=>{
+              const daysLeft = item.scheduledDate ? Math.ceil((new Date(item.scheduledDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24)) : 0;
+              const daysText = daysLeft > 0 ? `In ${daysLeft}d` : daysLeft === 0 ? "Today" : `${Math.abs(daysLeft)}d overdue`;
+              const daysColor = daysLeft > 2 ? "text-[var(--color-info)] bg-[var(--color-info)]/10" : daysLeft >= 0 ? "text-[var(--color-warn)] bg-[var(--color-warn)]/10" : "text-[var(--color-bad)] bg-[var(--color-bad)]/10";
+              return (
               <div key={item.id} draggable onDragStart={e=>{setDrag(item.id);e.dataTransfer.effectAllowed="move";}}
                 className={`bg-[var(--color-surface)] border rounded-xl p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all group ${drag===item.id?"opacity-40 scale-95":"border-[var(--color-border-card)] shadow-sm"}`}>
                 <div className="flex items-center justify-between mb-2 pb-2 border-b border-[var(--color-border-card)]/50">
                   <div className="flex items-center gap-1.5"><span className="text-[12px]">{icon[item.platform]||"•"}</span><span className="text-[9px] font-bold text-[var(--color-card-text-muted)] uppercase tracking-wider">{item.platform} · {item.contentType}</span></div>
-                  <span className="opacity-0 group-hover:opacity-100 transition-opacity"><X onClick={()=>del(item.id)}/></span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${daysColor}`}>{daysText}</span>
+                    <span className="opacity-0 group-hover:opacity-100 transition-opacity"><X onClick={()=>del(item.id)}/></span>
+                  </div>
                 </div>
                 {editId===item.id?(
                   <textarea autoFocus value={editDesc} onChange={e=>setEditDesc(e.target.value)} onBlur={()=>saveEdit(item.id)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();saveEdit(item.id);}}} className="w-full text-[11px] !bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-ember)] shadow-sm outline-none rounded p-1 font-medium resize-none" rows={2}/>
@@ -562,7 +591,7 @@ function Social({crm,showAdd,close,setConfirm}:any){
                 )}
                 {item.clientTag&&<span className="inline-block mt-2 text-[9px] font-bold px-2 py-0.5 bg-[var(--color-surface-muted)] rounded-md text-[var(--color-card-text-secondary)]">{item.clientTag}</span>}
               </div>
-            ))}</div>
+            )})}</div>
           </div>
         );})}
       </div>
@@ -652,7 +681,29 @@ function Leads({crm,sel,setSel,showAdd,close,setConfirm}:any){
           </div>
         </div>
       </div>
-      {showAdd&&<QuickAdd title="New Lead" fields={[{k:"companyName",l:"Company",p:"Company name"},{k:"projectDescription",l:"Need",p:"What do they need?"},{k:"estimatedValue",l:"Value (₹)",p:"0",t:"number"},{k:"assignedAdminId",l:"Owner",t:"select",o:crm.team.map((t:any)=>({v:t.id,l:t.name}))}]} onSubmit={(d:any)=>{crm.addNewLead({companyName:d.companyName,projectDescription:d.projectDescription,source:"LinkedIn" as const,status:"Lead" as const,estimatedValue:Number(d.estimatedValue)||0,assignedAdminId:d.assignedAdminId||"a3",sourcedById:d.assignedAdminId||"a3",engagementScore:10});close();}} onClose={close}/>}
+      {showAdd&&<QuickAdd title="New Lead" fields={[
+        {k:"companyName",l:"Company",p:"Company name"},
+        {k:"companyInfo",l:"Company Info",p:"Details about the company"},
+        {k:"projectDescription",l:"Need",p:"What do they need?"},
+        {k:"personContacted",l:"Person Contacted",p:"Name of contact"},
+        {k:"source",l:"Contacted Via",p:"e.g., LinkedIn, Email"},
+        {k:"estimatedValue",l:"Value (₹)",p:"0",t:"number"},
+        {k:"assignedAdminId",l:"Owner",t:"select",o:crm.team.map((t:any)=>({v:t.id,l:t.name}))}
+      ]} onSubmit={(d:any)=>{
+        crm.addNewLead({
+          companyName:d.companyName,
+          companyInfo:d.companyInfo||"",
+          personContacted:d.personContacted||"",
+          source:d.source||"LinkedIn",
+          projectDescription:d.projectDescription,
+          status:"Lead" as const,
+          estimatedValue:Number(d.estimatedValue)||0,
+          assignedAdminId:d.assignedAdminId||crm.currentAdminId||"a3",
+          sourcedById:crm.currentAdminId||"a3",
+          engagementScore:10
+        });
+        close();
+      }} onClose={close}/>}
       
       <div className="bg-[var(--color-surface)] border border-[var(--color-border-card)] shadow-sm rounded-xl overflow-x-auto">
         <table className="w-full text-[11.5px] min-w-[1000px]">
