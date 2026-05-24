@@ -22,7 +22,7 @@ function PortalContent() {
   // Sync view with role
   useEffect(() => {
     if (userProfile) {
-      setActiveView(userProfile.category === "admin" ? "admin" : "client");
+      setActiveView(userProfile.category === "admin" || userProfile.category === "intern" ? "admin" : "client");
     }
   }, [userProfile]);
 
