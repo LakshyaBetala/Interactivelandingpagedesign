@@ -42,6 +42,10 @@ export default function AdminDashboard() {
     {id:"products",l:"Products",i:"△",c:products.length},
   ];
   if (crm.userProfile?.category === "admin") navItems.push({id:"access",l:"Access Management",i:"⚿",c:crm.crmUsers?.length||0});
+  // Filter nav for interns - they only see dashboard + their allowed tabs
+  const filteredNav = crm.userProfile?.category === "intern" 
+    ? navItems.filter(n => n.id === "dashboard" || (crm.userProfile?.allowedTabs || []).includes(n.id))
+    : navItems;
   return (
     <div className="flex h-[100dvh] bg-[var(--color-bg)] text-[var(--color-text-primary)] font-sans overflow-hidden">
       {/* ── sidebar overlay (mobile) ── */}
@@ -58,7 +62,7 @@ export default function AdminDashboard() {
           <button className="md:hidden p-1 text-[var(--color-text-muted)] hover:text-white" onClick={()=>setSidebarOpen(false)}>×</button>
         </div>
         <nav className="flex-1 px-3 mt-2 space-y-1 overflow-y-auto crm-scroll">
-          {navItems.map(n=>(
+          {filteredNav.map(n=>(
             <button key={n.id} onClick={()=>go(n.id)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] transition-all font-medium ${sec===n.id?"bg-[var(--color-ember)] text-white shadow-md":"text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-soft)]"}`}>
               <span className="text-[14px] w-5 text-center opacity-70">{n.i}</span><span className="flex-1 text-left">{n.l}</span>
               {n.c!==undefined&&<span className={`text-[10px] min-w-[20px] text-center px-1.5 py-0.5 rounded-full ${sec===n.id?"bg-[var(--color-surface)]/20 text-white font-bold":"bg-[var(--color-border)] text-[var(--color-text-muted)]"}`}>{n.c}</span>}
@@ -84,7 +88,7 @@ export default function AdminDashboard() {
             <button className="md:hidden p-2 -ml-2 text-[var(--color-text-muted)] hover:text-white" onClick={()=>setSidebarOpen(true)}>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
             </button>
-            <h2 className="text-[15px] font-bold tracking-tight text-[var(--color-card-text)]">{navItems.find(n=>n.id===sec)?.l}</h2>
+            <h2 className="text-[15px] font-bold tracking-tight text-[var(--color-card-text)]">{filteredNav.find(n=>n.id===sec)?.l || navItems.find(n=>n.id===sec)?.l}</h2>
           </div>
           {!["dashboard","access"].includes(sec)&&<button onClick={()=>setShowAdd(!showAdd)} className="px-4 py-2 bg-[var(--color-ember)] text-white text-[12px] font-bold rounded-lg hover:bg-[var(--color-ember-hover)] transition-all shadow-[0_0_10px_var(--color-ember-soft)] flex items-center gap-1.5"><span className="text-[14px] leading-none">+</span> New</button>}
         </header>
@@ -129,15 +133,17 @@ function Dashboard({crm, navigateTo}:any) {
   const possibleCount = clients.filter((c:any) => POSSIBLE_STAGES.includes(c.stage)).length;
   const openF=flags.filter((f:any)=>f.status!=="Resolved").length;
   const openT=internalTasks.filter((t:any)=>t.status!=="Resolved").length;
+  const typeIcon:Record<string,string> = {milestone:"🏁",comment:"💬",invoice:"💰",alert:"🚨"};
   return (
-    <div className="space-y-6 max-w-[1200px] mx-auto">
+    <div className="space-y-6 max-w-[1400px] mx-auto">
       {/* stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {[{l:"Active Projects",v:activeCount,a:"text-[var(--color-ok)]"},{l:"Pipeline",v:fmt(pipe),a:"text-[var(--color-text-primary)]"},{l:"Tasks",v:openT,a:"text-[var(--color-info)]"},{l:"Issues",v:openF,a:openF?"text-[var(--color-bad)]":"text-[var(--color-text-primary)]"},{l:"Possible Projects",v:possibleCount,a:"text-[var(--color-text-primary)]"}].map(s=>(
           <div key={s.l} className="bg-[var(--color-surface)] border border-[var(--color-border-card)] shadow-sm rounded-xl px-4 py-3"><Lbl>{s.l}</Lbl><p className={`text-2xl font-bold mt-1 ${s.a}`}>{s.v}</p></div>
         ))}
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Column 1: Team Workload */}
         <div className="space-y-3">
           <Lbl>Team Workload</Lbl>
           {team.map((m:any)=>{const ts=internalTasks.filter((t:any)=>t.assignedAdminId===m.id&&t.status!=="Resolved");const now=ts.find((t:any)=>t.status==="In Progress");const nx=ts.find((t:any)=>t.status==="Todo");const pj=clients.filter((c:any)=>c.assignedAdminId===m.id);const cap=ts.length<=2?"bg-[var(--color-ok)]":ts.length<=4?"bg-[var(--color-warn)]":"bg-[var(--color-bad)]";return(
@@ -150,6 +156,33 @@ function Dashboard({crm, navigateTo}:any) {
             </div>
           );})}
         </div>
+        {/* Column 2: Activity Feed */}
+        <div className="space-y-3">
+          <Lbl>Activity Feed</Lbl>
+          <div className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border-card)] shadow-sm p-4 max-h-[600px] overflow-y-auto crm-scroll">
+            {activities.length === 0 && <div className="flex flex-col items-center justify-center py-8 opacity-30"><span className="text-2xl mb-1">📋</span><p className="text-[11px] font-medium">No activity yet</p></div>}
+            <div className="relative">
+              {activities.length > 0 && <div className="absolute left-[7px] top-2 bottom-2 w-[2px] bg-[var(--color-border-card)]/50 rounded-full"/>}
+              <div className="space-y-0">
+                {activities.slice(0, 20).map((a:any, i:number) => (
+                  <div key={a.id || i} className="flex gap-3 py-3 relative group hover:bg-[var(--color-bg-soft)] rounded-lg px-1 -mx-1 transition-colors">
+                    <div className="relative z-10 flex-shrink-0 w-4 h-4 rounded-full bg-[var(--color-surface)] border-2 border-[var(--color-border-card)] flex items-center justify-center mt-0.5">
+                      <span className="text-[8px]">{typeIcon[a.type] || "•"}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11.5px] font-bold text-[var(--color-card-text)] leading-snug">{a.action}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[9px] font-bold text-[var(--color-ember)] bg-[var(--color-ember-soft)] px-1.5 py-0.5 rounded">{a.client}</span>
+                        <span className="text-[9px] text-[var(--color-text-faint)] font-medium">{a.time}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Column 3: Attention + Active Projects */}
         <div className="space-y-6">
           <div className="bg-[var(--color-surface)] p-4 rounded-xl border border-[var(--color-border-card)] shadow-sm"><Lbl>Needs Attention</Lbl>
             <div className="space-y-2 mt-3">
@@ -159,7 +192,10 @@ function Dashboard({crm, navigateTo}:any) {
             </div>
           </div>
           <div><Lbl>Active Projects</Lbl>
-            <div className="space-y-1.5 mt-2">{activeClients.map((c:any)=>{const si=PROJECT_STAGES.indexOf(c.stage);return <div key={c.id} className="flex flex-col gap-1.5 py-2 px-3 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border-card)] shadow-sm hover:shadow transition-shadow"><div className="flex justify-between items-center"><span className="text-[12px] font-bold truncate text-[var(--color-card-text)]">{c.name}</span><span className="text-[10px] font-semibold text-[var(--color-ember)]">{c.stage}</span></div><div className="flex gap-1 w-full mt-1">{PROJECT_STAGES.map((_:any,i:number)=><div key={i} className={`h-1.5 flex-1 rounded-full ${i<=si?"bg-[var(--color-ember)] shadow-[0_0_5px_var(--color-ember)]/30":"bg-[var(--color-border)]"}`}/>)}</div></div>;})}</div>
+            <div className="space-y-1.5 mt-2">{activeClients.map((c:any)=>{const si=PROJECT_STAGES.indexOf(c.stage);const ow=team.find((t:any)=>t.id===c.assignedAdminId);return <div key={c.id} className="flex flex-col gap-1.5 py-2.5 px-3 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border-card)] shadow-sm hover:shadow transition-shadow">
+              <div className="flex justify-between items-center"><span className="text-[12px] font-bold truncate text-[var(--color-card-text)]">{c.name}</span><div className="flex items-center gap-2"><span className="text-[10px] font-semibold text-[var(--color-ember)]">{c.stage}</span>{ow && <Av id={ow.id} name={ow.name} sz={16}/>}</div></div>
+              <div className="flex gap-1 w-full mt-1">{PROJECT_STAGES.map((_:any,i:number)=><div key={i} className={`h-1.5 flex-1 rounded-full ${i<=si?"bg-[var(--color-ember)] shadow-[0_0_5px_var(--color-ember)]/30":"bg-[var(--color-border)]"}`}/>)}</div>
+            </div>})}</div>
           </div>
         </div>
       </div>
@@ -701,13 +737,20 @@ function Products({crm, showAdd, close}:any){
 }
 
 /* ═══════════════════════ ACCESS MANAGEMENT ═══════════════════════ */
+const ALL_TABS = [{id:"projects",l:"Projects"},{id:"tasks",l:"Tasks"},{id:"social",l:"Social"},{id:"leads",l:"Leads"},{id:"support",l:"Support"},{id:"products",l:"Products"}];
+
 function AccessManagement({crm, clients}:any) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [role, setRole] = useState("client");
   const [assignedClientId, setAssignedClientId] = useState<number>(clients[0]?.id || 1);
+  const [internTabs, setInternTabs] = useState<string[]>(["projects","tasks"]);
   const [error, setError] = useState<string|null>(null);
+
+  const toggleTab = (tabId: string) => {
+    setInternTabs(prev => prev.includes(tabId) ? prev.filter(t => t !== tabId) : [...prev, tabId]);
+  };
 
   const createUser = () => {
     if (!email || !password || !name) { setError("Please fill all fields"); return; }
@@ -719,9 +762,10 @@ function AccessManagement({crm, clients}:any) {
       role: role === "admin" ? "admin" : role === "intern" ? "intern" : "client",
       category: role === "admin" ? "admin" : role === "intern" ? "intern" : "client",
       assignedClientId: role === "client" ? assignedClientId : undefined,
+      allowedTabs: role === "intern" ? internTabs : undefined,
       createdBy: crm.userProfile?.email
     });
-    setEmail(""); setPassword(""); setName(""); setError(null);
+    setEmail(""); setPassword(""); setName(""); setError(null); setInternTabs(["projects","tasks"]);
   };
   
   const [editE,setEditE]=useState<string|null>(null);
@@ -761,6 +805,20 @@ function AccessManagement({crm, clients}:any) {
               </select>
             </div>
           )}
+          {role === "intern" && (
+            <div className="md:col-span-2">
+              <Lbl>Allowed Tabs (Data Abstraction)</Lbl>
+              <p className="text-[10px] text-[var(--color-text-faint)] mb-2 mt-1">Select which sections this intern can access. Dashboard is always visible.</p>
+              <div className="flex flex-wrap gap-2">
+                {ALL_TABS.map(tab => (
+                  <button key={tab.id} onClick={() => toggleTab(tab.id)}
+                    className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all ${internTabs.includes(tab.id) ? "bg-[var(--color-ember)] text-white border-[var(--color-ember)] shadow-[0_0_8px_var(--color-ember-soft)]" : "bg-[var(--color-surface-muted)] text-[var(--color-text-muted)] border-[var(--color-border-card)] hover:border-[var(--color-ember)]/50"}`}>
+                    {internTabs.includes(tab.id) ? "✓ " : ""}{tab.l}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
         {error && <p className="text-[12px] font-bold text-[var(--color-bad)] mb-4 bg-[var(--color-bad-soft)] p-3 rounded-lg border border-[var(--color-bad)]/20">{error}</p>}
         <button onClick={createUser} className="w-full bg-[var(--color-charcoal)] text-white text-[13px] font-bold px-4 py-3 rounded-xl hover:bg-[var(--color-charcoal-mid)] shadow-md transition-colors">Create User Credentials</button>
@@ -769,8 +827,8 @@ function AccessManagement({crm, clients}:any) {
       <div>
         <Lbl>Active Provisioned Accounts</Lbl>
         <div className="bg-[var(--color-surface)] border border-[var(--color-border-card)] rounded-xl overflow-x-auto shadow-sm mt-2">
-          <table className="w-full text-left border-collapse text-[11px] min-w-[700px]">
-            <thead><tr className="border-b border-[var(--color-border-card)] bg-[var(--color-surface)]"><th className="p-4 font-bold text-[var(--color-text-secondary)]">User</th><th className="p-4 font-bold text-[var(--color-text-secondary)]">Email</th><th className="p-4 font-bold text-[var(--color-text-secondary)]">Role</th><th className="p-4 font-bold text-[var(--color-text-secondary)]">Restriction / Password</th><th className="p-4 font-bold text-[var(--color-text-secondary)]">Created By</th><th className="p-4"></th></tr></thead>
+          <table className="w-full text-left border-collapse text-[11px] min-w-[800px]">
+            <thead><tr className="border-b border-[var(--color-border-card)] bg-[var(--color-surface)]"><th className="p-4 font-bold text-[var(--color-text-secondary)]">User</th><th className="p-4 font-bold text-[var(--color-text-secondary)]">Email</th><th className="p-4 font-bold text-[var(--color-text-secondary)]">Role</th><th className="p-4 font-bold text-[var(--color-text-secondary)]">Restriction / Password</th><th className="p-4 font-bold text-[var(--color-text-secondary)]">Allowed Tabs</th><th className="p-4 font-bold text-[var(--color-text-secondary)]">Created By</th><th className="p-4"></th></tr></thead>
             <tbody>
               {crm.crmUsers?.map((u:any) => (
                 <tr key={u.email} className="border-b border-[var(--color-border-card)]/30 hover:bg-[var(--color-bg-soft)] transition-colors">
@@ -793,11 +851,31 @@ function AccessManagement({crm, clients}:any) {
                       <div className="flex items-center gap-1 text-[10px]"><span className="text-[var(--color-text-faint)]">Pass:</span> <EditU uemail={u.email} field="password" value={u.password} c="text-[var(--color-card-text)]"/></div>
                     )}
                   </td>
+                  <td className="p-4">
+                    {u.role === 'intern' ? (
+                      <div className="flex flex-wrap gap-1">
+                        {ALL_TABS.map(tab => {
+                          const allowed = (u.allowedTabs || []).includes(tab.id);
+                          return <button key={tab.id} onClick={() => {
+                            const current = u.allowedTabs || [];
+                            const updated = allowed ? current.filter((t:string) => t !== tab.id) : [...current, tab.id];
+                            crm.updateCrmUser(u.email, {allowedTabs: updated});
+                          }} className={`px-1.5 py-0.5 rounded text-[8px] font-bold border transition-all ${allowed ? "bg-[var(--color-ember)] text-white border-[var(--color-ember)]" : "bg-[var(--color-surface-muted)] text-[var(--color-text-faint)] border-[var(--color-border)]"}`}>
+                            {tab.l}
+                          </button>;
+                        })}
+                      </div>
+                    ) : u.role === 'admin' ? (
+                      <span className="text-[9px] font-bold text-[var(--color-ember)] bg-[var(--color-ember-soft)] px-2 py-0.5 rounded">Full Access</span>
+                    ) : (
+                      <span className="text-[9px] font-bold text-[var(--color-ok)] bg-[var(--color-ok)]/10 px-2 py-0.5 rounded">Project Only</span>
+                    )}
+                  </td>
                   <td className="p-4 text-[var(--color-text-secondary)] font-medium text-[10px]">{u.createdBy || 'System'}</td>
                   <td className="p-4 text-right"><button onClick={()=>crm.deleteCrmUser(u.email)} className="text-[11px] font-bold text-[var(--color-bad)] hover:bg-[var(--color-bad-soft)] px-3 py-1.5 rounded-md transition-colors">Revoke</button></td>
                 </tr>
               ))}
-              {(!crm.crmUsers || crm.crmUsers.length === 0) && <tr><td colSpan={6} className="p-8 text-center text-[var(--color-text-faint)] font-medium text-[13px]">No custom accounts provisioned yet.</td></tr>}
+              {(!crm.crmUsers || crm.crmUsers.length === 0) && <tr><td colSpan={7} className="p-8 text-center text-[var(--color-text-faint)] font-medium text-[13px]">No custom accounts provisioned yet.</td></tr>}
             </tbody>
           </table>
         </div>

@@ -168,6 +168,7 @@ export interface UserProfile {
   category: "admin" | "intern" | "client";
   assignedClientId?: number; // Only for clients
   assignedProjects?: number[]; // Only for interns
+  allowedTabs?: string[]; // For interns: which tabs they can see
   avatar: string;
   colorVar: string;
   primaryFocus: string;
@@ -648,18 +649,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      if (profile.category === "admin") {
-        // Clear mock data so we don't confuse users with dummy data returning on refresh
-        setTeam([]);
-        setClients([]);
-        setProducts([]);
-        setComments([]);
-        setLeads([]);
-        setFlags([]);
-        setReleases([]);
-        setInternalTasks([]);
-        setSocialMedia([]);
-
+      if (profile.category === "admin" || profile.category === "intern") {
         // Partners fetch all telemetry metrics individually so one missing table doesn't abort the rest
         const safeFetch = async (promise: PromiseLike<any>) => {
           const res = await promise;
@@ -678,16 +668,17 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         const dbAuthEmails = await safeFetch(supabase.from("authorized_emails").select("*"));
         const dbSocial = await safeFetch(supabase.from("social_media").select("*"));
 
-        if (dbProfiles) setTeam(dbProfiles.map(mapTeamMemberToTS));
-        if (dbClients) setClients(dbClients.map(mapClientToTS));
-        if (dbProducts) setProducts(dbProducts.map(mapProductToTS));
-        if (dbComments) setComments(dbComments.map(mapCommentToTS));
-        if (dbLeads) setLeads(dbLeads.map(mapLeadToTS));
-        if (dbFlags) setFlags(dbFlags.map(mapFlagToTS));
-        if (dbReleases) setReleases(dbReleases.map(mapReleaseToTS));
-        if (dbTasks) setInternalTasks(dbTasks.map(mapTaskToTS));
-        if (dbAuthEmails) setAuthorizedEmails(dbAuthEmails.map(mapAuthEmailToTS));
-        if (dbSocial) setSocialMedia(dbSocial.map(mapSocialToTS));
+        // Fallback to initial mock data when Supabase tables are empty (fresh setup)
+        setTeam(dbProfiles && dbProfiles.length > 0 ? dbProfiles.map(mapTeamMemberToTS) : INITIAL_TEAM);
+        setClients(dbClients && dbClients.length > 0 ? dbClients.map(mapClientToTS) : INITIAL_CLIENTS);
+        setProducts(dbProducts && dbProducts.length > 0 ? dbProducts.map(mapProductToTS) : INITIAL_PRODUCTS);
+        setComments(dbComments && dbComments.length > 0 ? dbComments.map(mapCommentToTS) : INITIAL_COMMENTS);
+        setLeads(dbLeads && dbLeads.length > 0 ? dbLeads.map(mapLeadToTS) : INITIAL_LEADS);
+        setFlags(dbFlags && dbFlags.length > 0 ? dbFlags.map(mapFlagToTS) : INITIAL_FLAGS);
+        setReleases(dbReleases && dbReleases.length > 0 ? dbReleases.map(mapReleaseToTS) : INITIAL_RELEASES);
+        setInternalTasks(dbTasks && dbTasks.length > 0 ? dbTasks.map(mapTaskToTS) : INITIAL_INTERNAL_TASKS);
+        if (dbAuthEmails && dbAuthEmails.length > 0) setAuthorizedEmails(dbAuthEmails.map(mapAuthEmailToTS));
+        setSocialMedia(dbSocial && dbSocial.length > 0 ? dbSocial.map(mapSocialToTS) : INITIAL_SOCIAL_MEDIA);
       } else {
         // Client sandboxing - fetch ONLY their record
         setClients([]);
@@ -742,6 +733,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         category: session.category as any,
         assignedClientId: session.assignedClientId,
         assignedProjects: session.assignedProjects,
+        allowedTabs: session.allowedTabs,
         avatar: session.name.substring(0, 2).toUpperCase(),
         colorVar: "var(--color-admin-lakshya)",
         primaryFocus: "Operations",
@@ -1098,6 +1090,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         lastContacted: "Just now"
       }
     ]);
+    setActivities(prev => [{ id: Date.now(), action: `📥 New lead added: ${lead.companyName}`, client: lead.companyName, time: "Just now", type: "comment" as const }, ...prev]);
   }, [isSupabaseConfigured]);
 
   const convertLeadToClient = useCallback(async (leadId: string) => {
@@ -1405,6 +1398,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         createdAt: "Just now"
       }
     ]);
+    setActivities(prev => [{ id: Date.now(), action: `📌 New task: ${task.title}`, client: "Internal", time: "Just now", type: "comment" as const }, ...prev]);
   }, [isSupabaseConfigured]);
 
   const updateInternalTaskStatus = useCallback(async (taskId: string, status: TaskStatus) => {
@@ -1462,34 +1456,29 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         assigned_admin_id: client.assignedAdminId || null,
       }).select();
 
-      if (error) {
-        console.error("Database add client error:", error);
-        return;
-      }
-      if (data && data.length > 0) {
+      if (!error && data && data.length > 0) {
         setClients(prev => [...prev, mapClientToTS(data[0])]);
+        setActivities(prev => [{ id: Date.now(), action: `📋 New project created: ${client.name}`, client: client.name, time: "Just now", type: "milestone" }, ...prev]);
         return;
       }
+      if (error) console.error("Database add client error:", error);
     }
-    setClients(prev => [
-      ...prev,
-      {
-        ...client,
-        id: prev.length > 0 ? Math.max(...prev.map(c => c.id)) + 1 : 1,
-        health: 100,
-        lastActivity: "Client workspace initialized",
-        avatar
-      }
-    ]);
+    // Always update local state as fallback
+    const newClient: CRMClient = {
+      ...client,
+      id: Date.now(),
+      health: 100,
+      lastActivity: "Client workspace initialized",
+      avatar
+    };
+    setClients(prev => [...prev, newClient]);
+    setActivities(prev => [{ id: Date.now(), action: `📋 New project created: ${client.name}`, client: client.name, time: "Just now", type: "milestone" }, ...prev]);
   }, [isSupabaseConfigured]);
 
   const deleteClient = useCallback(async (clientId: number) => {
     if (isSupabaseConfigured) {
       const { error } = await supabase.from("clients").delete().eq("id", clientId);
-      if (error) {
-        console.error("Database delete client error:", error);
-        return;
-      }
+      if (error) console.error("Database delete client error:", error);
     }
     setClients(prev => prev.filter(c => c.id !== clientId));
   }, [isSupabaseConfigured]);
@@ -1497,10 +1486,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
   const deleteLead = useCallback(async (leadId: string) => {
     if (isSupabaseConfigured) {
       const { error } = await supabase.from("outreach_leads").delete().eq("id", leadId);
-      if (error) {
-        console.error("Database delete lead error:", error);
-        return;
-      }
+      if (error) console.error("Database delete lead error:", error);
     }
     setLeads(prev => prev.filter(l => l.id !== leadId));
   }, [isSupabaseConfigured]);
@@ -1508,10 +1494,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
   const deleteInternalTask = useCallback(async (taskId: string) => {
     if (isSupabaseConfigured) {
       const { error } = await supabase.from("internal_tasks").delete().eq("id", taskId);
-      if (error) {
-        console.error("Database delete task error:", error);
-        return;
-      }
+      if (error) console.error("Database delete task error:", error);
     }
     setInternalTasks(prev => prev.filter(t => t.id !== taskId));
   }, [isSupabaseConfigured]);
@@ -1519,10 +1502,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
   const deleteFlag = useCallback(async (flagId: string) => {
     if (isSupabaseConfigured) {
       const { error } = await supabase.from("project_flags").delete().eq("id", flagId);
-      if (error) {
-        console.error("Database delete flag error:", error);
-        return;
-      }
+      if (error) console.error("Database delete flag error:", error);
     }
     setFlags(prev => prev.filter(f => f.id !== flagId));
   }, [isSupabaseConfigured]);
@@ -1530,10 +1510,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
   const deleteRelease = useCallback(async (releaseId: string) => {
     if (isSupabaseConfigured) {
       const { error } = await supabase.from("releases").delete().eq("id", releaseId);
-      if (error) {
-        console.error("Database delete release error:", error);
-        return;
-      }
+      if (error) console.error("Database delete release error:", error);
     }
     setReleases(prev => prev.filter(r => r.id !== releaseId));
   }, [isSupabaseConfigured]);
