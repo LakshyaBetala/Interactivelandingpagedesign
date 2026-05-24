@@ -882,16 +882,21 @@ function Products({crm, showAdd, close, setConfirm}:any){
 }
 
 /* ═══════════════════════ ACCESS MANAGEMENT ═══════════════════════ */
-const ALL_TABS = [{id:"projects",l:"Projects"},{id:"tasks",l:"Tasks"},{id:"social",l:"Social"},{id:"leads",l:"Leads"},{id:"support",l:"Support"},{id:"products",l:"Products"}];
+const ALL_TABS = [{id:"dashboard",l:"Dashboard"},{id:"projects",l:"Projects"},{id:"tasks",l:"Tasks"},{id:"social",l:"Social"},{id:"leads",l:"Leads"},{id:"support",l:"Support"},{id:"products",l:"Products"}];
 
 function AccessManagement({crm, clients, setConfirm}:any) {
+  const isSuperAdmin = crm.userProfile?.email === "lakshbetala15@gmail.com";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [role, setRole] = useState("client");
   const [assignedClientId, setAssignedClientId] = useState<number>(clients[0]?.id || 1);
-  const [internTabs, setInternTabs] = useState<string[]>(["projects","tasks"]);
+  const [internTabs, setInternTabs] = useState<string[]>(["dashboard", "projects", "tasks"]);
   const [error, setError] = useState<string|null>(null);
+
+  const [passPrompt, setPassPrompt] = useState<{ title: string, desc: string, action: () => void } | null>(null);
+  const [passInput, setPassInput] = useState("");
+  const [passError, setPassError] = useState("");
 
   const toggleTab = (tabId: string) => {
     setInternTabs(prev => prev.includes(tabId) ? prev.filter(t => t !== tabId) : [...prev, tabId]);
@@ -899,18 +904,25 @@ function AccessManagement({crm, clients, setConfirm}:any) {
 
   const createUser = () => {
     if (!email || !password || !name) { setError("Please fill all fields"); return; }
-    crm.addCrmUser({
-      id: Date.now().toString(),
-      email: email.toLowerCase(),
-      password,
-      name,
-      role: role === "admin" ? "admin" : role === "intern" ? "intern" : "client",
-      category: role === "admin" ? "admin" : role === "intern" ? "intern" : "client",
-      assignedClientId: role === "client" ? assignedClientId : undefined,
-      allowedTabs: role === "intern" ? internTabs : undefined,
-      createdBy: crm.userProfile?.email
+    
+    setPassPrompt({
+      title: "Confirm Password",
+      desc: `Please enter your admin password to create this ${role} account.`,
+      action: () => {
+        crm.addCrmUser({
+          id: Date.now().toString(),
+          email: email.toLowerCase(),
+          password,
+          name,
+          role: role === "admin" ? "admin" : role === "intern" ? "intern" : "client",
+          category: role === "admin" ? "admin" : role === "intern" ? "intern" : "client",
+          assignedClientId: role === "client" ? assignedClientId : undefined,
+          allowedTabs: role === "intern" ? internTabs : undefined,
+          createdBy: crm.userProfile?.email
+        });
+        setEmail(""); setPassword(""); setName(""); setError(null); setInternTabs(["dashboard", "projects", "tasks"]);
+      }
     });
-    setEmail(""); setPassword(""); setName(""); setError(null); setInternTabs(["projects","tasks"]);
   };
   
   const [editE,setEditE]=useState<string|null>(null);
@@ -918,11 +930,11 @@ function AccessManagement({crm, clients, setConfirm}:any) {
   const [editV,setEditV]=useState("");
   const saveU=(uemail:string,field:string)=>{crm.updateCrmUser(uemail,{[field]:editV});setEditE(null);setEditF(null);};
   
-  const EditU=({uemail,field,value,c="font-medium"}:{uemail:string;field:string;value:string;c?:string})=>(
-    editE===uemail&&editF===field?(
+  const EditU=({uemail,field,value,c="font-medium",disabled=false}:{uemail:string;field:string;value:string;c?:string;disabled?:boolean})=>(
+    editE===uemail&&editF===field&&!disabled?(
       <input autoFocus value={editV} onChange={e=>setEditV(e.target.value)} onBlur={()=>saveU(uemail,field)} onKeyDown={e=>e.key==="Enter"&&saveU(uemail,field)} className={`!bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-ember)] shadow-[0_0_5px_var(--color-ember-soft)] rounded px-2 py-0.5 outline-none font-bold text-[11px] w-full`}/>
     ):(
-      <span onDoubleClick={()=>{setEditE(uemail);setEditF(field);setEditV(value);}} className={`cursor-text hover:text-[var(--color-ember)] border-b border-dashed border-transparent hover:border-[var(--color-ember)] transition-colors block ${c}`}>{value}</span>
+      <span onDoubleClick={()=>{if(!disabled){setEditE(uemail);setEditF(field);setEditV(value);}}} className={`${disabled?"":"cursor-text hover:text-[var(--color-ember)] border-b border-dashed border-transparent hover:border-[var(--color-ember)]"} transition-colors block ${c}`}>{value}</span>
     )
   );
 
@@ -953,7 +965,6 @@ function AccessManagement({crm, clients, setConfirm}:any) {
           {role === "intern" && (
             <div className="md:col-span-2">
               <Lbl>Allowed Tabs (Data Abstraction)</Lbl>
-              <p className="text-[10px] text-[var(--color-text-faint)] mb-2 mt-1">Select which sections this intern can access. Dashboard is always visible.</p>
               <div className="flex flex-wrap gap-2">
                 {ALL_TABS.map(tab => (
                   <button key={tab.id} onClick={() => toggleTab(tab.id)}
@@ -975,25 +986,46 @@ function AccessManagement({crm, clients, setConfirm}:any) {
           <table className="w-full text-left border-collapse text-[11px] min-w-[800px]">
             <thead><tr className="border-b border-[var(--color-border-card)] bg-[var(--color-surface)]"><th className="p-4 font-bold text-[var(--color-text-secondary)]">User</th><th className="p-4 font-bold text-[var(--color-text-secondary)]">Email</th><th className="p-4 font-bold text-[var(--color-text-secondary)]">Role</th><th className="p-4 font-bold text-[var(--color-text-secondary)]">Restriction / Password</th><th className="p-4 font-bold text-[var(--color-text-secondary)]">Allowed Tabs</th><th className="p-4 font-bold text-[var(--color-text-secondary)]">Created By</th><th className="p-4"></th></tr></thead>
             <tbody>
-              {crm.crmUsers?.map((u:any) => (
+              {crm.crmUsers?.map((u:any) => {
+                const canEdit = u.role !== 'admin' || isSuperAdmin;
+                return (
                 <tr key={u.email} className="border-b border-[var(--color-border-card)]/30 hover:bg-[var(--color-bg-soft)] transition-colors">
-                  <td className="p-4 text-[var(--color-card-text)]"><EditU uemail={u.email} field="name" value={u.name} c="font-bold text-[12px]"/></td>
+                  <td className="p-4 text-[var(--color-card-text)]"><EditU uemail={u.email} field="name" value={u.name} c="font-bold text-[12px]" disabled={!canEdit}/></td>
                   <td className="p-4 text-[var(--color-text-secondary)] font-medium">{u.email}</td>
                   <td className="p-4">
-                    <select value={u.role} onChange={e=>crm.updateCrmUser(u.email,{role:e.target.value, category:e.target.value})} className={`!bg-transparent outline-none cursor-pointer font-bold px-2 py-1 rounded-md ${u.role==='admin'?'text-[var(--color-ember)] bg-[var(--color-ember)]/10':u.role==='client'?'text-[var(--color-ok)] bg-[var(--color-ok)]/10':'text-[var(--color-info)] bg-[var(--color-info)]/10'}`}>
+                    {!canEdit ? (
+                      <span className="text-[12px] font-bold text-[var(--color-ember)] bg-[var(--color-ember)]/10 px-2 py-1 rounded-md">admin</span>
+                    ) : (
+                    <select value={u.role} onChange={e=>{
+                      const newRole = e.target.value;
+                      if (u.role === 'admin' || newRole === 'admin') {
+                        setPassPrompt({
+                          title: "Confirm Password",
+                          desc: "Please enter your admin password to modify admin privileges.",
+                          action: () => crm.updateCrmUser(u.email,{role:newRole, category:newRole})
+                        });
+                      } else {
+                        setConfirm({title:"Change Role",desc:"Are you sure you want to change this user's role?",action:()=>crm.updateCrmUser(u.email,{role:newRole, category:newRole})});
+                      }
+                    }} className={`!bg-transparent outline-none cursor-pointer font-bold px-2 py-1 rounded-md ${u.role==='admin'?'text-[var(--color-ember)] bg-[var(--color-ember)]/10':u.role==='client'?'text-[var(--color-ok)] bg-[var(--color-ok)]/10':'text-[var(--color-info)] bg-[var(--color-info)]/10'}`}>
                       <option value="client">client</option><option value="intern">intern</option><option value="admin">admin</option>
                     </select>
+                    )}
                   </td>
                   <td className="p-4 text-[var(--color-text-secondary)] font-medium">
                     {u.role === 'client' ? (
                       <div className="flex flex-col gap-1">
-                        <select value={u.assignedClientId||""} onChange={e=>crm.updateCrmUser(u.email,{assignedClientId:Number(e.target.value)})} className="!bg-transparent border-b border-dashed border-[var(--color-border)] outline-none cursor-pointer w-32">
-                          {clients.map((c:any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        </select>
-                        <div className="flex items-center gap-1 text-[9px]"><span className="text-[var(--color-text-faint)]">Pass:</span> <EditU uemail={u.email} field="password" value={u.password} c="text-[var(--color-card-text)]"/></div>
+                        {!canEdit ? (
+                          <span className="text-[11px] font-bold text-[var(--color-card-text)]">{clients.find((c:any)=>c.id===u.assignedClientId)?.name || "—"}</span>
+                        ) : (
+                          <select value={u.assignedClientId||""} onChange={e=>crm.updateCrmUser(u.email,{assignedClientId:Number(e.target.value)})} className="!bg-transparent border-b border-dashed border-[var(--color-border)] outline-none cursor-pointer w-32">
+                            {clients.map((c:any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                          </select>
+                        )}
+                        <div className="flex items-center gap-1 text-[9px]"><span className="text-[var(--color-text-faint)]">Pass:</span> <EditU uemail={u.email} field="password" value={u.password} c="text-[var(--color-card-text)]" disabled={!canEdit}/></div>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1 text-[10px]"><span className="text-[var(--color-text-faint)]">Pass:</span> <EditU uemail={u.email} field="password" value={u.password} c="text-[var(--color-card-text)]"/></div>
+                      <div className="flex items-center gap-1 text-[10px]"><span className="text-[var(--color-text-faint)]">Pass:</span> <EditU uemail={u.email} field="password" value={u.password} c="text-[var(--color-card-text)]" disabled={!canEdit}/></div>
                     )}
                   </td>
                   <td className="p-4">
@@ -1002,10 +1034,11 @@ function AccessManagement({crm, clients, setConfirm}:any) {
                         {ALL_TABS.map(tab => {
                           const allowed = (u.allowedTabs || []).includes(tab.id);
                           return <button key={tab.id} onClick={() => {
+                            if (!canEdit) return;
                             const current = u.allowedTabs || [];
                             const updated = allowed ? current.filter((t:string) => t !== tab.id) : [...current, tab.id];
                             crm.updateCrmUser(u.email, {allowedTabs: updated});
-                          }} className={`px-1.5 py-0.5 rounded text-[8px] font-bold border transition-all ${allowed ? "bg-[var(--color-ember)] text-white border-[var(--color-ember)]" : "bg-[var(--color-surface-muted)] text-[var(--color-text-faint)] border-[var(--color-border)]"}`}>
+                          }} className={`px-1.5 py-0.5 rounded text-[8px] font-bold border transition-all ${allowed ? "bg-[var(--color-ember)] text-white border-[var(--color-ember)]" : "bg-[var(--color-surface-muted)] text-[var(--color-text-faint)] border-[var(--color-border)]"} ${canEdit?"":"opacity-80 cursor-default"}`}>
                             {tab.l}
                           </button>;
                         })}
@@ -1017,14 +1050,54 @@ function AccessManagement({crm, clients, setConfirm}:any) {
                     )}
                   </td>
                   <td className="p-4 text-[var(--color-text-secondary)] font-medium text-[10px]">{u.createdBy || 'System'}</td>
-                  <td className="p-4 text-right"><button onClick={()=>setConfirm({title:"Revoke Access",desc:"Are you sure you want to revoke this user's access everywhere?",action:()=>crm.deleteCrmUser(u.email)})} className="text-[11px] font-bold text-[var(--color-bad)] hover:bg-[var(--color-bad-soft)] px-3 py-1.5 rounded-md transition-colors">Revoke</button></td>
+                  <td className="p-4 text-right">
+                    {canEdit && (
+                      <button onClick={()=>{
+                        if (u.role === 'admin') {
+                          setPassPrompt({
+                            title: "Confirm Password",
+                            desc: "Please enter your password to revoke this admin account.",
+                            action: () => crm.deleteCrmUser(u.email)
+                          });
+                        } else {
+                          setConfirm({title:"Revoke Access",desc:"Are you sure you want to revoke this user's access everywhere?",action:()=>crm.deleteCrmUser(u.email)});
+                        }
+                      }} className="text-[11px] font-bold text-[var(--color-bad)] hover:bg-[var(--color-bad-soft)] px-3 py-1.5 rounded-md transition-colors">Revoke</button>
+                    )}
+                  </td>
                 </tr>
-              ))}
+              )})}
               {(!crm.crmUsers || crm.crmUsers.length === 0) && <tr><td colSpan={7} className="p-8 text-center text-[var(--color-text-faint)] font-medium text-[13px]">No custom accounts provisioned yet.</td></tr>}
             </tbody>
           </table>
         </div>
       </div>
+      </div>
+
+      {passPrompt && (
+        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <motion.div initial={{opacity:0, scale:0.95}} animate={{opacity:1, scale:1}} className="bg-[var(--color-surface)] border border-[var(--color-border-card)] p-6 rounded-2xl w-full max-w-[400px] shadow-2xl">
+            <h3 className="text-[18px] font-black text-white mb-2">{passPrompt.title}</h3>
+            <p className="text-[13px] text-[var(--color-text-secondary)] mb-4 leading-relaxed">{passPrompt.desc}</p>
+            <input type="password" value={passInput} onChange={e=>{setPassInput(e.target.value);setPassError("")}} placeholder="Enter your password" className="w-full !bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-border-card)] shadow-sm rounded-lg px-3 py-2 text-[12px] font-medium outline-none focus:!border-[var(--color-ember)] mb-2" autoFocus/>
+            {passError && <p className="text-[11px] font-bold text-[var(--color-bad)] mb-2 bg-[var(--color-bad-soft)] p-2 rounded">{passError}</p>}
+            <div className="flex justify-end gap-3 mt-4">
+              <button onClick={() => {setPassPrompt(null);setPassInput("");setPassError("");}} className="px-5 py-2 text-[12px] font-bold text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-muted)] rounded-lg transition-colors">Cancel</button>
+              <button onClick={() => {
+                if (passInput === crm.userProfile?.password) {
+                  passPrompt.action();
+                  setPassPrompt(null);
+                  setPassInput("");
+                  setPassError("");
+                } else {
+                  setPassError("Incorrect password");
+                }
+              }} className="px-5 py-2 text-[12px] font-bold bg-[var(--color-ember)] hover:bg-[var(--color-ember-hover)] text-white rounded-lg transition-colors shadow-md">Confirm</button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
     </div>
   );
 }
