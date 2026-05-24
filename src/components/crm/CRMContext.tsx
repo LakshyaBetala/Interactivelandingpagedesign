@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, ReactNode } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
 // --- Types ---
@@ -605,6 +605,21 @@ export function CRMProvider({ children }: { children: ReactNode }) {
   const [releases, setReleases] = useState<ChangelogRelease[]>([]);
   const [internalTasks, setInternalTasks] = useState<InternalTask[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<number>(1);
+
+  const team = useMemo(() => {
+    return crmUsers
+      .filter((u: any) => u.category === "admin" || u.category === "intern")
+      .map((u: any) => ({
+        id: u.id || u.email,
+        name: u.name,
+        role: u.role || "Team Member",
+        avatar: (u.name || "?").substring(0, 2).toUpperCase(),
+        colorVar: u.colorVar || "var(--color-admin-lakshya)",
+        primaryFocus: (u.primary_focus || u.primaryFocus || "Management") as any,
+        responsibilities: [],
+        activeTasks: []
+      }));
+  }, [crmUsers]);
 
   // If Supabase is unconfigured, fall back to "a1" (Lakshya) for admin operations.
   const currentAdminId = userProfile?.id || "a1";
@@ -1272,7 +1287,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     const flag = flags.find(f => f.id === flagId);
     if (!flag) return;
 
-    const admin = team.find(t => t.id === adminId);
+    const admin = team.find((t: any) => t.id === adminId);
     const updatedLogs = [
       ...flag.sprintLogs,
       { id: `sl_assign_${Date.now()}`, author: "System", text: `Sprint owner assigned: ${admin?.name || "Unassigned"}`, timestamp: "Just now" }
@@ -1712,20 +1727,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     } as ChangelogRelease]);
   }, []);
 
-  const team = useMemo(() => {
-    return crmUsers
-      .filter((u: any) => u.category === "admin" || u.category === "intern")
-      .map((u: any) => ({
-        id: u.id || u.email,
-        name: u.name,
-        role: u.role || "Team Member",
-        avatar: (u.name || "?").substring(0, 2).toUpperCase(),
-        colorVar: u.colorVar || "var(--color-admin-lakshya)",
-        primaryFocus: "Operations",
-        responsibilities: [],
-        activeTasks: []
-      }));
-  }, [crmUsers]);
+
 
   return (
     <CRMContext.Provider value={{ 
