@@ -682,9 +682,24 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         const dbAuthEmails = await safeFetch(supabase.from("authorized_emails").select("*"));
         const dbSocial = await safeFetch(supabase.from("social_media").select("*"));
 
-        // Supabase is the single source of truth — use DB data only, empty = empty
+        // Merge Supabase profiles with local edits/passwords
         if (dbProfiles) {
-          setCrmUsers(dbProfiles);
+          try {
+            const localUsers = JSON.parse(localStorage.getItem("almmatix_users") || "[]");
+            const mergedProfiles = dbProfiles.map((dbUser:any) => {
+              const localMatch = localUsers.find((lu:any) => lu.id === dbUser.id || lu.email === dbUser.email || lu.name === dbUser.name);
+              return localMatch ? { ...dbUser, ...localMatch, category: localMatch.category || dbUser.category } : dbUser;
+            });
+            // Also append any local users that aren't in Supabase at all
+            localUsers.forEach((lu:any) => {
+              if (!mergedProfiles.some((mp:any) => mp.email === lu.email || mp.name === lu.name)) {
+                mergedProfiles.push(lu);
+              }
+            });
+            setCrmUsers(mergedProfiles);
+          } catch(e) {
+            setCrmUsers(dbProfiles);
+          }
         }
         setClients(dbClients ? dbClients.map(mapClientToTS) : []);
         setProducts(dbProducts ? dbProducts.map(mapProductToTS) : []);

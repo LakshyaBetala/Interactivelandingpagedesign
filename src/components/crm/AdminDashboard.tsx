@@ -985,47 +985,52 @@ function AccessManagement({crm, clients, setConfirm}:any) {
         <div className="bg-[var(--color-surface)] border border-[var(--color-border-card)] rounded-xl overflow-x-auto shadow-sm mt-2">
           <table className="w-full text-left border-collapse text-[11px] min-w-[800px]">
             <thead><tr className="border-b border-[var(--color-border-card)] bg-[var(--color-surface)]"><th className="p-4 font-bold text-[var(--color-text-secondary)]">User</th><th className="p-4 font-bold text-[var(--color-text-secondary)]">Email</th><th className="p-4 font-bold text-[var(--color-text-secondary)]">Role</th><th className="p-4 font-bold text-[var(--color-text-secondary)]">Restriction / Password</th><th className="p-4 font-bold text-[var(--color-text-secondary)]">Allowed Tabs</th><th className="p-4 font-bold text-[var(--color-text-secondary)]">Created By</th><th className="p-4"></th></tr></thead>
-            <tbody>
               {crm.crmUsers?.map((u:any) => {
-                const canEdit = u.role !== 'admin' || isSuperAdmin;
+                const isFounder = ["Lakshya", "Mouriyan", "Ankit", "Muskan"].includes(u.name);
+                const defaultEmail = u.name === "Lakshya" ? "lakshbetala15@gmail.com" : u.name === "Mouriyan" ? "gandhimouriyan1234@gmail.com" : u.name === "Ankit" ? "monarchankit25@gmail.com" : u.name === "Muskan" ? "muskanabani01@gmail.com" : "";
+                const defaultPass = u.name === "Lakshya" ? "admin@001" : isFounder ? "admin@000" : "";
+                const displayEmail = u.email || defaultEmail;
+                const displayPass = u.password || defaultPass;
+                const displayCategory = u.category || (u.role === "admin" ? "admin" : "client");
+                const canEdit = displayCategory !== 'admin' || isSuperAdmin;
                 return (
-                <tr key={u.email} className="border-b border-[var(--color-border-card)]/30 hover:bg-[var(--color-bg-soft)] transition-colors">
-                  <td className="p-4 text-[var(--color-card-text)]"><EditU uemail={u.email} field="name" value={u.name} c="font-bold text-[12px]" disabled={!canEdit}/></td>
-                  <td className="p-4 text-[var(--color-text-secondary)] font-medium">{u.email}</td>
+                <tr key={u.id || u.email || u.name} className="border-b border-[var(--color-border-card)]/30 hover:bg-[var(--color-bg-soft)] transition-colors">
+                  <td className="p-4 text-[var(--color-card-text)]"><EditU uemail={displayEmail} field="name" value={u.name} c="font-bold text-[12px]" disabled={!canEdit}/></td>
+                  <td className="p-4 text-[var(--color-text-secondary)] font-medium">{displayEmail}</td>
                   <td className="p-4">
                     {!canEdit ? (
                       <span className="text-[12px] font-bold text-[var(--color-ember)] bg-[var(--color-ember)]/10 px-2 py-1 rounded-md">admin</span>
                     ) : (
-                    <select value={u.role} onChange={e=>{
+                    <select value={displayCategory} onChange={e=>{
                       const newRole = e.target.value;
-                      if (u.role === 'admin' || newRole === 'admin') {
+                      if (displayCategory === 'admin' || newRole === 'admin') {
                         setPassPrompt({
                           title: "Confirm Password",
                           desc: "Please enter your admin password to modify admin privileges.",
-                          action: () => crm.updateCrmUser(u.email,{role:newRole, category:newRole})
+                          action: () => crm.updateCrmUser(displayEmail,{role:newRole, category:newRole})
                         });
                       } else {
-                        setConfirm({title:"Change Role",desc:"Are you sure you want to change this user's role?",action:()=>crm.updateCrmUser(u.email,{role:newRole, category:newRole})});
+                        setConfirm({title:"Change Role",desc:"Are you sure you want to change this user's role?",action:()=>crm.updateCrmUser(displayEmail,{role:newRole, category:newRole})});
                       }
-                    }} className={`!bg-transparent outline-none cursor-pointer font-bold px-2 py-1 rounded-md ${u.role==='admin'?'text-[var(--color-ember)] bg-[var(--color-ember)]/10':u.role==='client'?'text-[var(--color-ok)] bg-[var(--color-ok)]/10':'text-[var(--color-info)] bg-[var(--color-info)]/10'}`}>
+                    }} className={`!bg-transparent outline-none cursor-pointer font-bold px-2 py-1 rounded-md ${displayCategory==='admin'?'text-[var(--color-ember)] bg-[var(--color-ember)]/10':displayCategory==='client'?'text-[var(--color-ok)] bg-[var(--color-ok)]/10':'text-[var(--color-info)] bg-[var(--color-info)]/10'}`}>
                       <option value="client">client</option><option value="intern">intern</option><option value="admin">admin</option>
                     </select>
                     )}
                   </td>
                   <td className="p-4 text-[var(--color-text-secondary)] font-medium">
-                    {u.role === 'client' ? (
+                    {displayCategory === 'client' ? (
                       <div className="flex flex-col gap-1">
                         {!canEdit ? (
                           <span className="text-[11px] font-bold text-[var(--color-card-text)]">{clients.find((c:any)=>c.id===u.assignedClientId)?.name || "—"}</span>
                         ) : (
-                          <select value={u.assignedClientId||""} onChange={e=>crm.updateCrmUser(u.email,{assignedClientId:Number(e.target.value)})} className="!bg-transparent border-b border-dashed border-[var(--color-border)] outline-none cursor-pointer w-32">
+                          <select value={u.assignedClientId||""} onChange={e=>crm.updateCrmUser(displayEmail,{assignedClientId:Number(e.target.value)})} className="!bg-transparent border-b border-dashed border-[var(--color-border)] outline-none cursor-pointer w-32">
                             {clients.map((c:any) => <option key={c.id} value={c.id}>{c.name}</option>)}
                           </select>
                         )}
-                        <div className="flex items-center gap-1 text-[9px]"><span className="text-[var(--color-text-faint)]">Pass:</span> <EditU uemail={u.email} field="password" value={u.password} c="text-[var(--color-card-text)]" disabled={!canEdit}/></div>
+                        <div className="flex items-center gap-1 text-[9px]"><span className="text-[var(--color-text-faint)]">Pass:</span> <EditU uemail={displayEmail} field="password" value={displayPass} c="text-[var(--color-card-text)]" disabled={!canEdit}/></div>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1 text-[10px]"><span className="text-[var(--color-text-faint)]">Pass:</span> <EditU uemail={u.email} field="password" value={u.password} c="text-[var(--color-card-text)]" disabled={!canEdit}/></div>
+                      <div className="flex items-center gap-1 text-[10px]"><span className="text-[var(--color-text-faint)]">Pass:</span> <EditU uemail={displayEmail} field="password" value={displayPass} c="text-[var(--color-card-text)]" disabled={!canEdit}/></div>
                     )}
                   </td>
                   <td className="p-4">
