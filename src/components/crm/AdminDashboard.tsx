@@ -110,22 +110,22 @@ export default function AdminDashboard() {
           <div className="flex-1 overflow-y-auto crm-scroll p-4 md:p-6">
             <AnimatePresence mode="wait"><motion.div key={sec} initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} exit={{opacity:0}} transition={{duration:0.2,ease:[0.16,1,0.3,1]}}>
               {sec==="dashboard"&&<Dashboard crm={crm} navigateTo={navigateTo}/>}
-              {sec==="projects"&&<Projects crm={crm} clients={clients} sel={sel} setSel={setSel} showAdd={showAdd} close={()=>setShowAdd(false)} navigateTo={navigateTo}/>}
-              {sec==="tasks"&&<Tasks crm={crm} showAdd={showAdd} close={()=>setShowAdd(false)} navigateTo={navigateTo}/>}
-              {sec==="social"&&<Social crm={crm} showAdd={showAdd} close={()=>setShowAdd(false)} navigateTo={navigateTo}/>}
-              {sec==="leads"&&<Leads crm={crm} sel={sel} setSel={setSel} showAdd={showAdd} close={()=>setShowAdd(false)} navigateTo={navigateTo}/>}
-              {sec==="support"&&<Support crm={crm} sel={sel} setSel={setSel} showAdd={showAdd} close={()=>setShowAdd(false)} navigateTo={navigateTo}/>}
-              {sec==="products"&&<Products crm={crm} clients={clients} showAdd={showAdd} close={()=>setShowAdd(false)} navigateTo={navigateTo}/>}
-              {sec==="access"&&<AccessManagement crm={crm} clients={clients}/>}
+              {sec==="projects"&&<Projects crm={crm} clients={clients} sel={sel} setSel={setSel} showAdd={showAdd} close={()=>setShowAdd(false)} navigateTo={navigateTo} setConfirm={setConfirm}/>}
+              {sec==="tasks"&&<Tasks crm={crm} showAdd={showAdd} close={()=>setShowAdd(false)} navigateTo={navigateTo} setConfirm={setConfirm}/>}
+              {sec==="social"&&<Social crm={crm} showAdd={showAdd} close={()=>setShowAdd(false)} navigateTo={navigateTo} setConfirm={setConfirm}/>}
+              {sec==="leads"&&<Leads crm={crm} sel={sel} setSel={setSel} showAdd={showAdd} close={()=>setShowAdd(false)} navigateTo={navigateTo} setConfirm={setConfirm}/>}
+              {sec==="support"&&<Support crm={crm} sel={sel} setSel={setSel} showAdd={showAdd} close={()=>setShowAdd(false)} navigateTo={navigateTo} setConfirm={setConfirm}/>}
+              {sec==="products"&&<Products crm={crm} clients={clients} showAdd={showAdd} close={()=>setShowAdd(false)} navigateTo={navigateTo} setConfirm={setConfirm}/>}
+              {sec==="access"&&<AccessManagement crm={crm} clients={clients} setConfirm={setConfirm}/>}
             </motion.div></AnimatePresence>
           </div>
           <AnimatePresence>
             {sel!==null&&["projects","leads","support"].includes(sec)&&(
               <motion.div initial={{width:0,opacity:0}} animate={{width:380,opacity:1}} exit={{width:0,opacity:0}} transition={{duration:.2,ease:[.16,1,.3,1]}} className="flex-shrink-0 border-l border-[var(--color-border-subtle)] bg-[var(--color-surface)] shadow-2xl overflow-hidden absolute md:relative right-0 h-full z-20">
                 <div className="w-[380px] h-full overflow-y-auto crm-scroll relative bg-gradient-to-b from-[var(--color-surface)] to-[var(--color-bg)]">
-                  {sec==="projects"&&<ProjDrawer crm={crm} id={sel as number} onClose={()=>setSel(null)}/>}
-                  {sec==="leads"&&<LeadDrawer crm={crm} id={sel as string} onClose={()=>setSel(null)}/>}
-                  {sec==="support"&&<FlagDrawer crm={crm} id={sel as string} onClose={()=>setSel(null)}/>}
+                  {sec==="projects"&&<ProjDrawer crm={crm} id={sel as number} onClose={()=>setSel(null)} setConfirm={setConfirm}/>}
+                  {sec==="leads"&&<LeadDrawer crm={crm} id={sel as string} onClose={()=>setSel(null)} setConfirm={setConfirm}/>}
+                  {sec==="support"&&<FlagDrawer crm={crm} id={sel as string} onClose={()=>setSel(null)} setConfirm={setConfirm}/>}
                 </div>
               </motion.div>
             )}
@@ -230,7 +230,7 @@ function Dashboard({crm, navigateTo}:any) {
 }
 
 /* ═══════════════════════ 2. PROJECTS ═══════════════════════ */
-function Projects({crm,sel,setSel,showAdd,close,clients}:any) {
+function Projects({crm,sel,setSel,showAdd,close,clients,setConfirm}:any) {
   const [drag,setDrag]=useState<number|null>(null);
   const drop=(stage:ClientStage)=>{if(drag!==null){crm.updateClientStage(drag,stage);setDrag(null);}};
   const grouped:Record<string,any[]>={};
@@ -275,7 +275,7 @@ function Projects({crm,sel,setSel,showAdd,close,clients}:any) {
 }
 
 /* ── Project Drawer ── */
-function ProjDrawer({crm,id,onClose}:any){
+function ProjDrawer({crm,id,onClose,setConfirm}:any){
   const c=crm.clients.find((x:any)=>x.id===id);if(!c)return null;
   const si=PROJECT_STAGES.indexOf(c.stage);
   const [ed,setEd]=useState<string|null>(null);const [ev,setEv]=useState("");
@@ -427,7 +427,7 @@ function ProjDrawer({crm,id,onClose}:any){
 }
 
 /* ═══════════════════════ 3. TASKS ═══════════════════════ */
-function Tasks({crm,showAdd,close}:any){
+function Tasks({crm,showAdd,close,setConfirm}:any){
   const [drag,setDrag]=useState<string|null>(null);
   const [editId,setEditId]=useState<string|null>(null);
   const [editTitle,setEditTitle]=useState("");
@@ -466,7 +466,7 @@ function Tasks({crm,showAdd,close}:any){
 }
 
 /* ═══════════════════════ 4. SOCIAL ═══════════════════════ */
-function Social({crm,showAdd,close}:any){
+function Social({crm,showAdd,close,setConfirm}:any){
   const sm:SocialMediaItem[]=(crm as any).socialMedia||[];
   const setSM=(crm as any).setSocialMedia;
   const [drag,setDrag]=useState<string|null>(null);
@@ -509,7 +509,7 @@ function Social({crm,showAdd,close}:any){
 }
 
 /* ═══════════════════════ 5. LEADS ═══════════════════════ */
-function Leads({crm,sel,setSel,showAdd,close}:any){
+function Leads({crm,sel,setSel,showAdd,close,setConfirm}:any){
   const [editId,setEditId]=useState<string|null>(null);
   const [editField,setEditField]=useState<string|null>(null);
   const [editVal,setEditVal]=useState("");
@@ -614,7 +614,7 @@ function Leads({crm,sel,setSel,showAdd,close}:any){
   );
 }
 
-function LeadDrawer({crm,id,onClose}:any){
+function LeadDrawer({crm,id,onClose,setConfirm}:any){
   const l=crm.leads.find((x:any)=>x.id===id);if(!l)return null;const [note,setNote]=useState("");
   return(
     <div className="p-6 space-y-6">
@@ -641,7 +641,7 @@ function LeadDrawer({crm,id,onClose}:any){
 }
 
 /* ═══════════════════════ 6. SUPPORT ═══════════════════════ */
-function Support({crm,sel,setSel,showAdd,close,navigateTo}:any){
+function Support({crm,sel,setSel,showAdd,close,navigateTo,setConfirm}:any){
   const open=crm.flags.filter((f:any)=>f.status!=="Resolved");const done=crm.flags.filter((f:any)=>f.status==="Resolved");
   const maint=crm.clients.filter((c:any)=>["Maintenance","Delivery"].includes(c.stage));
   const sv=(s:string)=>s==="Critical"?"var(--color-bad)":s==="High"?"var(--color-warn)":"var(--color-text-faint)";
@@ -667,7 +667,7 @@ function Support({crm,sel,setSel,showAdd,close,navigateTo}:any){
   );
 }
 
-function FlagDrawer({crm,id,onClose}:any){
+function FlagDrawer({crm,id,onClose,setConfirm}:any){
   const f=crm.flags.find((x:any)=>x.id===id);if(!f)return null;const cl=crm.clients.find((c:any)=>c.id===f.clientId);const [log,setLog]=useState("");
   const [edT, setEdT]=useState(false); const [vT, setVT]=useState(f.title);
   const [edD, setEdD]=useState(false); const [vD, setVD]=useState(f.description);
@@ -705,7 +705,7 @@ function FlagDrawer({crm,id,onClose}:any){
 }
 
 /* ═══════════════════════ 7. PRODUCTS ═══════════════════════ */
-function Products({crm, showAdd, close}:any){
+function Products({crm, showAdd, close, setConfirm}:any){
   const sc=(s:string)=>s==="Demo"||s==="Distribution"?"bg-[var(--color-ok)] shadow-[0_0_5px_var(--color-ok)]":s==="Dev"||s==="Post-Demo Dev"?"bg-[var(--color-warn)]":"bg-[var(--color-border)]";
   
   const [editId,setEditId]=useState<string|null>(null);
@@ -765,7 +765,7 @@ function Products({crm, showAdd, close}:any){
 /* ═══════════════════════ ACCESS MANAGEMENT ═══════════════════════ */
 const ALL_TABS = [{id:"projects",l:"Projects"},{id:"tasks",l:"Tasks"},{id:"social",l:"Social"},{id:"leads",l:"Leads"},{id:"support",l:"Support"},{id:"products",l:"Products"}];
 
-function AccessManagement({crm, clients}:any) {
+function AccessManagement({crm, clients, setConfirm}:any) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
