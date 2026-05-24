@@ -26,7 +26,7 @@ function PortalContent() {
     }
   }, [userProfile]);
 
-  if (loading) {
+  if (loading || !userProfile) {
     return (
       <div className="min-h-screen bg-[var(--color-bg)] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
