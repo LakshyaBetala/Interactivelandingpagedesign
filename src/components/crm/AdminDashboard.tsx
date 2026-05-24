@@ -1068,6 +1068,7 @@ function AccessManagement({crm, clients, setConfirm}:any) {
         <div className="bg-[var(--color-surface)] border border-[var(--color-border-card)] rounded-xl overflow-x-auto shadow-sm mt-2">
           <table className="w-full text-left border-collapse text-[11px] min-w-[800px]">
             <thead><tr className="border-b border-[var(--color-border-card)] bg-[var(--color-surface)]"><th className="p-4 font-bold text-[var(--color-text-secondary)]">User</th><th className="p-4 font-bold text-[var(--color-text-secondary)]">Email</th><th className="p-4 font-bold text-[var(--color-text-secondary)]">Role</th><th className="p-4 font-bold text-[var(--color-text-secondary)]">Restriction / Password</th><th className="p-4 font-bold text-[var(--color-text-secondary)]">Allowed Tabs</th><th className="p-4 font-bold text-[var(--color-text-secondary)]">Created By</th><th className="p-4"></th></tr></thead>
+            <tbody>
               {crm.crmUsers?.map((u:any) => {
                 const isFounder = ["Lakshya", "Mouriyan", "Ankit", "Muskan"].includes(u.name);
                 const defaultEmail = u.name === "Lakshya" ? "lakshbetala15@gmail.com" : u.name === "Mouriyan" ? "gandhimouriyan1234@gmail.com" : u.name === "Ankit" ? "monarchankit25@gmail.com" : u.name === "Muskan" ? "muskanabani01@gmail.com" : "";
