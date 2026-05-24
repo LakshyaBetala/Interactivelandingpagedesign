@@ -791,6 +791,22 @@ export function CRMProvider({ children }: { children: ReactNode }) {
           setUserProfile(profile);
           fetchOperationalData(profile);
         }
+
+        // Self-heal the database profile row in the background if it's missing or out of sync
+        const needsHeal = !profileData || pData.category !== profile.category || pData.role !== profile.role;
+        if (needsHeal) {
+          supabase.from("profiles").upsert({
+            id: profile.id,
+            category: profile.category,
+            role: profile.role,
+            name: profile.name,
+            allowed_tabs: profile.allowedTabs,
+            assigned_client_id: profile.assignedClientId,
+            email: profile.email
+          }).then(({error}) => {
+             if (error) console.warn("Self-heal profile update failed:", error);
+          });
+        }
       } else {
         if (mounted) {
           setUserProfile(null);
