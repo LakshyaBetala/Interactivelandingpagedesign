@@ -1072,7 +1072,6 @@ function AccessManagement({crm, clients, setConfirm}:any) {
           </table>
         </div>
       </div>
-      </div>
 
       {passPrompt && (
         <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
