@@ -66,6 +66,89 @@ export default function AdminDashboard() {
   const filteredNav = crm.userProfile?.category === "intern" 
     ? navItems.filter(n => (crm.userProfile?.allowedTabs || []).includes(n.id))
     : navItems;
+
+  if (crm.userProfile?.category === "intern") {
+    return (
+      <div className="flex flex-col h-[100dvh] bg-[var(--color-bg)] text-[var(--color-text-primary)] font-sans overflow-hidden">
+        {/* INTERN TOP NAVIGATION */}
+        <header className="h-16 flex-shrink-0 border-b border-[var(--color-border-subtle)] flex items-center justify-between px-4 md:px-8 bg-gradient-to-r from-[var(--color-bg-raised)] to-[var(--color-bg)] shadow-sm z-20">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <h1 className="text-[16px] font-black tracking-tight text-[var(--color-card-text)]">almmatix</h1>
+              <span className="text-[10px] font-bold text-[var(--color-ember)] bg-[var(--color-ember)]/10 px-2 py-0.5 rounded uppercase tracking-wider hidden md:block">Workspace</span>
+            </div>
+            
+            <nav className="hidden md:flex items-center gap-2 border-l border-[var(--color-border-subtle)] pl-6 ml-2">
+              {filteredNav.map(n => (
+                <button key={n.id} onClick={()=>go(n.id)} className={`px-4 py-2 text-[13px] font-bold rounded-lg transition-all ${sec===n.id ? 'bg-[var(--color-surface)] text-[var(--color-ember)] shadow-sm border border-[var(--color-border-card)]' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-soft)]'}`}>
+                  {n.l}
+                </button>
+              ))}
+            </nav>
+          </div>
+          <div className="flex items-center gap-3">
+             {!["dashboard","access"].includes(sec)&&<button onClick={()=>setShowAdd(!showAdd)} className="px-4 py-2 bg-[var(--color-ember)] text-white text-[12px] font-bold rounded-lg hover:bg-[var(--color-ember-hover)] transition-all shadow-[0_0_10px_var(--color-ember-soft)] flex items-center gap-1.5"><span className="text-[14px] leading-none">+</span> <span className="hidden md:block">New</span></button>}
+             <div className="flex items-center gap-2 pl-3 md:pl-4 border-l border-[var(--color-border-subtle)]">
+               <Av id={crm.userProfile?.id||"i1"} name={crm.userProfile?.name||"Intern"} sz={28}/>
+               <div className="hidden md:block text-left mr-2">
+                 <p className="text-[12px] font-bold text-[var(--color-card-text)] leading-tight">{crm.userProfile?.name||"Intern"}</p>
+                 <p className="text-[9px] text-[var(--color-text-faint)] font-medium">Workspace Member</p>
+               </div>
+               <button onClick={crm.signOut} className="text-[11px] bg-[var(--color-surface-muted)] px-3 py-2 rounded-lg font-bold text-[var(--color-text-muted)] hover:text-[var(--color-bad)] hover:bg-[var(--color-bad-soft)] transition-colors">Logout</button>
+             </div>
+          </div>
+        </header>
+
+        {/* MOBILE INTERN NAV */}
+        <div className="md:hidden flex overflow-x-auto p-3 gap-2 border-b border-[var(--color-border-subtle)] bg-[var(--color-surface)] crm-scroll z-10 flex-shrink-0">
+           {filteredNav.map(n => (
+              <button key={n.id} onClick={()=>go(n.id)} className={`px-4 py-2 text-[12px] font-bold rounded-lg whitespace-nowrap transition-all ${sec===n.id ? 'bg-[var(--color-ember)] text-white shadow-md' : 'bg-[var(--color-bg-soft)] text-[var(--color-text-secondary)] border border-transparent'}`}>
+                {n.l}
+              </button>
+            ))}
+        </div>
+
+        {/* MAIN INTERN CONTENT */}
+        <div className="flex-1 flex overflow-hidden relative bg-[var(--color-bg)]">
+          <div className="flex-1 overflow-y-auto crm-scroll p-4 md:p-8">
+            <AnimatePresence mode="wait"><motion.div key={sec} initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} exit={{opacity:0}} transition={{duration:0.2,ease:[0.16,1,0.3,1]}}>
+              {sec==="dashboard"&&<Dashboard crm={crm} navigateTo={navigateTo}/>}
+              {sec==="projects"&&<Projects crm={crm} clients={clients} sel={sel} setSel={setSel} showAdd={showAdd} close={()=>setShowAdd(false)} navigateTo={navigateTo} setConfirm={setConfirm}/>}
+              {sec==="tasks"&&<Tasks crm={crm} showAdd={showAdd} close={()=>setShowAdd(false)} navigateTo={navigateTo} setConfirm={setConfirm}/>}
+              {sec==="social"&&<Social crm={crm} showAdd={showAdd} close={()=>setShowAdd(false)} navigateTo={navigateTo} setConfirm={setConfirm}/>}
+              {sec==="leads"&&<Leads crm={crm} sel={sel} setSel={setSel} showAdd={showAdd} close={()=>setShowAdd(false)} navigateTo={navigateTo} setConfirm={setConfirm}/>}
+              {sec==="support"&&<Support crm={crm} sel={sel} setSel={setSel} showAdd={showAdd} close={()=>setShowAdd(false)} navigateTo={navigateTo} setConfirm={setConfirm}/>}
+              {sec==="products"&&<Products crm={crm} clients={clients} showAdd={showAdd} close={()=>setShowAdd(false)} navigateTo={navigateTo} setConfirm={setConfirm}/>}
+            </motion.div></AnimatePresence>
+          </div>
+          <AnimatePresence>
+            {sel!==null&&["projects","leads","support"].includes(sec)&&(
+              <motion.div initial={{width:0,opacity:0}} animate={{width:380,opacity:1}} exit={{width:0,opacity:0}} transition={{duration:.2,ease:[.16,1,.3,1]}} className="flex-shrink-0 border-l border-[var(--color-border-subtle)] bg-[var(--color-surface)] shadow-2xl overflow-hidden absolute md:relative right-0 h-full z-20">
+                <div className="w-[380px] h-full overflow-y-auto crm-scroll relative bg-gradient-to-b from-[var(--color-surface)] to-[var(--color-bg)]">
+                  {sec==="projects"&&<ProjDrawer crm={crm} id={sel as number} onClose={()=>setSel(null)} setConfirm={setConfirm}/>}
+                  {sec==="leads"&&<LeadDrawer crm={crm} id={sel as string} onClose={()=>setSel(null)} setConfirm={setConfirm}/>}
+                  {sec==="support"&&<FlagDrawer crm={crm} id={sel as string} onClose={()=>setSel(null)} setConfirm={setConfirm}/>}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+        
+        {confirm && (
+          <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <motion.div initial={{opacity:0, scale:0.95}} animate={{opacity:1, scale:1}} className="bg-[var(--color-surface)] border border-[var(--color-border-card)] p-6 rounded-2xl w-full max-w-[400px] shadow-2xl">
+              <h3 className="text-[18px] font-black text-white mb-2">{confirm.title}</h3>
+              <p className="text-[13px] text-[var(--color-text-secondary)] mb-6 leading-relaxed">{confirm.desc}</p>
+              <div className="flex justify-end gap-3">
+                <button onClick={() => setConfirm(null)} className="px-5 py-2 text-[12px] font-bold text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-muted)] rounded-lg transition-colors">Cancel</button>
+                <button onClick={() => { confirm.action(); setConfirm(null); }} className="px-5 py-2 text-[12px] font-bold bg-[var(--color-bad)] hover:bg-red-600 text-white rounded-lg transition-colors shadow-lg shadow-red-500/20">Yes, Delete</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </div>
+    );
+  }
   return (
     <div className="flex h-[100dvh] bg-[var(--color-bg)] text-[var(--color-text-primary)] font-sans overflow-hidden">
       {/* ── sidebar overlay (mobile) ── */}
