@@ -27,7 +27,17 @@ export default function ClientPortalView() {
   // Ref to hold the currently playing video element
   const activeVideoRef = useRef<HTMLVideoElement>(null);
 
-  if (!client) return <div className="min-h-screen flex items-center justify-center text-[var(--color-text-muted)] text-[11px] bg-[var(--color-bg)] font-sans">No project data available. Contact your admin.</div>;
+  if (!client) return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--color-bg)] font-sans">
+      <div className="text-center space-y-4">
+        <h2 className="text-[16px] font-bold text-[var(--color-card-text)]">almmatix</h2>
+        <p className="text-[var(--color-text-muted)] text-[12px]">No project data available. Contact your admin.</p>
+        <button onClick={signOut} className="mt-4 px-6 py-2 bg-[var(--color-charcoal)] text-white text-[12px] font-bold rounded-xl hover:bg-[var(--color-charcoal-mid)] transition-colors shadow-md">
+          Log out
+        </button>
+      </div>
+    </div>
+  );
 
   const clientComments = comments.filter(c => c.clientId === client.id);
   const clientFlags = flags.filter(f => f.clientId === client.id);

@@ -772,13 +772,13 @@ export function CRMProvider({ children }: { children: ReactNode }) {
           const profile: UserProfile = {
             id: session.user.id,
             email: session.user.email || "",
-            name: profileData.name || session.user.email || "User",
-            role: profileData.role || "",
-            category: profileData.category as any || "client",
-            assignedClientId: profileData.assigned_client_id,
+            name: profileData.name || session.user.user_metadata?.name || session.user.email || "User",
+            role: profileData.role || session.user.user_metadata?.role || "",
+            category: profileData.category || session.user.user_metadata?.category || "client",
+            assignedClientId: profileData.assigned_client_id || session.user.user_metadata?.assignedClientId,
             assignedProjects: profileData.assigned_projects,
-            allowedTabs: profileData.allowed_tabs,
-            avatar: profileData.avatar || (profileData.name ? profileData.name.substring(0, 2).toUpperCase() : "U"),
+            allowedTabs: profileData.allowed_tabs || session.user.user_metadata?.allowedTabs || null,
+            avatar: profileData.avatar || session.user.user_metadata?.avatar || (profileData.name || session.user.user_metadata?.name ? (profileData.name || session.user.user_metadata?.name).substring(0, 2).toUpperCase() : "U"),
             colorVar: profileData.color_var || "var(--color-admin-lakshya)",
             primaryFocus: profileData.primary_focus || "Operations",
             responsibilities: profileData.responsibilities || [],
@@ -843,7 +843,9 @@ export function CRMProvider({ children }: { children: ReactNode }) {
               data: {
                 name: user.name,
                 role: user.role,
-                category: user.category
+                category: user.category,
+                assignedClientId: user.assignedClientId || null,
+                allowedTabs: user.allowedTabs || null
               }
             })
           });
@@ -851,6 +853,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
           const userId = authData?.user?.id || authData?.id;
           
           if (userId) {
+            user.id = userId; // Ensure local UI knows the true ID
             await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${userId}`, {
               method: "PATCH",
               headers: { "Content-Type": "application/json", "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` },
