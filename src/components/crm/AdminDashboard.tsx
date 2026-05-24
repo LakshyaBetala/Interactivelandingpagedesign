@@ -729,7 +729,9 @@ function Products({crm, showAdd, close, setConfirm}:any){
 
   return(
     <div className="space-y-4 max-w-[1000px] mx-auto">
-      {showAdd&&<QuickAdd title="New Product" fields={[{k:"name",l:"Name",p:"Product name"},{k:"description",l:"Description",p:"Short description"},{k:"stage",l:"Stage",t:"select",o:["Ideation", "Dev", "Demo", "Post-Demo Dev", "Distribution"]},{k:"leadId",l:"Lead",t:"select",o:crm.team.map((t:any)=>({v:t.id,l:t.name}))}]} onSubmit={(d:any)=>{crm.addProduct({name:d.name,description:d.description,stage:d.stage||"Ideation",leadId:d.leadId||"a1",progress:0});close();}} onClose={close}/>}
+      {showAdd&&<QuickAdd title="New Product" fields={[{k:"name",l:"Name",p:"Product name"},{k:"description",l:"Description",p:"Short description"},{k:"stage",l:"Stage",t:"select",o:["Ideation", "Dev", "Demo", "Post-Demo Dev", "Distribution"]},{k:"leadId",l:"Lead",t:"select",o:crm.team.map((t:any)=>({v:t.id,l:t.name}))}]} onSubmit={(d:any)=>{
+        const progressMap: Record<string, number> = { "Ideation": 10, "Dev": 30, "Demo": 60, "Post-Demo Dev": 80, "Distribution": 100 };
+        crm.addProduct({name:d.name,description:d.description,stage:d.stage||"Ideation",leadId:d.leadId||"a1",progress:progressMap[d.stage||"Ideation"]||10});close();}} onClose={close}/>}
       
       <Lbl>Internal Products Portfolio</Lbl>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-2">
@@ -742,7 +744,11 @@ function Products({crm, showAdd, close, setConfirm}:any){
             </div>
             
             <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2"><span className={`w-2.5 h-2.5 rounded-full ${sc(p.stage)}`}/><select value={p.stage} onChange={e=>crm.updateProduct(p.id,{stage:e.target.value})} className="!bg-transparent text-[11px] font-bold text-[var(--color-text-secondary)] outline-none cursor-pointer p-0 border-none">{["Ideation", "Dev", "Demo", "Post-Demo Dev", "Distribution"].map(s=><option key={s}>{s}</option>)}</select></div>
+              <div className="flex items-center gap-2"><span className={`w-2.5 h-2.5 rounded-full ${sc(p.stage)}`}/><select value={p.stage} onChange={e=>{
+                const newStage = e.target.value;
+                const progressMap: Record<string, number> = { "Ideation": 10, "Dev": 30, "Demo": 60, "Post-Demo Dev": 80, "Distribution": 100 };
+                crm.updateProduct(p.id,{stage:newStage, progress: progressMap[newStage] || p.progress});
+              }} className="!bg-transparent text-[11px] font-bold text-[var(--color-text-secondary)] outline-none cursor-pointer p-0 border-none">{["Ideation", "Dev", "Demo", "Post-Demo Dev", "Distribution"].map(s=><option key={s}>{s}</option>)}</select></div>
               <div className="flex items-center gap-1 font-bold text-[11px] text-[var(--color-ember)]"><EditP pid={p.id} field="progress" value={p.progress.toString()} t="number" w="w-12 text-right"/>%</div>
             </div>
             
