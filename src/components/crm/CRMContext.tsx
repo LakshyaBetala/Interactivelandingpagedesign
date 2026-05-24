@@ -1606,6 +1606,10 @@ export function CRMProvider({ children }: { children: ReactNode }) {
   }, [isSupabaseConfigured]);
 
   const addProduct = useCallback(async (product: Partial<InternalProduct>) => {
+    if (!isSupabaseConfigured) {
+      alert("WARNING: Supabase is not connected! Your changes are only saved locally and will disappear on refresh. Please ensure NEXT_PUBLIC_SUPABASE_URL is set in your Vercel Environment Variables.");
+    }
+
     const newProduct: InternalProduct = {
       id: "p" + Date.now(),
       name: product.name || "New Product",
