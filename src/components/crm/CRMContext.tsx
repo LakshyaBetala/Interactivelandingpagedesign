@@ -824,13 +824,54 @@ export function CRMProvider({ children }: { children: ReactNode }) {
 
   }, []);
 
-  const addCrmUser = useCallback((user: any) => {
+  const addCrmUser = useCallback(async (user: any) => {
+    if (isSupabaseConfigured) {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      if (supabaseUrl && supabaseKey) {
+        try {
+          const authRes = await fetch(`${supabaseUrl}/auth/v1/signup`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "apikey": supabaseKey },
+            body: JSON.stringify({
+              email: user.email,
+              password: user.password,
+              data: {
+                name: user.name,
+                role: user.role,
+                category: user.category
+              }
+            })
+          });
+          const authData = await authRes.json();
+          const userId = authData?.user?.id || authData?.id;
+          
+          if (userId) {
+            await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${userId}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json", "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` },
+              body: JSON.stringify({
+                role: user.role,
+                category: user.category,
+                name: user.name,
+                assigned_client_id: user.assignedClientId || null,
+                allowed_tabs: user.allowedTabs || null
+              })
+            });
+          }
+        } catch (e) {
+          console.error("Failed to provision user to Supabase Auth:", e);
+        }
+      }
+    }
+    
+    // Fallback/Sync for UI
     setCrmUsers(prev => {
       const updated = [...prev, user];
       localStorage.setItem("almmatix_users", JSON.stringify(updated));
       return updated;
     });
-  }, []);
+  }, [isSupabaseConfigured]);
 
   const deleteCrmUser = useCallback((email: string) => {
     setCrmUsers(prev => {
