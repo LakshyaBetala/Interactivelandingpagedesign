@@ -13,12 +13,18 @@ const TASK_COLS: { s: TaskStatus; l: string }[] = [{s:"Todo",l:"To Do"},{s:"In P
 const SOCIAL_COLS: { s: SocialStatus; l: string }[] = [{s:"Idea and Create",l:"Idea & Create"},{s:"Schedule",l:"Scheduled"},{s:"Done",l:"Done"}];
 const LEAD_STATUSES: OutreachStatus[] = ["Lead","Contacted","Responded","Requirements","Demo","Quoted","Converted","Lost"];
 type Section = "dashboard"|"projects"|"tasks"|"social"|"leads"|"support"|"products"|"access";
-const pc: Record<string,string> = {a1:"#FF5A1F",a2:"#0D9488",a3:"#65A30D",a4:"#9333EA"};
+const USER_COLORS = ["#FF5A1F", "#0D9488", "#65A30D", "#9333EA", "#E11D48", "#2563EB", "#059669", "#D97706", "#4F46E5", "#BE185D"];
+const getAvatarColor = (name: string) => {
+  if (!name) return "#78716C";
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return USER_COLORS[Math.abs(hash) % USER_COLORS.length];
+};
 
 /* ─── tiny shared components ─── */
 const Dot = ({c}:{c:string}) => <span className={`w-[5px] h-[5px] rounded-full inline-block ${c}`}/>;
 const Lbl = ({children}:{children:React.ReactNode}) => <span className="text-[8px] font-mono uppercase tracking-[.14em] text-[var(--color-text-faint)]">{children}</span>;
-const Av = ({id,name,sz=18}:{id:string;name:string;sz?:number}) => <span title={name} className="rounded-full flex items-center justify-center text-white font-bold flex-shrink-0" style={{backgroundColor:pc[id]||"#78716C",width:sz,height:sz,fontSize:sz*0.42}}>{name?.charAt(0)||"?"}</span>;
+const Av = ({id,name,sz=18}:{id:string;name:string;sz?:number}) => <span title={name} className="rounded-full flex items-center justify-center text-white font-bold flex-shrink-0" style={{backgroundColor:getAvatarColor(name),width:sz,height:sz,fontSize:sz*0.42}}>{name?.charAt(0).toUpperCase()||"?"}</span>;
 const X = ({onClick}:{onClick:()=>void}) => <button onClick={e=>{e.stopPropagation();onClick();}} className="w-5 h-5 rounded flex items-center justify-center text-[14px] text-[var(--color-text-faint)] hover:text-[var(--color-bad)] hover:bg-[var(--color-bad-soft)] transition-colors">×</button>;
 
 /* ═══════════════════════════════════════════ ROOT ═══════════════════════════════════════════ */
