@@ -668,6 +668,9 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         const dbSocial = await safeFetch(supabase.from("social_media").select("*"));
 
         // Supabase is the single source of truth — use DB data only, empty = empty
+        if (dbProfiles) {
+          setCrmUsers(dbProfiles);
+        }
         setClients(dbClients ? dbClients.map(mapClientToTS) : []);
         setProducts(dbProducts ? dbProducts.map(mapProductToTS) : []);
         setComments(dbComments ? dbComments.map(mapCommentToTS) : []);
@@ -717,68 +720,78 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Monitor auth status
   useEffect(() => {
-    // Read Local Storage Auth (bypassing Supabase for demo purposes to support local user creation)
-    const sessionRaw = localStorage.getItem("almmatix_session");
-    if (sessionRaw) {
-      const session = JSON.parse(sessionRaw);
-      setUserProfile({
-        id: session.id,
-        email: session.email,
-        name: session.name,
-        role: session.role,
-        category: session.category as any,
-        assignedClientId: session.assignedClientId,
-        assignedProjects: session.assignedProjects,
-        allowedTabs: session.allowedTabs,
-        avatar: session.name.substring(0, 2).toUpperCase(),
-        colorVar: "var(--color-admin-lakshya)",
-        primaryFocus: "Operations",
-        responsibilities: [],
-        activeTasks: [],
-      });
-      fetchOperationalData(session);
-    } else {
-      setUserProfile(null);
-      // No session — load mock data for offline/dev mode only if Supabase is not configured
-      if (!checkSupabaseStatus()) {
-        setClients(INITIAL_CLIENTS);
-        setProducts(INITIAL_PRODUCTS);
-        setComments(INITIAL_COMMENTS);
-        setActivities(INITIAL_ACTIVITY);
-        setSocialMedia(INITIAL_SOCIAL_MEDIA);
-        setLeads(INITIAL_LEADS);
-        setFlags(INITIAL_FLAGS);
-        setReleases(INITIAL_RELEASES);
-        setInternalTasks(INITIAL_INTERNAL_TASKS);
-      }
-    }
-    setLoading(false);
+    let mounted = true;
+    
+    const loadSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session && session.user) {
+        // Fetch profile
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", session.user.id)
+          .single();
 
-    const defaultAdmins = [
-      { id: "a1", email: "lakshbetala15@gmail.com", password: "admin@000", name: "Lakshya", role: "admin", category: "admin", createdBy: "System" },
-      { id: "a2", email: "gandhimouriyan1234@gmail.com", password: "admin@000", name: "Mouriyan", role: "admin", category: "admin", createdBy: "System" },
-      { id: "a3", email: "monarchankit25@gmail.com", password: "admin@000", name: "Ankit", role: "admin", category: "admin", createdBy: "System" },
-      { id: "a4", email: "muskanabani01@gmail.com", password: "admin@000", name: "Muskan", role: "admin", category: "admin", createdBy: "System" },
-      { id: "c1", email: "client@almmatix.com", password: "client123", name: "UPKEM Client", role: "client", category: "client", assignedClientId: 1, createdBy: "System" }
-    ];
-
-    const usersRaw = localStorage.getItem("almmatix_users");
-    let currentUsers = usersRaw ? JSON.parse(usersRaw) : [];
-
-    // Force update master admins in case they had old cached credentials
-    defaultAdmins.forEach(admin => {
-      const idx = currentUsers.findIndex((u: any) => u.email === admin.email);
-      if (idx !== -1) {
-        currentUsers[idx].password = admin.password; // Force password update
+        if (profileData) {
+          const profile: UserProfile = {
+            id: session.user.id,
+            email: session.user.email || "",
+            name: profileData.name || session.user.email || "User",
+            role: profileData.role || "",
+            category: profileData.category as any || "client",
+            assignedClientId: profileData.assigned_client_id,
+            assignedProjects: profileData.assigned_projects,
+            allowedTabs: profileData.allowed_tabs,
+            avatar: profileData.avatar || (profileData.name ? profileData.name.substring(0, 2).toUpperCase() : "U"),
+            colorVar: profileData.color_var || "var(--color-admin-lakshya)",
+            primaryFocus: profileData.primary_focus || "Operations",
+            responsibilities: profileData.responsibilities || [],
+            activeTasks: profileData.active_tasks || [],
+          };
+          if (mounted) {
+            setUserProfile(profile);
+            fetchOperationalData(profile);
+          }
+        }
       } else {
-        currentUsers.push(admin);
+        if (mounted) {
+          setUserProfile(null);
+          // If offline mode
+          if (!checkSupabaseStatus()) {
+            setClients(INITIAL_CLIENTS);
+            setProducts(INITIAL_PRODUCTS);
+            setComments(INITIAL_COMMENTS);
+            setActivities(INITIAL_ACTIVITY);
+            setSocialMedia(INITIAL_SOCIAL_MEDIA);
+            setLeads(INITIAL_LEADS);
+            setFlags(INITIAL_FLAGS);
+            setReleases(INITIAL_RELEASES);
+            setInternalTasks(INITIAL_INTERNAL_TASKS);
+          }
+        }
+      }
+      if (mounted) setLoading(false);
+    };
+
+    loadSession();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        loadSession();
+      } else if (event === "SIGNED_OUT") {
+        setUserProfile(null);
+        window.location.href = "/portal/auth";
       }
     });
 
-    localStorage.setItem("almmatix_users", JSON.stringify(currentUsers));
-    setCrmUsers(currentUsers);
+    return () => {
+      mounted = false;
+      authListener.subscription.unsubscribe();
+    };
+
+
   }, []);
 
   const addCrmUser = useCallback((user: any) => {
@@ -798,9 +811,9 @@ export function CRMProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    localStorage.removeItem("almmatix_session");
+    await supabase.auth.signOut();
     setUserProfile(null);
-    window.location.reload();
+    window.location.href = "/portal/auth";
   }, []);
 
   const provisionUser = useCallback(async (emailData: Omit<AuthorizedEmail, "createdAt">) => {

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function AuthPage() {
   const router = useRouter();
@@ -12,11 +13,11 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Check if already logged in via local auth
-    const session = localStorage.getItem("almmatix_session");
-    if (session) {
-      router.push("/portal");
-    }
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        router.push("/portal");
+      }
+    });
   }, [router]);
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -24,36 +25,15 @@ export default function AuthPage() {
     setErrorMsg(null); 
     setLoading(true);
 
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
-        const storedUsersRaw = localStorage.getItem("almmatix_users");
-        let users = storedUsersRaw ? JSON.parse(storedUsersRaw) : [];
-
-        const defaultAdmins = [
-          { id: "a1", email: "lakshbetala15@gmail.com", password: "admin@000", name: "Lakshya", role: "admin", category: "admin", createdBy: "System" },
-          { id: "a2", email: "gandhimouriyan1234@gmail.com", password: "admin@000", name: "Mouriyan", role: "admin", category: "admin", createdBy: "System" },
-          { id: "a3", email: "monarchankit25@gmail.com", password: "admin@000", name: "Ankit", role: "admin", category: "admin", createdBy: "System" },
-          { id: "a4", email: "muskanabani01@gmail.com", password: "admin@000", name: "Muskan", role: "admin", category: "admin", createdBy: "System" },
-          { id: "c1", email: "client@almmatix.com", password: "client123", name: "UPKEM Client", role: "client", category: "client", assignedClientId: 1, createdBy: "System" }
-        ];
-
-        // Force update master admins in case they had old cached credentials
-        defaultAdmins.forEach(admin => {
-          const idx = users.findIndex((u: any) => u.email === admin.email);
-          if (idx !== -1) {
-            users[idx].password = admin.password;
-          } else {
-            users.push(admin);
-          }
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: email.toLowerCase(),
+          password
         });
-        localStorage.setItem("almmatix_users", JSON.stringify(users));
-
-        // Sign In
-        const user = users.find((u: any) => u.email === email.toLowerCase() && u.password === password);
-        if (!user) {
-          throw new Error("Invalid email or password.");
-        }
-        localStorage.setItem("almmatix_session", JSON.stringify(user));
+        
+        if (error) throw error;
+        
         router.push("/portal");
       } catch (err: any) { 
         setErrorMsg(err.message || "Authentication error."); 
@@ -80,11 +60,11 @@ export default function AuthPage() {
               <motion.div key="l" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
                 <div>
                   <label className="block text-[10px] text-[var(--color-card-text-muted)] mb-1 font-medium">Email</label>
-                  <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" className={inputClass + " !bg-white !text-[var(--color-card-text)] !border-[var(--color-border-card)] focus:!border-[var(--color-ember)] !placeholder:text-[var(--color-card-text-muted)]"} />
+                  <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" className={inputClass + " !border-[var(--color-border-card)] focus:!border-[var(--color-ember)] !placeholder:text-[var(--color-card-text-muted)]"} />
                 </div>
                 <div>
                   <label className="block text-[10px] text-[var(--color-card-text-muted)] mb-1 font-medium">Password</label>
-                  <input type="password" required value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" className={inputClass + " !bg-white !text-[var(--color-card-text)] !border-[var(--color-border-card)] focus:!border-[var(--color-ember)] !placeholder:text-[var(--color-card-text-muted)]"} />
+                  <input type="password" required value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" className={inputClass + " !border-[var(--color-border-card)] focus:!border-[var(--color-ember)] !placeholder:text-[var(--color-card-text-muted)]"} />
                 </div>
               </motion.div>
             </AnimatePresence>
@@ -97,7 +77,7 @@ export default function AuthPage() {
           </form>
 
           <div className="mt-5 pt-4 border-t border-[var(--color-border-card)] text-center">
-            <p className="text-[9px] text-[var(--color-card-text-muted)]">All accounts must be created by an Admin inside the CRM.</p>
+            <p className="text-[9px] text-[var(--color-card-text-muted)]">Please ensure your account has been provisioned by an Admin.</p>
           </div>
         </div>
       </motion.div>
