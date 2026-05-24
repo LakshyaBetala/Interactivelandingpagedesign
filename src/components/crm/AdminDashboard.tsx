@@ -42,6 +42,7 @@ export default function AdminDashboard() {
   const [sel,setSel]=useState<number|string|null>(null);
   const [showAdd,setShowAdd] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [confirm, setConfirm] = useState<{ title: string, desc: string, action: () => void } | null>(null);
   const go = (s:Section)=>{setSec(s);setSel(null);setShowAdd(false);setSidebarOpen(false);};
   const navigateTo = (s:Section, id?: string | number)=>{setSec(s);setSel(id ?? null);setShowAdd(false);setSidebarOpen(false);};
   const navItems:{id:Section;l:string;i:string;c?:number}[] = [
@@ -131,6 +132,18 @@ export default function AdminDashboard() {
           </AnimatePresence>
         </div>
       </main>
+      {confirm && (
+        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <motion.div initial={{opacity:0, scale:0.95}} animate={{opacity:1, scale:1}} className="bg-[var(--color-surface)] border border-[var(--color-border-card)] p-6 rounded-2xl w-full max-w-[400px] shadow-2xl">
+            <h3 className="text-[18px] font-black text-white mb-2">{confirm.title}</h3>
+            <p className="text-[13px] text-[var(--color-text-secondary)] mb-6 leading-relaxed">{confirm.desc}</p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setConfirm(null)} className="px-5 py-2 text-[12px] font-bold text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-muted)] rounded-lg transition-colors">Cancel</button>
+              <button onClick={() => { confirm.action(); setConfirm(null); }} className="px-5 py-2 text-[12px] font-bold bg-[var(--color-bad)] hover:bg-red-600 text-white rounded-lg transition-colors shadow-lg shadow-red-500/20">Yes, Delete</button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
@@ -243,7 +256,7 @@ function Projects({crm,sel,setSel,showAdd,close,clients}:any) {
                     className={`bg-[var(--color-surface)] border rounded-xl p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all ${sel===c.id?"border-[var(--color-ember)] ring-2 ring-[var(--color-ember)]/20 shadow-lg scale-[1.02]":"border-[var(--color-border-card)] shadow-sm"} ${drag===c.id?"opacity-40 scale-95":""}`}>
                     <div className="flex items-start justify-between mb-1 gap-2">
                       <span className="text-[12px] font-bold text-[var(--color-card-text)] leading-tight line-clamp-2">{c.name}</span>
-                      <X onClick={()=>crm.deleteClient(c.id)}/>
+                      <X onClick={()=>setConfirm({title:"Delete Project",desc:"Are you sure you want to delete this project everywhere?",action:()=>crm.deleteClient(c.id)})}/>
                     </div>
                     <p className="text-[10px] text-[var(--color-card-text-muted)] line-clamp-1 mb-3 font-medium">{c.project}</p>
                     <div className="flex items-center justify-between mt-auto pt-2 border-t border-[var(--color-border-card)]/50">
@@ -407,7 +420,7 @@ function ProjDrawer({crm,id,onClose}:any){
       </div>
       
       <div className="border-t border-[var(--color-border-subtle)] pt-4">
-        <button onClick={()=>{crm.deleteClient(id);onClose();}} className="text-[10px] font-bold text-[var(--color-bad)] hover:bg-[var(--color-bad-soft)] px-3 py-1.5 rounded-md transition-colors w-full text-left">Delete project...</button>
+        <button onClick={()=>{setConfirm({title:"Delete Project",desc:"Are you sure you want to delete this project everywhere?",action:()=>{crm.deleteClient(id);onClose();}});}} className="text-[10px] font-bold text-[var(--color-bad)] hover:bg-[var(--color-bad-soft)] px-3 py-1.5 rounded-md transition-colors w-full text-left">Delete project...</button>
       </div>
     </div>
   );
@@ -440,7 +453,7 @@ function Tasks({crm,showAdd,close}:any){
                   <div className="flex items-center gap-2">
                     <select value={t.assignedAdminId} onChange={e=>{e.stopPropagation();crm.updateInternalTask(t.id,{assignedAdminId:e.target.value});}} className="w-5 h-5 opacity-0 absolute cursor-pointer" title="Reassign" style={{zIndex:2}}/>
                     <Av id={t.assignedAdminId} name={ow?.name||"?"} sz={20}/>
-                    <span className="opacity-0 group-hover:opacity-100 transition-opacity"><X onClick={()=>crm.deleteInternalTask(t.id)}/></span>
+                    <span className="opacity-0 group-hover:opacity-100 transition-opacity"><X onClick={()=>setConfirm({title:"Delete Task",desc:"Are you sure you want to delete this task everywhere?",action:()=>crm.deleteInternalTask(t.id)})}/></span>
                   </div>
                 </div>
               </div>
@@ -461,7 +474,7 @@ function Social({crm,showAdd,close}:any){
   const [editDesc,setEditDesc]=useState("");
   const icon:Record<string,string>={Instagram:"📸",Twitter:"𝕏",LinkedIn:"in",Reddit:"🔴",YouTube:"▶"};
   const moveTo=(status:SocialStatus)=>{if(drag){crm.updateSocialMedia(drag, { status });setDrag(null);}};
-  const del=(id:string)=>{crm.deleteSocialMedia(id);};
+  const del=(id:string)=>{setConfirm({title:"Delete Post",desc:"Are you sure you want to delete this social post everywhere?",action:()=>crm.deleteSocialMedia(id)});};
   const saveEdit=(id:string)=>{crm.updateSocialMedia(id, { description: editDesc });setEditId(null);};
 
   return(
@@ -592,7 +605,7 @@ function Leads({crm,sel,setSel,showAdd,close}:any){
               <td className="p-3 font-black text-[var(--color-card-text)] text-[12px]"><EditCell lid={l.id} field="estimatedValue" value={l.estimatedValue.toString()} t="number" w="w-24"/></td>
               <td className="p-3"><select value={l.status} onClick={e=>e.stopPropagation()} onChange={e=>{e.stopPropagation();crm.updateLeadStatus(l.id,e.target.value);}} className="!bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-border-card)] rounded-md px-2 py-1 outline-none cursor-pointer font-semibold shadow-sm">{LEAD_STATUSES.map(s=><option key={s}>{s}</option>)}</select></td>
               <td className="p-3 text-[var(--color-text-secondary)] font-medium flex items-center gap-2"><Av id={l.assignedAdminId} name={ow?.name||"?"} sz={16}/> {ow?.name||"—"}</td>
-              <td className="p-3"><X onClick={()=>crm.deleteLead(l.id)}/></td>
+              <td className="p-3"><X onClick={()=>setConfirm({title:"Delete Lead",desc:"Are you sure you want to delete this lead everywhere?",action:()=>crm.deleteLead(l.id)})}/></td>
             </tr>
           );})}{crm.leads.length===0&&<tr><td colSpan={9} className="p-8 text-center text-[var(--color-text-faint)] font-medium text-[12px]">No leads in pipeline.</td></tr>}</tbody>
         </table>
@@ -621,7 +634,7 @@ function LeadDrawer({crm,id,onClose}:any){
       </div>
       {!["Converted","Lost"].includes(l.status)&&<div className="pt-2 space-y-2">
         <button onClick={()=>{crm.convertLeadToClient(id);onClose();}} className="w-full bg-[var(--color-ok)] text-white text-[12px] font-bold py-2.5 rounded-xl shadow-md hover:opacity-90 transition-opacity">Convert to Project</button>
-        <button onClick={()=>{crm.deleteLead(id);onClose();}} className="text-[10px] text-center w-full font-bold text-[var(--color-bad)] hover:underline py-2">Delete Lead</button>
+        <button onClick={()=>{setConfirm({title:"Delete Lead",desc:"Are you sure you want to delete this lead everywhere?",action:()=>{crm.deleteLead(id);onClose();}});}} className="text-[10px] text-center w-full font-bold text-[var(--color-bad)] hover:underline py-2">Delete Lead</button>
       </div>}
     </div>
   );
@@ -686,7 +699,7 @@ function FlagDrawer({crm,id,onClose}:any){
         </div>
         <div className="flex gap-2"><input value={log} onChange={e=>setLog(e.target.value)} placeholder="Add update..." className="flex-1 !bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-border-card)] shadow-sm rounded-lg px-3 py-2 text-[11px] font-medium outline-none focus:!border-[var(--color-ember)]" onKeyDown={e=>{if(e.key==="Enter"&&log.trim()){crm.addFlagSprintLog(id,crm.userProfile?.name||"Admin",log.trim());setLog("");}}}/><button onClick={()=>{if(log.trim()){crm.addFlagSprintLog(id,crm.userProfile?.name||"Admin",log.trim());setLog("");}}} className="px-4 py-2 bg-[var(--color-charcoal)] text-white text-[11px] font-bold rounded-lg shadow-md hover:bg-[var(--color-charcoal-mid)] transition-colors">Add</button></div>
       </div>
-      <div className="pt-2"><button onClick={()=>{crm.deleteFlag(id);onClose();}} className="text-[10px] text-center w-full font-bold text-[var(--color-bad)] hover:bg-[var(--color-bad-soft)] py-2 rounded-md transition-colors">Delete Issue</button></div>
+      <div className="pt-2"><button onClick={()=>{setConfirm({title:"Delete Issue",desc:"Are you sure you want to delete this issue everywhere?",action:()=>{crm.deleteFlag(id);onClose();}});}} className="text-[10px] text-center w-full font-bold text-[var(--color-bad)] hover:bg-[var(--color-bad-soft)] py-2 rounded-md transition-colors">Delete Issue</button></div>
     </div>
   );
 }
@@ -722,7 +735,7 @@ function Products({crm, showAdd, close}:any){
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-2">
         {crm.products.map((p:any)=>{const ld=crm.team.find((t:any)=>t.id===p.leadId);return(
           <div key={p.id} className="bg-[var(--color-surface)] border border-[var(--color-border-card)] shadow-sm rounded-2xl p-4 md:p-5 hover:shadow-md transition-shadow relative group">
-            <button onClick={()=>crm.deleteProduct(p.id)} className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 text-[var(--color-text-faint)] hover:text-[var(--color-bad)] transition-all">×</button>
+            <button onClick={()=>setConfirm({title:"Delete Product",desc:"Are you sure you want to delete this product everywhere?",action:()=>crm.deleteProduct(p.id)})} className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 text-[var(--color-text-faint)] hover:text-[var(--color-bad)] transition-all">×</button>
             <div className="flex flex-col mb-4 pr-6">
               <EditP pid={p.id} field="name" value={p.name} c="text-[16px] font-black text-[var(--color-card-text)] mb-1"/>
               <EditP pid={p.id} field="description" value={p.description} c="text-[12px] font-medium text-[var(--color-text-secondary)] leading-snug"/>
@@ -885,7 +898,7 @@ function AccessManagement({crm, clients}:any) {
                     )}
                   </td>
                   <td className="p-4 text-[var(--color-text-secondary)] font-medium text-[10px]">{u.createdBy || 'System'}</td>
-                  <td className="p-4 text-right"><button onClick={()=>crm.deleteCrmUser(u.email)} className="text-[11px] font-bold text-[var(--color-bad)] hover:bg-[var(--color-bad-soft)] px-3 py-1.5 rounded-md transition-colors">Revoke</button></td>
+                  <td className="p-4 text-right"><button onClick={()=>setConfirm({title:"Revoke Access",desc:"Are you sure you want to revoke this user's access everywhere?",action:()=>crm.deleteCrmUser(u.email)})} className="text-[11px] font-bold text-[var(--color-bad)] hover:bg-[var(--color-bad-soft)] px-3 py-1.5 rounded-md transition-colors">Revoke</button></td>
                 </tr>
               ))}
               {(!crm.crmUsers || crm.crmUsers.length === 0) && <tr><td colSpan={7} className="p-8 text-center text-[var(--color-text-faint)] font-medium text-[13px]">No custom accounts provisioned yet.</td></tr>}
