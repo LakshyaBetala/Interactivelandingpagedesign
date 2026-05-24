@@ -182,33 +182,39 @@ function Dashboard({crm, navigateTo}:any) {
             </div>
           );})}
         </div>
-        {/* Column 2: Activity Feed */}
+        {/* Column 2: Activity Feed (In Progress Tasks) */}
         <div className="space-y-3">
-          <Lbl>Activity Feed</Lbl>
+          <Lbl>Activity Feed (In Progress)</Lbl>
           <div className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border-card)] shadow-sm p-4 max-h-[600px] overflow-y-auto crm-scroll">
-            {activities.length === 0 && <div className="flex flex-col items-center justify-center py-8 opacity-30"><span className="text-2xl mb-1">📋</span><p className="text-[11px] font-medium">No activity yet</p></div>}
+            {internalTasks.filter((t:any) => t.status === "In Progress").length === 0 && <div className="flex flex-col items-center justify-center py-8 opacity-30"><span className="text-2xl mb-1">📋</span><p className="text-[11px] font-medium">No tasks in progress</p></div>}
             <div className="relative">
-              {activities.length > 0 && <div className="absolute left-[7px] top-2 bottom-2 w-[2px] bg-[var(--color-border-card)]/50 rounded-full"/>}
+              {internalTasks.filter((t:any) => t.status === "In Progress").length > 0 && <div className="absolute left-[7px] top-2 bottom-2 w-[2px] bg-[var(--color-border-card)]/50 rounded-full"/>}
               <div className="space-y-0">
-                {activities.slice(0, 20).map((a:any, i:number) => (
-                  <div key={a.id || i} className="flex gap-3 py-3 relative group hover:bg-[var(--color-bg-soft)] rounded-lg px-1 -mx-1 transition-colors">
+                {internalTasks.filter((t:any) => t.status === "In Progress").slice(0, 20).map((t:any, i:number) => {
+                  const ow = team.find((u:any) => u.id === t.assignedAdminId);
+                  const cl = clients.find((c:any) => c.id === t.clientId);
+                  const pr = crm.products?.find((p:any) => p.id === t.productId);
+                  return (
+                  <div key={t.id || i} className="flex gap-3 py-3 relative group hover:bg-[var(--color-bg-soft)] rounded-lg px-1 -mx-1 transition-colors">
                     <div className="relative z-10 flex-shrink-0 w-4 h-4 rounded-full bg-[var(--color-surface)] border-2 border-[var(--color-border-card)] flex items-center justify-center mt-0.5">
-                      <span className="text-[8px]">{typeIcon[a.type] || "•"}</span>
+                      <span className="text-[8px]">⚡</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[11.5px] font-bold text-[var(--color-card-text)] leading-snug">{a.action}</p>
+                      <p className="text-[11.5px] font-bold text-[var(--color-card-text)] leading-snug">{t.title}</p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[9px] font-bold text-[var(--color-ember)] bg-[var(--color-ember-soft)] px-1.5 py-0.5 rounded">{a.client}</span>
-                        <span className="text-[9px] text-[var(--color-text-faint)] font-medium">{a.time}</span>
+                        <span className="text-[9px] font-bold text-[var(--color-ember)] bg-[var(--color-ember-soft)] px-1.5 py-0.5 rounded">{ow?.name || "Unassigned"}</span>
+                        <span className="text-[9px] text-[var(--color-text-faint)] font-medium">
+                          {(cl && cl.name) || (pr && pr.name) || "General"}
+                        </span>
                       </div>
                     </div>
                   </div>
-                ))}
+                )})}
               </div>
             </div>
           </div>
         </div>
-        {/* Column 3: Attention + Active Projects */}
+        {/* Column 3: Attention + Active Projects + Active Products */}
         <div className="space-y-6">
           <div className="bg-[var(--color-surface)] p-4 rounded-xl border border-[var(--color-border-card)] shadow-sm"><Lbl>Needs Attention</Lbl>
             <div className="space-y-2 mt-3">
@@ -222,6 +228,22 @@ function Dashboard({crm, navigateTo}:any) {
               <div className="flex justify-between items-center"><span className="text-[12px] font-bold truncate text-[var(--color-card-text)]">{c.name}</span><div className="flex items-center gap-2"><span className="text-[10px] font-semibold text-[var(--color-ember)]">{c.stage}</span>{ow && <Av id={ow.id} name={ow.name} sz={16}/>}</div></div>
               <div className="flex gap-1 w-full mt-1">{PROJECT_STAGES.map((_:any,i:number)=><div key={i} className={`h-1.5 flex-1 rounded-full ${i<=si?"bg-[var(--color-ember)] shadow-[0_0_5px_var(--color-ember)]/30":"bg-[var(--color-border)]"}`}/>)}</div>
             </div>})}</div>
+          </div>
+          <div><Lbl>Active Products</Lbl>
+            <div className="space-y-1.5 mt-2">
+              {crm.products?.filter((p:any) => p.stage === "Post-Demo Dev" || p.stage === "Distribution").map((p:any) => {
+                const stages = ["Ideation", "Dev", "Demo", "Post-Demo Dev", "Distribution"];
+                const si = stages.indexOf(p.stage);
+                const ow = team.find((t:any)=>t.id===p.leadId);
+                return <div key={p.id} className="flex flex-col gap-1.5 py-2.5 px-3 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border-card)] shadow-sm hover:shadow transition-shadow">
+                  <div className="flex justify-between items-center"><span className="text-[12px] font-bold truncate text-[var(--color-card-text)]">{p.name}</span><div className="flex items-center gap-2"><span className="text-[10px] font-semibold text-[var(--color-info)]">{p.stage}</span>{ow && <Av id={ow.id} name={ow.name} sz={16}/>}</div></div>
+                  <div className="flex gap-1 w-full mt-1">{stages.map((_:any,i:number)=><div key={i} className={`h-1.5 flex-1 rounded-full ${i<=si?"bg-[var(--color-info)] shadow-[0_0_5px_var(--color-info)]/30":"bg-[var(--color-border)]"}`}/>)}</div>
+                </div>
+              })}
+              {crm.products?.filter((p:any) => p.stage === "Post-Demo Dev" || p.stage === "Distribution").length === 0 && (
+                <div className="text-[11px] text-[var(--color-text-faint)] py-2 text-center border border-dashed border-[var(--color-border-card)] rounded-lg">No active products</div>
+              )}
+            </div>
           </div>
         </div>
       </div>
