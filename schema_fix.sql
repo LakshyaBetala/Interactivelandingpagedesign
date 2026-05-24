@@ -17,6 +17,8 @@ ALTER TABLE IF EXISTS public.outreach_leads ADD COLUMN IF NOT EXISTS source text
 ALTER TABLE IF EXISTS public.outreach_leads ADD COLUMN IF NOT EXISTS engagement_score bigint DEFAULT 10;
 ALTER TABLE IF EXISTS public.outreach_leads ADD COLUMN IF NOT EXISTS sourced_by_id uuid REFERENCES public.profiles(id);
 ALTER TABLE IF EXISTS public.outreach_leads ADD COLUMN IF NOT EXISTS estimated_value bigint DEFAULT 0;
+ALTER TABLE IF EXISTS public.outreach_leads ADD COLUMN IF NOT EXISTS company_info text;
+ALTER TABLE IF EXISTS public.outreach_leads ADD COLUMN IF NOT EXISTS person_contacted text;
 
 -- Internal Tasks
 ALTER TABLE IF EXISTS public.internal_tasks ADD COLUMN IF NOT EXISTS status text;
