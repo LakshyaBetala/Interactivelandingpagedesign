@@ -596,7 +596,6 @@ export function CRMProvider({ children }: { children: ReactNode }) {
   // Database application states — start empty; populated by fetchOperationalData or offline fallback
   const [clients, setClients] = useState<CRMClient[]>([]);
   const [authorizedEmails, setAuthorizedEmails] = useState<AuthorizedEmail[]>(INITIAL_AUTH_EMAILS);
-  const [team, setTeam] = useState<TeamMember[]>(INITIAL_TEAM);
   const [products, setProducts] = useState<InternalProduct[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -669,7 +668,6 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         const dbSocial = await safeFetch(supabase.from("social_media").select("*"));
 
         // Supabase is the single source of truth — use DB data only, empty = empty
-        setTeam(dbProfiles && dbProfiles.length > 0 ? dbProfiles.map(mapTeamMemberToTS) : INITIAL_TEAM);
         setClients(dbClients ? dbClients.map(mapClientToTS) : []);
         setProducts(dbProducts ? dbProducts.map(mapProductToTS) : []);
         setComments(dbComments ? dbComments.map(mapCommentToTS) : []);
@@ -1700,6 +1698,21 @@ export function CRMProvider({ children }: { children: ReactNode }) {
       videoUrl: release.videoUrl
     } as ChangelogRelease]);
   }, []);
+
+  const team = useMemo(() => {
+    return crmUsers
+      .filter((u: any) => u.category === "admin" || u.category === "intern")
+      .map((u: any) => ({
+        id: u.id || u.email,
+        name: u.name,
+        role: u.role || "Team Member",
+        avatar: (u.name || "?").substring(0, 2).toUpperCase(),
+        colorVar: u.colorVar || "var(--color-admin-lakshya)",
+        primaryFocus: "Operations",
+        responsibilities: [],
+        activeTasks: []
+      }));
+  }, [crmUsers]);
 
   return (
     <CRMContext.Provider value={{ 

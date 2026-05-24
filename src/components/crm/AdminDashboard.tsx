@@ -26,7 +26,19 @@ export default function AdminDashboard() {
   const crm=useCRM();
   const {team,products,comments,activities,leads,flags,internalTasks}=crm;
   const clients = crm.userProfile?.category === "intern" ? crm.clients.filter(c => c.assignedAdminId === crm.userProfile?.id || (crm.userProfile?.assignedProjects || []).includes(c.id)) : crm.clients;
-  const [sec,setSec]=useState<Section>("dashboard");
+  const [sec,setSec]=useState<Section>(() => {
+    if (crm.userProfile?.category === "intern") {
+      return (crm.userProfile.allowedTabs?.[0] as Section) || "projects";
+    }
+    return "dashboard";
+  });
+  
+  useEffect(() => {
+    if (crm.userProfile?.category === "intern" && sec === "dashboard") {
+      setSec((crm.userProfile.allowedTabs?.[0] as Section) || "projects");
+    }
+  }, [crm.userProfile?.category, crm.userProfile?.allowedTabs, sec]);
+
   const [sel,setSel]=useState<number|string|null>(null);
   const [showAdd,setShowAdd] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -42,9 +54,10 @@ export default function AdminDashboard() {
     {id:"products",l:"Products",i:"△",c:products.length},
   ];
   if (crm.userProfile?.category === "admin") navItems.push({id:"access",l:"Access Management",i:"⚿",c:crm.crmUsers?.length||0});
-  // Filter nav for interns - they only see dashboard + their allowed tabs
+  
+  // Filter nav for interns - they only see their explicitly allowed tabs
   const filteredNav = crm.userProfile?.category === "intern" 
-    ? navItems.filter(n => n.id === "dashboard" || (crm.userProfile?.allowedTabs || []).includes(n.id))
+    ? navItems.filter(n => (crm.userProfile?.allowedTabs || []).includes(n.id))
     : navItems;
   return (
     <div className="flex h-[100dvh] bg-[var(--color-bg)] text-[var(--color-text-primary)] font-sans overflow-hidden">
