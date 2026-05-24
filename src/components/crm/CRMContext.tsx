@@ -687,7 +687,11 @@ export function CRMProvider({ children }: { children: ReactNode }) {
           try {
             const localUsers = JSON.parse(localStorage.getItem("almmatix_users") || "[]");
             const mergedProfiles = dbProfiles.map((dbUser:any) => {
-              const localMatch = localUsers.find((lu:any) => lu.id === dbUser.id || lu.email === dbUser.email || lu.name === dbUser.name);
+              const localMatch = localUsers.find((lu:any) => 
+                (lu.id && lu.id === dbUser.id) || 
+                (lu.email && lu.email === dbUser.email) || 
+                (lu.name && lu.name === dbUser.name)
+              );
               return localMatch ? { ...dbUser, ...localMatch, category: localMatch.category || dbUser.category } : dbUser;
             });
             // Also append any local users that aren't in Supabase at all
