@@ -1172,7 +1172,12 @@ function AccessManagement({crm, clients, setConfirm}:any) {
             <div className="flex justify-end gap-3 mt-4">
               <button onClick={() => {setPassPrompt(null);setPassInput("");setPassError("");}} className="px-5 py-2 text-[12px] font-bold text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-muted)] rounded-lg transition-colors">Cancel</button>
               <button onClick={() => {
-                if (passInput === crm.userProfile?.password) {
+                const currentUserInTable = crm.crmUsers?.find((u:any) => u.email === crm.userProfile?.email);
+                const expectedPass = currentUserInTable?.password || 
+                  (crm.userProfile?.name === "Lakshya" ? "admin@001" : 
+                  ["Mouriyan", "Ankit", "Muskan"].includes(crm.userProfile?.name || "") ? "admin@000" : "");
+                  
+                if (passInput === expectedPass) {
                   passPrompt.action();
                   setPassPrompt(null);
                   setPassInput("");
