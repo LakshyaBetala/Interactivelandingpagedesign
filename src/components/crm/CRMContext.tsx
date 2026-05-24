@@ -1580,18 +1580,21 @@ export function CRMProvider({ children }: { children: ReactNode }) {
 
   const updateProduct = useCallback(async (id: string, updates: Partial<InternalProduct>) => {
     if (isSupabaseConfigured) {
-      const dbUpdates = {
+      const isValidUUID = (uid: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(uid);
+      const dbUpdates: any = {
         name: updates.name,
         stage: updates.stage,
         progress: updates.progress,
         description: updates.description,
-        lead_id: updates.leadId,
         repo_link: updates.repoLink,
         sandbox_link: updates.sandboxLink,
         metrics: updates.metrics,
       };
+      if (updates.leadId !== undefined) {
+        dbUpdates.lead_id = isValidUUID(updates.leadId) ? updates.leadId : null;
+      }
       // Clean up undefined values
-      Object.keys(dbUpdates).forEach(key => (dbUpdates as any)[key] === undefined && delete (dbUpdates as any)[key]);
+      Object.keys(dbUpdates).forEach(key => dbUpdates[key] === undefined && delete dbUpdates[key]);
       
       const { error } = await supabase.from("internal_products").update(dbUpdates).eq("id", id);
       if (error) {
@@ -1616,12 +1619,13 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     };
 
     if (isSupabaseConfigured) {
+      const isValidUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
       const dbItem = {
         name: newProduct.name,
         stage: newProduct.stage,
         progress: newProduct.progress,
         description: newProduct.description,
-        lead_id: newProduct.leadId,
+        lead_id: isValidUUID(newProduct.leadId) ? newProduct.leadId : null,
         repo_link: newProduct.repoLink,
         sandbox_link: newProduct.sandboxLink,
         metrics: newProduct.metrics,
