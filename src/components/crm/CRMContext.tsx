@@ -1629,6 +1629,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
       const { data, error } = await supabase.from("internal_products").insert(dbItem).select().single();
       if (error) {
         console.error("Database insert product error:", error);
+        alert(`Database error: ${error.message}\nDetails: ${error.details || 'none'}\nHint: ${error.hint || 'none'}`);
       } else if (data) {
         newProduct.id = data.id;
         setProducts(prev => [...prev, newProduct]);
