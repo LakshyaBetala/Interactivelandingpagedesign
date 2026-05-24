@@ -762,32 +762,34 @@ export function CRMProvider({ children }: { children: ReactNode }) {
       
       if (session && session.user) {
         // Fetch profile
-        const { data: profileData } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select("*")
           .eq("id", session.user.id)
           .single();
 
-        if (profileData) {
-          const profile: UserProfile = {
-            id: session.user.id,
-            email: session.user.email || "",
-            name: profileData.name || session.user.user_metadata?.name || session.user.email || "User",
-            role: profileData.role || session.user.user_metadata?.role || "",
-            category: profileData.category || session.user.user_metadata?.category || "client",
-            assignedClientId: profileData.assigned_client_id || session.user.user_metadata?.assignedClientId,
-            assignedProjects: profileData.assigned_projects,
-            allowedTabs: profileData.allowed_tabs || session.user.user_metadata?.allowedTabs || null,
-            avatar: profileData.avatar || session.user.user_metadata?.avatar || (profileData.name || session.user.user_metadata?.name ? (profileData.name || session.user.user_metadata?.name).substring(0, 2).toUpperCase() : "U"),
-            colorVar: profileData.color_var || "var(--color-admin-lakshya)",
-            primaryFocus: profileData.primary_focus || "Operations",
-            responsibilities: profileData.responsibilities || [],
-            activeTasks: profileData.active_tasks || [],
-          };
-          if (mounted) {
-            setUserProfile(profile);
-            fetchOperationalData(profile);
-          }
+        // If no profile row exists, we use an empty object and rely entirely on JWT metadata fallbacks.
+        const pData = profileData || {};
+
+        const profile: UserProfile = {
+          id: session.user.id,
+          email: session.user.email || "",
+          name: pData.name || session.user.user_metadata?.name || session.user.email || "User",
+          role: pData.role || session.user.user_metadata?.role || "",
+          category: pData.category || session.user.user_metadata?.category || "client",
+          assignedClientId: pData.assigned_client_id || session.user.user_metadata?.assignedClientId,
+          assignedProjects: pData.assigned_projects,
+          allowedTabs: pData.allowed_tabs || session.user.user_metadata?.allowedTabs || null,
+          avatar: pData.avatar || session.user.user_metadata?.avatar || (pData.name || session.user.user_metadata?.name ? (pData.name || session.user.user_metadata?.name).substring(0, 2).toUpperCase() : "U"),
+          colorVar: pData.color_var || "var(--color-admin-lakshya)",
+          primaryFocus: pData.primary_focus || "Operations",
+          responsibilities: pData.responsibilities || [],
+          activeTasks: pData.active_tasks || [],
+        };
+        
+        if (mounted) {
+          setUserProfile(profile);
+          fetchOperationalData(profile);
         }
       } else {
         if (mounted) {
