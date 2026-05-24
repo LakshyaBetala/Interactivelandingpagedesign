@@ -456,13 +456,47 @@ function Tasks({crm,showAdd,close,setConfirm}:any){
   const drop=(s:TaskStatus)=>{if(drag){crm.updateInternalTask(drag,{status:s});setDrag(null);}};
   return(
     <div className="space-y-4 max-w-[1400px]">
-      {showAdd&&<QuickAdd title="New Task" fields={[{k:"title",l:"Task",p:"What needs to be done?"},{k:"assignedAdminId",l:"Assign to",t:"select",o:crm.team.map((t:any)=>({v:t.id,l:t.name}))},{k:"clientId",l:"Project (optional)",t:"select",o:[{v:"",l:"— None —"},...crm.clients.map((c:any)=>({v:String(c.id),l:c.name}))]}]} onSubmit={(d:any)=>{crm.addInternalTask({title:d.title,assignedAdminId:d.assignedAdminId||"a1",clientId:d.clientId?Number(d.clientId):undefined,status:"Todo" as const});close();}} onClose={close}/>}
+      {showAdd&&<QuickAdd title="New Task" fields={[
+        {k:"title",l:"Task",p:"What needs to be done?"},
+        {k:"assignedAdminId",l:"Assign to",t:"select",o:crm.team.map((t:any)=>({v:t.id,l:t.name}))},
+        {k:"linkId",l:"Related To (optional)",t:"select",o:[
+          {v:"",l:"— None —"},
+          {v:"lbl_proj",l:"--- Projects ---",d:true},
+          ...crm.clients.map((c:any)=>({v:"client_"+c.id,l:c.name})),
+          {v:"lbl_prod",l:"--- Products ---",d:true},
+          ...(crm.products||[]).map((p:any)=>({v:"product_"+p.id,l:p.name})),
+          {v:"lbl_oth",l:"--- Other ---",d:true},
+          {v:"lead",l:"Leads"},
+          {v:"social",l:"Social"}
+        ]}
+      ]} onSubmit={(d:any)=>{
+        const isClient = d.linkId?.startsWith("client_");
+        const isProduct = d.linkId?.startsWith("product_");
+        const isLead = d.linkId === "lead";
+        const isSocial = d.linkId === "social";
+        let finalTitle = d.title;
+        if (isLead) finalTitle = "[Lead] " + finalTitle;
+        if (isSocial) finalTitle = "[Social] " + finalTitle;
+        
+        crm.addInternalTask({
+          title: finalTitle,
+          assignedAdminId: d.assignedAdminId||"a1",
+          clientId: isClient ? Number(d.linkId.split("_")[1]) : undefined,
+          productId: isProduct ? d.linkId.split("_")[1] : undefined,
+          status: "Todo" as const
+        });
+        close();
+      }} onClose={close}/>}
       <div className="flex gap-4 overflow-x-auto pb-4 crm-scroll" style={{minHeight:"calc(100vh - 140px)"}}>
         {TASK_COLS.map(col=>{const items=crm.internalTasks.filter((t:any)=>t.status===col.s);return(
           <div key={col.s} onDrop={e=>{e.preventDefault();drop(col.s);}} onDragOver={e=>{e.preventDefault();e.dataTransfer.dropEffect="move";}}
             className={`flex-shrink-0 w-[280px] rounded-2xl p-3 border-2 transition-colors ${drag?"border-[var(--color-ember)]/20 bg-[var(--color-ember-soft)]/20":"border-[var(--color-border-card)]/50 bg-[var(--color-surface)] shadow-sm"}`}>
             <div className="flex items-center justify-between mb-4 px-1"><h4 className="text-[12px] font-bold text-[var(--color-text-secondary)]">{col.l}</h4><span className="text-[10px] font-bold text-[var(--color-text-muted)] bg-[var(--color-border)] px-2 py-0.5 rounded-full">{items.length}</span></div>
-            <div className="space-y-3">{items.map((t:any)=>{const ow=crm.team.find((m:any)=>m.id===t.assignedAdminId);const pj=crm.clients.find((c:any)=>c.id===t.clientId);return(
+            <div className="space-y-3">{items.map((t:any)=>{
+              const ow=crm.team.find((m:any)=>m.id===t.assignedAdminId);
+              const pj=crm.clients.find((c:any)=>c.id===t.clientId);
+              const pr=crm.products?.find((p:any)=>p.id===t.productId);
+              return(
               <div key={t.id} draggable onDragStart={e=>{setDrag(t.id);e.dataTransfer.effectAllowed="move";}}
                 className={`bg-[var(--color-surface)] border rounded-xl p-3.5 cursor-grab active:cursor-grabbing hover:shadow-md transition-all group ${drag===t.id?"opacity-40 scale-95":"border-[var(--color-border-card)] shadow-sm"}`}>
                 {editId===t.id?(
@@ -471,7 +505,7 @@ function Tasks({crm,showAdd,close,setConfirm}:any){
                   <p onDoubleClick={()=>{setEditId(t.id);setEditTitle(t.title);}} className="text-[12px] font-bold text-[var(--color-card-text)] leading-snug cursor-text mb-2 line-clamp-3">{t.title}</p>
                 )}
                 <div className="flex items-center justify-between mt-3 pt-2 border-t border-[var(--color-border-card)]/50">
-                  <span className="text-[9px] font-bold text-[var(--color-card-text-muted)] bg-[var(--color-surface-muted)] px-1.5 py-0.5 rounded truncate max-w-[120px]">{pj?.name||"Internal"}</span>
+                  <span className="text-[9px] font-bold text-[var(--color-card-text-muted)] bg-[var(--color-surface-muted)] px-1.5 py-0.5 rounded truncate max-w-[120px]">{pj?.name||pr?.name||"Internal"}</span>
                   <div className="flex items-center gap-2">
                     <select value={t.assignedAdminId} onChange={e=>{e.stopPropagation();crm.updateInternalTask(t.id,{assignedAdminId:e.target.value});}} className="w-5 h-5 opacity-0 absolute cursor-pointer" title="Reassign" style={{zIndex:2}}/>
                     <Av id={t.assignedAdminId} name={ow?.name||"?"} sz={20}/>
@@ -479,9 +513,9 @@ function Tasks({crm,showAdd,close,setConfirm}:any){
                   </div>
                 </div>
               </div>
-            );})}</div>
+            )})}</div>
           </div>
-        );})}
+        )})}
       </div>
     </div>
   );
