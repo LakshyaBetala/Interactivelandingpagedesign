@@ -721,12 +721,19 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         setFlags([]);
         setReleases([]);
 
-        const { data: dbClients, error: clientErr } = await supabase
-          .from("clients")
-          .select("*")
-          .eq("profile_id", profile.id);
-
-        if (clientErr) console.warn("Client fetch error:", clientErr.message);
+        // A client is linked to their project via assignedClientId (= the project row's id).
+        // Older accounts may instead be linked through clients.profile_id, so fall back to that.
+        let dbClients: any[] | null = null;
+        if (profile.assignedClientId !== undefined && profile.assignedClientId !== null) {
+          const res = await supabase.from("clients").select("*").eq("id", profile.assignedClientId);
+          if (res.error) console.warn("Client fetch (assignedClientId) error:", res.error.message);
+          dbClients = res.data;
+        }
+        if (!dbClients || dbClients.length === 0) {
+          const res = await supabase.from("clients").select("*").eq("profile_id", profile.id);
+          if (res.error) console.warn("Client fetch (profile_id) error:", res.error.message);
+          dbClients = res.data;
+        }
 
         if (dbClients && dbClients.length > 0) {
           const clientData = mapClientToTS(dbClients[0]);
@@ -774,12 +781,15 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         const profile: UserProfile = {
           id: session.user.id,
           email: session.user.email || "",
-          name: session.user.user_metadata?.name || pData.name || session.user.email || "User",
-          role: session.user.user_metadata?.role || pData.role || "",
-          category: session.user.user_metadata?.category || pData.category || "client",
-          assignedClientId: session.user.user_metadata?.assignedClientId || pData.assigned_client_id,
+          // DB profile row is the living source of truth (admin edits land there);
+          // JWT user_metadata is only a fallback for fields the trigger didn't populate
+          // (it is frozen at signup and cannot be updated for other users client-side).
+          name: pData.name || session.user.user_metadata?.name || session.user.email || "User",
+          role: pData.role ?? session.user.user_metadata?.role ?? "",
+          category: pData.category ?? session.user.user_metadata?.category ?? "client",
+          assignedClientId: pData.assigned_client_id ?? session.user.user_metadata?.assignedClientId,
           assignedProjects: pData.assigned_projects,
-          allowedTabs: session.user.user_metadata?.allowedTabs || pData.allowed_tabs || null,
+          allowedTabs: pData.allowed_tabs ?? session.user.user_metadata?.allowedTabs ?? null,
           avatar: session.user.user_metadata?.avatar || pData.avatar || (pData.name || session.user.user_metadata?.name ? (pData.name || session.user.user_metadata?.name).substring(0, 2).toUpperCase() : "U"),
           colorVar: pData.color_var || "var(--color-admin-lakshya)",
           primaryFocus: pData.primary_focus || "Operations",
@@ -883,6 +893,16 @@ export function CRMProvider({ children }: { children: ReactNode }) {
                 allowed_tabs: user.allowedTabs || null
               })
             });
+
+            // Link the assigned project back to this client so their isolated portal
+            // query can read it (satisfies profile_id-keyed RLS as well as id lookups).
+            if (user.category === "client" && user.assignedClientId) {
+              const { error: linkErr } = await supabase
+                .from("clients")
+                .update({ profile_id: userId })
+                .eq("id", user.assignedClientId);
+              if (linkErr) console.error("Failed to link client to project:", linkErr.message);
+            }
           }
         } catch (e) {
           console.error("Failed to provision user to Supabase Auth:", e);
@@ -1754,9 +1774,39 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     setCrmUsers(prev => {
       const updated = prev.map(u => u.email === email ? { ...u, ...updates } : u);
       localStorage.setItem("almmatix_users", JSON.stringify(updated));
+
+      // Persist role / restriction / assignment changes to the Supabase profiles row so they
+      // survive reloads, apply across devices, and take effect when the user logs in themselves
+      // (not just in the editing admin's browser). Passwords live in auth, not profiles, so skip them.
+      const target = updated.find(u => u.email === email);
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      if (isSupabaseConfigured && target?.id && supabaseUrl && supabaseKey) {
+        const dbUpdates: Record<string, any> = {};
+        if (updates.name !== undefined) dbUpdates.name = updates.name;
+        if (updates.role !== undefined) dbUpdates.role = updates.role;
+        if (updates.category !== undefined) dbUpdates.category = updates.category;
+        if (updates.assignedClientId !== undefined) dbUpdates.assigned_client_id = updates.assignedClientId;
+        if (updates.allowedTabs !== undefined) dbUpdates.allowed_tabs = updates.allowedTabs;
+        if (Object.keys(dbUpdates).length > 0) {
+          fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${target.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` },
+            body: JSON.stringify(dbUpdates)
+          }).then(res => { if (!res.ok) console.error("Failed to persist user update to Supabase:", res.status); })
+            .catch(e => console.error("Failed to persist user update to Supabase:", e));
+        }
+
+        // When a client is (re)assigned to a project, link that project row back to them
+        // so their isolated portal query can read it.
+        if (updates.assignedClientId !== undefined && target.category === "client") {
+          supabase.from("clients").update({ profile_id: target.id }).eq("id", updates.assignedClientId)
+            .then(({ error }) => { if (error) console.error("Failed to link client to project:", error.message); });
+        }
+      }
       return updated;
     });
-  }, []);
+  }, [isSupabaseConfigured]);
 
   const addSocialMedia = useCallback(async (item: SocialMediaItem) => {
     if (isSupabaseConfigured) {
