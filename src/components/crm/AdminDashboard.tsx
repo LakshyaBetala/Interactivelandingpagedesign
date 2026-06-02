@@ -421,6 +421,7 @@ function ProjDrawer({crm,id,onClose,setConfirm}:any){
   const [relVer, setRelVer] = useState("1.0");
   const [relVideo, setRelVideo] = useState("");
   const [relNotes, setRelNotes] = useState("");
+  const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const save=(f:string)=>{crm.updateClient(id,{[f]:ev});setEd(null);};
@@ -434,20 +435,26 @@ function ProjDrawer({crm,id,onClose,setConfirm}:any){
   );
 
   const submitRelease = () => {
-    if(!relTitle) return;
-    const notesArray = relNotes.split('\n').map(s=>s.trim()).filter(s=>s);
-    crm.addRelease({ clientId: id, title: relTitle, version: relVer, videoUrl: relVideo, whatWasImproved: notesArray });
+    if(!relTitle || uploading) return;
+    const notesArray = relNotes.split('\n').map((s:string)=>s.trim()).filter((s:string)=>s);
+    // createRelease persists to Supabase (incl. video_url) so the client actually receives it
+    crm.createRelease({ clientId: id, title: relTitle, version: relVer, videoUrl: relVideo || undefined, whatWasImproved: notesArray });
     setShowReleaseForm(false);
     setRelTitle(""); setRelVer("1.0"); setRelVideo(""); setRelNotes("");
   };
 
-  const handleVideoFile = (file: File) => {
-    if (file && file.type.startsWith("video/")) {
-      const url = URL.createObjectURL(file);
-      setRelVideo(url);
-    } else {
-      alert("Please select a valid video file.");
+  const handleVideoFile = async (file: File) => {
+    if (!file || !file.type.startsWith("video/")) { alert("Please select a valid video file."); return; }
+    if (!crm.isSupabaseConfigured) {
+      // Offline/mock mode: no storage available, fall back to a local-only preview
+      setRelVideo(URL.createObjectURL(file));
+      return;
     }
+    setUploading(true);
+    const url = await crm.uploadDemoVideo(file, id);
+    setUploading(false);
+    if (url) setRelVideo(url);
+    else alert("Video upload failed. Make sure a public 'demos' storage bucket exists, or paste a hosted video URL instead.");
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -509,19 +516,30 @@ function ProjDrawer({crm,id,onClose,setConfirm}:any){
               <div className="flex-1 flex gap-2 items-center bg-[var(--color-surface)] border border-[var(--color-border-card)] rounded-md px-2 shadow-sm focus-within:border-[var(--color-ember)] transition-colors">
                 <input value={relVideo} onChange={e=>setRelVideo(e.target.value)} placeholder="Paste Video URL or Drop File ➡️" className="w-full bg-transparent text-[11px] text-[var(--color-card-text)] font-medium outline-none py-1.5"/>
                 <input type="file" accept="video/*" ref={fileInputRef} onChange={e => { if(e.target.files && e.target.files[0]) handleVideoFile(e.target.files[0]); }} className="hidden" />
-                <button onClick={() => fileInputRef.current?.click()} title="Upload Video" className="text-[12px] bg-[var(--color-surface-muted)] px-2 py-0.5 rounded text-[var(--color-text-secondary)] hover:text-[var(--color-card-text)] border border-[var(--color-border-subtle)]">📁</button>
+                <button onClick={() => fileInputRef.current?.click()} disabled={uploading} title="Upload Video" className="text-[12px] bg-[var(--color-surface-muted)] px-2 py-0.5 rounded text-[var(--color-text-secondary)] hover:text-[var(--color-card-text)] border border-[var(--color-border-subtle)] disabled:opacity-50">{uploading ? "⏳" : "📁"}</button>
               </div>
             </div>
-            
-            {relVideo && relVideo.startsWith("blob:") && (
+
+            {uploading && (
+              <div className="flex items-center gap-2 bg-[var(--color-info)]/10 text-[var(--color-info)] border border-[var(--color-info)]/20 px-2 py-1.5 rounded-md text-[10px] font-bold">
+                ⏳ Uploading video to storage…
+              </div>
+            )}
+            {!uploading && relVideo && relVideo.startsWith("blob:") && (
+              <div className="flex items-center gap-2 bg-[var(--color-warn)]/10 text-[var(--color-warn)] border border-[var(--color-warn)]/20 px-2 py-1.5 rounded-md text-[10px] font-bold">
+                ⚠ Local-only preview (offline mode) — will be wiped on refresh and won't reach the client.
+                <button onClick={()=>setRelVideo("")} className="ml-auto text-red-500 hover:underline">Remove</button>
+              </div>
+            )}
+            {!uploading && relVideo && !relVideo.startsWith("blob:") && (
               <div className="flex items-center gap-2 bg-[var(--color-ok)]/10 text-[var(--color-ok)] border border-[var(--color-ok)]/20 px-2 py-1.5 rounded-md text-[10px] font-bold">
-                ✓ Local video attached. (Will be wiped if you refresh)
+                ✓ Hosted video attached — will be saved to the client&apos;s portal.
                 <button onClick={()=>setRelVideo("")} className="ml-auto text-red-500 hover:underline">Remove</button>
               </div>
             )}
 
             <textarea value={relNotes} onChange={e=>setRelNotes(e.target.value)} placeholder="Release notes (one per line)..." rows={3} className="w-full !bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-border-card)] rounded-md px-2.5 py-1.5 text-[11px] font-medium outline-none resize-none focus:!border-[var(--color-ember)] shadow-sm"/>
-            <button onClick={submitRelease} className="w-full bg-[var(--color-charcoal)] text-white text-[11px] font-bold py-1.5 rounded-md hover:bg-[var(--color-charcoal-mid)] shadow-md transition-colors">Publish to Portal</button>
+            <button onClick={submitRelease} disabled={uploading} className="w-full bg-[var(--color-charcoal)] text-white text-[11px] font-bold py-1.5 rounded-md hover:bg-[var(--color-charcoal-mid)] shadow-md transition-colors disabled:opacity-50">{uploading ? "Uploading…" : "Publish to Portal"}</button>
           </div>
         )}
 

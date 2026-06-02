@@ -44,7 +44,7 @@ const fmtTime = (s: number) => {
 
 export default function ClientPortalView() {
   const crm = useCRM();
-  const { clients, comments, flags, releases, selectedClientId, userProfile, signOut } = crm;
+  const { clients, comments, flags, releases, selectedClientId, setSelectedClientId, userProfile, signOut } = crm;
 
   const isClient = userProfile?.category === "client";
   
@@ -94,7 +94,16 @@ export default function ClientPortalView() {
         <div className="flex items-center gap-3">
           <span className="text-[14px] font-bold tracking-tight text-[var(--color-text-muted)]">almmatix</span>
           <span className="text-[var(--color-border)]">/</span>
-          <span className="text-[12px] font-semibold">{client.name}</span>
+          {isClient ? (
+            <span className="text-[12px] font-semibold">{client.name}</span>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-ember)] bg-[var(--color-ember)]/10 px-2 py-0.5 rounded">Preview as</span>
+              <select value={client.id} onChange={e => setSelectedClientId(Number(e.target.value))} className="!bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-border-card)] rounded-md px-2 py-1 text-[12px] font-semibold outline-none cursor-pointer hover:border-[var(--color-ember)] transition-colors">
+                {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-4">
           <div className="hidden sm:flex items-center gap-2">

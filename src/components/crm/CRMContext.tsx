@@ -491,6 +491,7 @@ const mapReleaseToTS = (db: any): ChangelogRelease => ({
   status: db.status,
   approvedAt: db.approved_at,
   releaseNotes: db.release_notes,
+  videoUrl: db.video_url || undefined,
 });
 
 const mapSocialToTS = (db: any): SocialMediaItem => ({
@@ -556,6 +557,7 @@ interface CRMContextProps {
   // Changelog Composer Callbacks
   createRelease: (release: Omit<ChangelogRelease, "id" | "publishedAt" | "status">) => void;
   approveRelease: (releaseId: string) => void;
+  uploadDemoVideo: (file: File, clientId: number) => Promise<string | null>;
 
   // Internal Collaboration Gate Tasks
   addInternalTask: (task: Omit<InternalTask, "id" | "createdAt" | "status" | "internalNotes">) => void;
@@ -1445,6 +1447,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         published_at: "Just now",
         status: "Awaiting Review",
         release_notes: newRelease.releaseNotes || null,
+        video_url: newRelease.videoUrl || null,
       }).select();
 
       if (error) console.error("Database create release error:", error);
@@ -1859,6 +1862,23 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     });
   }, [isSupabaseConfigured]);
 
+  // Upload a demo video file to Supabase Storage and return its public URL.
+  // Requires a public bucket named "demos" with an insert policy for authenticated users.
+  const uploadDemoVideo = useCallback(async (file: File, clientId: number): Promise<string | null> => {
+    if (!isSupabaseConfigured) return null;
+    try {
+      const ext = (file.name.split(".").pop() || "mp4").toLowerCase();
+      const path = `client-${clientId}/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("demos").upload(path, file, { upsert: false, contentType: file.type });
+      if (error) { console.error("Demo video upload error:", error.message); return null; }
+      const { data } = supabase.storage.from("demos").getPublicUrl(path);
+      return data.publicUrl;
+    } catch (e) {
+      console.error("Demo video upload exception:", e);
+      return null;
+    }
+  }, [isSupabaseConfigured]);
+
   const addRelease = useCallback((release: Partial<ChangelogRelease>) => {
     setReleases(prev => [...prev, {
       id: "r" + Date.now(),
@@ -1881,7 +1901,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
       updateClient, updateLead, updateInternalTask, updateFlag, updateProduct, addProduct, deleteProduct, updateCrmUser, addRelease,
       updateLeadStatus, incrementLeadCalls, addLeadNote, convertLeadToClient, addNewLead,
       addFlag, updateFlagStatus, assignFlagAdmin, addFlagSprintLog,
-      createRelease, approveRelease,
+      createRelease, approveRelease, uploadDemoVideo,
       addInternalTask, updateInternalTaskStatus, addInternalTaskNote,
       addNewClient, deleteClient, deleteLead, deleteInternalTask, deleteFlag, deleteRelease,
       addSocialMedia, updateSocialMedia, deleteSocialMedia,
