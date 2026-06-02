@@ -58,6 +58,7 @@ export interface Comment {
   clientId: number; // Linked to client portal view
   isUnreadAdmin?: boolean;
   videoTimestamp?: number; // Optional timestamp in seconds for video feedback
+  createdAt?: string; // ISO timestamp — reliable ordering key independent of fetch/array order
 }
 
 export interface Activity {
@@ -436,6 +437,7 @@ const mapCommentToTS = (db: any): Comment => ({
   timestamp: db.timestamp || "",
   timeElapsed: db.time_elapsed || "",
   clientId: db.client_id,
+  createdAt: db.created_at || undefined,
 });
 
 const mapLeadToTS = (db: any): OutreachLead => ({
@@ -1007,7 +1009,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
       }
     }
     // Safe Local Fallback
-    setComments((prev) => [{ ...newComment, id: Date.now().toString(), isUnreadAdmin: newComment.role === 'client' }, ...prev]);
+    setComments((prev) => [{ ...newComment, id: Date.now().toString(), isUnreadAdmin: newComment.role === 'client', createdAt: new Date().toISOString() }, ...prev]);
   }, [isSupabaseConfigured, userProfile]);
 
   const markCommentAsRead = useCallback(async (id: string) => {

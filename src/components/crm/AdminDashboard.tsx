@@ -249,6 +249,17 @@ function Dashboard({crm, navigateTo}:any) {
   const openF=flags.filter((f:any)=>f.status!=="Resolved").length;
   const openT=internalTasks.filter((t:any)=>t.status!=="Resolved").length;
   const typeIcon:Record<string,string> = {milestone:"🏁",comment:"💬",invoice:"💰",alert:"🚨"};
+  // A thread needs a reply when its most recent message is from the client.
+  // Derived from the data (latest by createdAt), so it survives reloads regardless of
+  // fetch/array order — unlike the old in-session isUnreadAdmin flag.
+  const awaitingReply = clients
+    .map((cl:any) => {
+      const thread = comments.filter((c:any) => c.clientId === cl.id);
+      if (thread.length === 0) return null;
+      const latest = thread.reduce((a:any,b:any) => (a.createdAt||"") >= (b.createdAt||"") ? a : b);
+      return latest.role === "client" ? { ...latest, clientName: cl.name } : null;
+    })
+    .filter(Boolean);
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto">
       {/* stats */}
@@ -307,9 +318,9 @@ function Dashboard({crm, navigateTo}:any) {
         <div className="space-y-6">
           <div className="bg-[var(--color-surface)] p-4 rounded-xl border border-[var(--color-border-card)] shadow-sm"><Lbl>Needs Attention</Lbl>
             <div className="space-y-2 mt-3">
-              {comments.filter((c:any)=>c.role==="client"&&c.isUnreadAdmin).slice(0,3).map((c:any)=>{const cl=clients.find((x:any)=>x.id===c.clientId);return <div key={c.id} onClick={()=>crm.markCommentAsRead(c.id)} className="flex items-start gap-2 bg-[var(--color-ember-soft)] border border-[var(--color-ember)]/30 rounded-lg p-3 cursor-pointer hover:bg-[var(--color-ember)]/10 transition-colors"><Dot c="bg-[var(--color-ember)] mt-1.5 animate-pulse shadow-[0_0_5px_var(--color-ember)]"/><div className="min-w-0 flex-1"><p className="text-[11px] font-bold text-[var(--color-ember)] mb-0.5">Reply needed: {cl?.name}</p><p className="text-[11px] text-[var(--color-text-secondary)] line-clamp-2 leading-snug">{c.text}</p></div></div>;})}
+              {awaitingReply.slice(0,3).map((c:any)=><div key={c.id} onClick={()=>navigateTo("projects", c.clientId)} className="flex items-start gap-2 bg-[var(--color-ember-soft)] border border-[var(--color-ember)]/30 rounded-lg p-3 cursor-pointer hover:bg-[var(--color-ember)]/10 transition-colors"><Dot c="bg-[var(--color-ember)] mt-1.5 animate-pulse shadow-[0_0_5px_var(--color-ember)]"/><div className="min-w-0 flex-1"><p className="text-[11px] font-bold text-[var(--color-ember)] mb-0.5">Reply needed: {c.clientName}</p><p className="text-[11px] text-[var(--color-text-secondary)] line-clamp-2 leading-snug">{c.text}</p></div></div>)}
               {flags.filter((f:any)=>f.status==="Open").slice(0,2).map((f:any)=><div key={f.id} onClick={() => navigateTo("support", f.id)} className="flex items-center gap-2 bg-[var(--color-surface)] border border-[var(--color-border-card)] rounded-lg p-3 shadow-sm cursor-pointer hover:border-[var(--color-ember)] hover:shadow-md transition-all"><Dot c="bg-[var(--color-bad)] shadow-[0_0_5px_var(--color-bad)]"/><p className="text-[11px] font-bold text-[var(--color-card-text)] truncate flex-1">{f.title}</p></div>)}
-              {comments.filter((c:any)=>c.role==="client"&&c.isUnreadAdmin).length===0&&flags.filter((f:any)=>f.status==="Open").length===0&&<div className="flex flex-col items-center justify-center py-6 opacity-30"><span className="text-2xl mb-1">✨</span><p className="text-[11px] font-medium">All clear</p></div>}
+              {awaitingReply.length===0&&flags.filter((f:any)=>f.status==="Open").length===0&&<div className="flex flex-col items-center justify-center py-6 opacity-30"><span className="text-2xl mb-1">✨</span><p className="text-[11px] font-medium">All clear</p></div>}
             </div>
           </div>
           <div><Lbl>Active Projects</Lbl>
@@ -390,6 +401,19 @@ function ProjDrawer({crm,id,onClose,setConfirm}:any){
   const c=crm.clients.find((x:any)=>x.id===id);if(!c)return null;
   const si=PROJECT_STAGES.indexOf(c.stage);
   const [ed,setEd]=useState<string|null>(null);const [ev,setEv]=useState("");
+  const [reply,setReply]=useState("");
+  const sendReply=()=>{
+    if(!reply.trim())return;
+    crm.addComment({
+      author: crm.userProfile?.name || "Admin",
+      role: "admin" as const,
+      text: reply.trim(),
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      timeElapsed: "Just now",
+      clientId: id,
+    });
+    setReply("");
+  };
   
   // New Release Form State
   const [showReleaseForm, setShowReleaseForm] = useState(false);
@@ -512,10 +536,11 @@ function ProjDrawer({crm,id,onClose,setConfirm}:any){
       <div className="bg-[var(--color-surface)] rounded-xl p-4 border border-[var(--color-border-card)] shadow-sm">
         <Lbl>Feedback Discussions</Lbl>
         <div className="mt-3 space-y-3">
-          {crm.comments.filter((m:any)=>m.clientId===id).slice(-5).map((m:any)=>(
+          {/* Show the 5 most recent messages in chronological order (oldest -> newest) */}
+          {crm.comments.filter((m:any)=>m.clientId===id).slice().sort((a:any,b:any)=>(a.createdAt||"").localeCompare(b.createdAt||"")).slice(-5).map((m:any)=>(
             <div key={m.id} className={`p-3 rounded-xl border ${m.role==="client"?"bg-[var(--color-ember-soft)] border-[var(--color-ember)]/30":"bg-[var(--color-bg-soft)] border-[var(--color-border)]"}`}>
               <div className="flex items-baseline gap-2 mb-1.5">
-                <span className="text-[10px] font-black text-[var(--color-card-text)]">{m.author}</span> 
+                <span className="text-[10px] font-black text-[var(--color-card-text)]">{m.author}</span>
                 <span className="text-[8px] font-medium text-[var(--color-text-faint)]">{m.timeElapsed}</span>
               </div>
               {m.videoTimestamp !== undefined && (
@@ -527,6 +552,11 @@ function ProjDrawer({crm,id,onClose,setConfirm}:any){
             </div>
           ))}
           {crm.comments.filter((m:any)=>m.clientId===id).length===0 && <p className="text-[10px] text-[var(--color-text-faint)] text-center py-2">No feedback yet.</p>}
+        </div>
+        {/* Reply composer — lets admins answer the client directly from the project workspace */}
+        <div className="mt-3 pt-3 border-t border-[var(--color-border-card)]/40 flex gap-2">
+          <input value={reply} onChange={e=>setReply(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")sendReply();}} placeholder="Reply to the client..." className="flex-1 !bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-border-card)] rounded-lg px-3 py-2 text-[11px] font-medium outline-none focus:!border-[var(--color-ember)] shadow-sm transition-colors !placeholder:text-[var(--color-card-text-muted)]"/>
+          <button onClick={sendReply} className="px-4 py-2 bg-[var(--color-ember)] text-white text-[11px] font-bold rounded-lg hover:bg-[var(--color-ember-hover)] transition-colors shadow-md">Send</button>
         </div>
       </div>
       

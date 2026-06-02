@@ -7,6 +7,34 @@ import { useCRM, FlagSeverity, ClientStage, ChangelogRelease } from "./CRMContex
 const formatINR = (n: number) => n > 0 ? "₹" + n.toLocaleString("en-IN") : "—";
 const PROJECT_STAGES: ClientStage[] = ["Requirement", "Model", "Demo 1", "Converted", "Dev 1", "Demo 2", "Dev Final", "Final Demo", "Delivery", "Maintenance"];
 
+// Client-facing presentation of the internal pipeline: jargon is relabeled and
+// internal-only milestones (e.g. "Converted") are hidden. null => not shown to the client.
+const CLIENT_STAGE_LABELS: Record<ClientStage, string | null> = {
+  "Requirement": "Requirements",
+  "Model": "Planning",
+  "Demo 1": "First Demo",
+  "Converted": null,
+  "Dev 1": "Development",
+  "Demo 2": "Progress Demo",
+  "Dev Final": "Final Build",
+  "Final Demo": "Final Review",
+  "Delivery": "Delivery",
+  "Maintenance": "Support",
+};
+// Ordered list of the internal stages the client is allowed to see.
+const CLIENT_VISIBLE_STAGES: ClientStage[] = PROJECT_STAGES.filter(s => CLIENT_STAGE_LABELS[s] !== null);
+
+// Map an internal stage to the client's current step. Hidden stages (Converted)
+// resolve to the nearest preceding visible stage so progress never goes backwards.
+const clientStageIndex = (stage: ClientStage): number => {
+  let i = PROJECT_STAGES.indexOf(stage);
+  if (i < 0) return 0;
+  while (i >= 0 && CLIENT_STAGE_LABELS[PROJECT_STAGES[i]] === null) i--;
+  return i < 0 ? 0 : CLIENT_VISIBLE_STAGES.indexOf(PROJECT_STAGES[i]);
+};
+const clientStageLabel = (stage: ClientStage): string =>
+  CLIENT_VISIBLE_STAGES[clientStageIndex(stage)] ? (CLIENT_STAGE_LABELS[CLIENT_VISIBLE_STAGES[clientStageIndex(stage)]] || "In Progress") : "In Progress";
+
 // Helper to format seconds to MM:SS
 const fmtTime = (s: number) => {
   const m = Math.floor(s / 60);
@@ -39,10 +67,14 @@ export default function ClientPortalView() {
     </div>
   );
 
-  const clientComments = comments.filter(c => c.clientId === client.id);
+  // Chat reads oldest -> newest regardless of how the DB returned them
+  const clientComments = comments
+    .filter(c => c.clientId === client.id)
+    .slice()
+    .sort((a, b) => (a.createdAt || "").localeCompare(b.createdAt || ""));
   const clientFlags = flags.filter(f => f.clientId === client.id);
   const clientReleases = releases.filter(r => r.clientId === client.id);
-  const si = PROJECT_STAGES.indexOf(client.stage);
+  const si = clientStageIndex(client.stage);
 
   const seekVideo = (time: number) => {
     if (activeVideoRef.current) {
@@ -86,7 +118,7 @@ export default function ClientPortalView() {
             <div className="flex gap-2 md:gap-3">
               <div className="flex-1 md:flex-none bg-[var(--color-bg-soft)] border border-[var(--color-border)] rounded-lg px-4 py-2 text-center md:text-right">
                 <p className="text-[9px] font-mono uppercase tracking-widest text-[var(--color-text-faint)]">Stage</p>
-                <p className="text-[12px] md:text-[14px] font-bold text-[var(--color-ember)]">{client.stage}</p>
+                <p className="text-[12px] md:text-[14px] font-bold text-[var(--color-ember)]">{clientStageLabel(client.stage)}</p>
               </div>
               <div className="flex-1 md:flex-none bg-[var(--color-bg-soft)] border border-[var(--color-border)] rounded-lg px-4 py-2 text-center md:text-right">
                 <p className="text-[9px] font-mono uppercase tracking-widest text-[var(--color-text-faint)]">Health</p>
@@ -99,13 +131,13 @@ export default function ClientPortalView() {
           <div className="bg-[var(--color-surface)] border border-[var(--color-border-card)] rounded-xl p-4 md:p-5 shadow-sm overflow-x-auto">
             <div className="flex items-center justify-between mb-4 min-w-[600px]">
               <h3 className="text-[11px] font-semibold font-mono uppercase tracking-widest text-[var(--color-text-secondary)]">Timeline</h3>
-              <span className="text-[10px] text-[var(--color-text-muted)]">Step {si + 1} of {PROJECT_STAGES.length}</span>
+              <span className="text-[10px] text-[var(--color-text-muted)]">Step {si + 1} of {CLIENT_VISIBLE_STAGES.length}</span>
             </div>
             <div className="flex gap-1 min-w-[600px]">
-              {PROJECT_STAGES.map((s, i) => (
+              {CLIENT_VISIBLE_STAGES.map((s, i) => (
                 <div key={s} className="flex-1 group relative">
                   <div className={`h-2 w-full rounded-full transition-colors ${i <= si ? "bg-[var(--color-ember)] shadow-[0_0_8px_var(--color-ember)]/20" : "bg-[var(--color-border)]"}`} />
-                  <p className={`text-[9px] mt-2 text-center transition-colors ${i === si ? "text-[var(--color-ember)] font-bold" : "text-[var(--color-text-faint)]"}`}>{s}</p>
+                  <p className={`text-[9px] mt-2 text-center transition-colors ${i === si ? "text-[var(--color-ember)] font-bold" : "text-[var(--color-text-faint)]"}`}>{CLIENT_STAGE_LABELS[s]}</p>
                 </div>
               ))}
             </div>
