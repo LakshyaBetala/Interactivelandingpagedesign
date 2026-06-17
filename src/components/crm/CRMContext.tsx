@@ -782,15 +782,22 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         // If no profile row exists, we use an empty object and rely entirely on JWT metadata fallbacks.
         const pData = profileData || {};
 
+        // If the database trigger defaulted them to 'client', but their auth token says 'intern' or 'admin',
+        // we should trust the auth token (user_metadata) since that's what the admin provisioned them as.
+        const actualCategory = (pData.category === "client" && session.user.user_metadata?.category) 
+          ? session.user.user_metadata.category 
+          : (pData.category || session.user.user_metadata?.category || "client");
+          
+        const actualRole = (!pData.role || pData.role === "Client Partner" || pData.role === "client") && session.user.user_metadata?.role
+          ? session.user.user_metadata.role
+          : (pData.role || session.user.user_metadata?.role || "");
+
         const profile: UserProfile = {
           id: session.user.id,
           email: session.user.email || "",
-          // DB profile row is the living source of truth (admin edits land there);
-          // JWT user_metadata is only a fallback for fields the trigger didn't populate
-          // (it is frozen at signup and cannot be updated for other users client-side).
           name: pData.name || session.user.user_metadata?.name || session.user.email || "User",
-          role: pData.role ?? session.user.user_metadata?.role ?? "",
-          category: pData.category ?? session.user.user_metadata?.category ?? "client",
+          role: actualRole,
+          category: actualCategory,
           assignedClientId: pData.assigned_client_id ?? session.user.user_metadata?.assignedClientId,
           assignedProjects: pData.assigned_projects,
           allowedTabs: pData.allowed_tabs ?? session.user.user_metadata?.allowedTabs ?? null,
@@ -814,8 +821,6 @@ export function CRMProvider({ children }: { children: ReactNode }) {
             category: profile.category,
             role: profile.role,
             name: profile.name,
-            allowed_tabs: profile.allowedTabs,
-            assigned_client_id: profile.assignedClientId,
             email: profile.email
           }).then(({error}) => {
              if (error) console.warn("Self-heal profile update failed:", error);
