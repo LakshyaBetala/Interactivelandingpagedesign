@@ -48,7 +48,7 @@ export default function AdminDashboard() {
   const [sel,setSel]=useState<number|string|null>(null);
   const [showAdd,setShowAdd] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [confirm, setConfirm] = useState<{ title: string, desc: string, action: () => void } | null>(null);
+  const [confirm, setConfirm] = useState<{ title: string, desc: string, confirmText?: string, action: () => void } | null>(null);
   const go = (s:Section)=>{setSec(s);setSel(null);setShowAdd(false);setSidebarOpen(false);};
   const navigateTo = (s:Section, id?: string | number)=>{setSec(s);setSel(id ?? null);setShowAdd(false);setSidebarOpen(false);};
   const navItems:{id:Section;l:string;i:string;c?:number}[] = [
