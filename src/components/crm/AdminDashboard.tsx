@@ -1061,13 +1061,13 @@ function AccessManagement({crm, clients, setConfirm}:any) {
   const [editE,setEditE]=useState<string|null>(null);
   const [editF,setEditF]=useState<string|null>(null);
   const [editV,setEditV]=useState("");
-  const saveU=(uemail:string,field:string)=>{crm.updateCrmUser(uemail,{[field]:editV});setEditE(null);setEditF(null);};
+  const saveU=(uid:string,field:string)=>{crm.updateCrmUser(uid,{[field]:editV});setEditE(null);setEditF(null);};
   
-  const EditU=({uemail,field,value,c="font-medium",disabled=false}:{uemail:string;field:string;value:string;c?:string;disabled?:boolean})=>(
-    editE===uemail&&editF===field&&!disabled?(
-      <input autoFocus value={editV} onChange={e=>setEditV(e.target.value)} onBlur={()=>saveU(uemail,field)} onKeyDown={e=>e.key==="Enter"&&saveU(uemail,field)} className={`!bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-ember)] shadow-[0_0_5px_var(--color-ember-soft)] rounded px-2 py-0.5 outline-none font-bold text-[11px] w-full`}/>
+  const EditU=({uid,field,value,c="font-medium",disabled=false}:{uid:string;field:string;value:string;c?:string;disabled?:boolean})=>(
+    editE===uid&&editF===field&&!disabled?(
+      <input autoFocus value={editV} onChange={e=>setEditV(e.target.value)} onBlur={()=>saveU(uid,field)} onKeyDown={e=>e.key==="Enter"&&saveU(uid,field)} className={`!bg-[var(--color-bg)] !text-[var(--color-text-primary)] border border-[var(--color-ember)] shadow-[0_0_5px_var(--color-ember-soft)] rounded px-2 py-0.5 outline-none font-bold text-[11px] w-full`}/>
     ):(
-      <span onDoubleClick={()=>{if(!disabled){setEditE(uemail);setEditF(field);setEditV(value);}}} className={`${disabled?"":"cursor-text hover:text-[var(--color-ember)] border-b border-dashed border-transparent hover:border-[var(--color-ember)]"} transition-colors block ${c}`}>{value}</span>
+      <span onDoubleClick={()=>{if(!disabled){setEditE(uid);setEditF(field);setEditV(value);}}} className={`${disabled?"":"cursor-text hover:text-[var(--color-ember)] border-b border-dashed border-transparent hover:border-[var(--color-ember)]"} transition-colors block ${c}`}>{value}</span>
     )
   );
 
@@ -1129,7 +1129,7 @@ function AccessManagement({crm, clients, setConfirm}:any) {
                 const canEdit = displayCategory !== 'admin' || isSuperAdmin;
                 return (
                 <tr key={u.id || u.email || u.name} className="border-b border-[var(--color-border-card)]/30 hover:bg-[var(--color-bg-soft)] transition-colors">
-                  <td className="p-4 text-[var(--color-card-text)]"><EditU uemail={displayEmail} field="name" value={u.name} c="font-bold text-[12px]" disabled={!canEdit}/></td>
+                  <td className="p-4 text-[var(--color-card-text)]"><EditU uid={u.id} field="name" value={u.name} c="font-bold text-[12px]" disabled={!canEdit}/></td>
                   <td className="p-4 text-[var(--color-text-secondary)] font-medium">{displayEmail}</td>
                   <td className="p-4">
                     {!canEdit ? (
@@ -1141,10 +1141,10 @@ function AccessManagement({crm, clients, setConfirm}:any) {
                         setPassPrompt({
                           title: "Confirm Password",
                           desc: "Please enter your admin password to modify admin privileges.",
-                          action: () => crm.updateCrmUser(displayEmail,{role:newRole, category:newRole})
+                          action: () => crm.updateCrmUser(u.id,{role:newRole, category:newRole})
                         });
                       } else {
-                        setConfirm({title:"Change Role",desc:"Are you sure you want to change this user's role?", confirmText: "Yes, Change", action:()=>crm.updateCrmUser(displayEmail,{role:newRole, category:newRole})});
+                        setConfirm({title:"Change Role",desc:"Are you sure you want to change this user's role?", confirmText: "Yes, Change", action:()=>crm.updateCrmUser(u.id,{role:newRole, category:newRole})});
                       }
                     }} className={`!bg-transparent outline-none cursor-pointer font-bold px-2 py-1 rounded-md ${displayCategory==='admin'?'text-[var(--color-ember)] bg-[var(--color-ember)]/10':displayCategory==='client'?'text-[var(--color-ok)] bg-[var(--color-ok)]/10':'text-[var(--color-info)] bg-[var(--color-info)]/10'}`}>
                       <option value="client">client</option><option value="intern">intern</option><option value="admin">admin</option>
@@ -1157,14 +1157,14 @@ function AccessManagement({crm, clients, setConfirm}:any) {
                         {!canEdit ? (
                           <span className="text-[11px] font-bold text-[var(--color-card-text)]">{clients.find((c:any)=>c.id===u.assignedClientId)?.name || "—"}</span>
                         ) : (
-                          <select value={u.assignedClientId||""} onChange={e=>crm.updateCrmUser(displayEmail,{assignedClientId:Number(e.target.value)})} className="!bg-transparent border-b border-dashed border-[var(--color-border)] outline-none cursor-pointer w-32">
+                          <select value={u.assignedClientId||""} onChange={e=>crm.updateCrmUser(u.id,{assignedClientId:Number(e.target.value)})} className="!bg-transparent border-b border-dashed border-[var(--color-border)] outline-none cursor-pointer w-32">
                             {clients.map((c:any) => <option key={c.id} value={c.id}>{c.name}</option>)}
                           </select>
                         )}
-                        <div className="flex items-center gap-1 text-[9px]"><span className="text-[var(--color-text-faint)]">Pass:</span> <EditU uemail={displayEmail} field="password" value={displayPass} c="text-[var(--color-card-text)]" disabled={!canEdit}/></div>
+                        <div className="flex items-center gap-1 text-[9px]"><span className="text-[var(--color-text-faint)]">Pass:</span> <EditU uid={u.id} field="password" value={displayPass} c="text-[var(--color-card-text)]" disabled={!canEdit}/></div>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1 text-[10px]"><span className="text-[var(--color-text-faint)]">Pass:</span> <EditU uemail={displayEmail} field="password" value={displayPass} c="text-[var(--color-card-text)]" disabled={!canEdit}/></div>
+                      <div className="flex items-center gap-1 text-[10px]"><span className="text-[var(--color-text-faint)]">Pass:</span> <EditU uid={u.id} field="password" value={displayPass} c="text-[var(--color-card-text)]" disabled={!canEdit}/></div>
                     )}
                   </td>
                   <td className="p-4">
@@ -1176,7 +1176,7 @@ function AccessManagement({crm, clients, setConfirm}:any) {
                             if (!canEdit) return;
                             const current = u.allowedTabs || [];
                             const updated = allowed ? current.filter((t:string) => t !== tab.id) : [...current, tab.id];
-                            crm.updateCrmUser(u.email, {allowedTabs: updated});
+                            crm.updateCrmUser(u.id, {allowedTabs: updated});
                           }} className={`px-1.5 py-0.5 rounded text-[8px] font-bold border transition-all ${allowed ? "bg-[var(--color-ember)] text-white border-[var(--color-ember)]" : "bg-[var(--color-surface-muted)] text-[var(--color-text-faint)] border-[var(--color-border)]"} ${canEdit?"":"opacity-80 cursor-default"}`}>
                             {tab.l}
                           </button>;
@@ -1196,10 +1196,10 @@ function AccessManagement({crm, clients, setConfirm}:any) {
                           setPassPrompt({
                             title: "Confirm Password",
                             desc: "Please enter your password to revoke this admin account.",
-                            action: () => crm.deleteCrmUser(u.email)
+                            action: () => crm.deleteCrmUser(u.id)
                           });
                         } else {
-                          setConfirm({title:"Revoke Access",desc:"Are you sure you want to revoke this user's access everywhere?",action:()=>crm.deleteCrmUser(u.email)});
+                          setConfirm({title:"Revoke Access",desc:"Are you sure you want to revoke this user's access everywhere?",action:()=>crm.deleteCrmUser(u.id)});
                         }
                       }} className="text-[11px] font-bold text-[var(--color-bad)] hover:bg-[var(--color-bad-soft)] px-3 py-1.5 rounded-md transition-colors">Revoke</button>
                     )}

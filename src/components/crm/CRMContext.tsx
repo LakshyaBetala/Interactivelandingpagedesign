@@ -530,7 +530,7 @@ interface CRMContextProps {
   updateClientAdmin: (clientId: number, adminId: string) => void;
   updateClient: (clientId: number, updates: Partial<CRMClient>) => void;
   addCrmUser: (user: any) => void;
-  deleteCrmUser: (email: string) => void;
+  deleteCrmUser: (id: string) => void;
   crmUsers: any[];
   updateLead: (leadId: string, updates: Partial<OutreachLead>) => void;
   updateInternalTask: (taskId: string, updates: Partial<InternalTask>) => void;
@@ -538,7 +538,7 @@ interface CRMContextProps {
   updateProduct: (id: string, updates: Partial<InternalProduct>) => void;
   addProduct: (product: Partial<InternalProduct>) => void;
   deleteProduct: (id: string) => void;
-  updateCrmUser: (email: string, updates: any) => void;
+  updateCrmUser: (id: string, updates: any) => void;
   addRelease: (release: Partial<ChangelogRelease>) => void;
   
   // Outreach Pipeline Callbacks
@@ -921,15 +921,15 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     });
   }, [isSupabaseConfigured]);
 
-  const deleteCrmUser = useCallback((email: string) => {
+  const deleteCrmUser = useCallback((id: string) => {
     setCrmUsers(prev => {
-      const target = prev.find(u => u.email === email);
+      const target = prev.find(u => u.id === id || (u.email && u.email === id));
       if (isSupabaseConfigured && target?.id) {
         supabase.from("profiles").delete().eq("id", target.id).then(({ error }) => {
           if (error) console.error("Failed to delete user profile from DB", error);
         });
       }
-      const updated = prev.filter(u => u.email !== email);
+      const updated = prev.filter(u => u.id !== id && (!u.email || u.email !== id));
       localStorage.setItem("almmatix_users", JSON.stringify(updated));
       return updated;
     });
@@ -1780,15 +1780,15 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     });
   }, [isSupabaseConfigured]);
 
-  const updateCrmUser = useCallback((email: string, updates: any) => {
+  const updateCrmUser = useCallback((id: string, updates: any) => {
     setCrmUsers(prev => {
-      const updated = prev.map(u => u.email === email ? { ...u, ...updates } : u);
+      const updated = prev.map(u => (u.id === id || (u.email && u.email === id)) ? { ...u, ...updates } : u);
       localStorage.setItem("almmatix_users", JSON.stringify(updated));
 
       // Persist role / restriction / assignment changes to the Supabase profiles row so they
       // survive reloads, apply across devices, and take effect when the user logs in themselves
       // (not just in the editing admin's browser). Passwords live in auth, not profiles, so skip them.
-      const target = updated.find(u => u.email === email);
+      const target = updated.find(u => u.id === id || (u.email && u.email === id));
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
       const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
       if (isSupabaseConfigured && target?.id && supabaseUrl && supabaseKey) {
