@@ -897,9 +897,7 @@ export function CRMProvider({ children }: { children: ReactNode }) {
               body: JSON.stringify({
                 role: user.role,
                 category: user.category,
-                name: user.name,
-                assigned_client_id: user.assignedClientId || null,
-                allowed_tabs: user.allowedTabs || null
+                name: user.name
               })
             });
 
@@ -927,13 +925,28 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     });
   }, [isSupabaseConfigured]);
 
-  const deleteCrmUser = useCallback((email: string) => {
+  const deleteCrmUser = useCallback(async (email: string) => {
+    if (isSupabaseConfigured) {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      if (supabaseUrl && supabaseKey) {
+        try {
+          await fetch(`${supabaseUrl}/rest/v1/profiles?email=eq.${encodeURIComponent(email)}`, {
+            method: "DELETE",
+            headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` }
+          });
+        } catch (e) {
+          console.error("Failed to delete user profile from DB", e);
+        }
+      }
+    }
+
     setCrmUsers(prev => {
       const updated = prev.filter(u => u.email !== email);
       localStorage.setItem("almmatix_users", JSON.stringify(updated));
       return updated;
     });
-  }, []);
+  }, [isSupabaseConfigured]);
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
@@ -1796,8 +1809,6 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         if (updates.name !== undefined) dbUpdates.name = updates.name;
         if (updates.role !== undefined) dbUpdates.role = updates.role;
         if (updates.category !== undefined) dbUpdates.category = updates.category;
-        if (updates.assignedClientId !== undefined) dbUpdates.assigned_client_id = updates.assignedClientId;
-        if (updates.allowedTabs !== undefined) dbUpdates.allowed_tabs = updates.allowedTabs;
         if (Object.keys(dbUpdates).length > 0) {
           fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${target.id}`, {
             method: "PATCH",
