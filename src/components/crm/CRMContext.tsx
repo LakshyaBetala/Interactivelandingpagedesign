@@ -927,18 +927,8 @@ export function CRMProvider({ children }: { children: ReactNode }) {
 
   const deleteCrmUser = useCallback(async (email: string) => {
     if (isSupabaseConfigured) {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-      if (supabaseUrl && supabaseKey) {
-        try {
-          await fetch(`${supabaseUrl}/rest/v1/profiles?email=eq.${encodeURIComponent(email)}`, {
-            method: "DELETE",
-            headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` }
-          });
-        } catch (e) {
-          console.error("Failed to delete user profile from DB", e);
-        }
-      }
+      const { error } = await supabase.from("profiles").delete().eq("email", email);
+      if (error) console.error("Failed to delete user profile from DB", error);
     }
 
     setCrmUsers(prev => {
@@ -1810,12 +1800,9 @@ export function CRMProvider({ children }: { children: ReactNode }) {
         if (updates.role !== undefined) dbUpdates.role = updates.role;
         if (updates.category !== undefined) dbUpdates.category = updates.category;
         if (Object.keys(dbUpdates).length > 0) {
-          fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${target.id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json", "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` },
-            body: JSON.stringify(dbUpdates)
-          }).then(res => { if (!res.ok) console.error("Failed to persist user update to Supabase:", res.status); })
-            .catch(e => console.error("Failed to persist user update to Supabase:", e));
+          supabase.from("profiles").update(dbUpdates).eq("id", target.id).then(({ error }) => {
+            if (error) console.error("Failed to persist user update to Supabase:", error);
+          });
         }
 
         // When a client is (re)assigned to a project, link that project row back to them
