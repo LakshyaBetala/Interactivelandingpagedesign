@@ -710,7 +710,9 @@ function Social({crm,showAdd,close,setConfirm}:any){
                 <div className="flex items-center justify-between mb-2 pb-2 border-b border-[var(--color-border-card)]/50">
                   <div className="flex items-center gap-1.5"><span className="text-[12px]">{icon[item.platform]||"•"}</span><span className="text-[9px] font-bold text-[var(--color-card-text-muted)] uppercase tracking-wider">{item.platform} · {item.contentType}</span></div>
                   <div className="flex items-center gap-2">
-                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${daysColor}`}>{daysText}</span>
+                    {item.status !== "Done" && (
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${daysColor}`}>{daysText}</span>
+                    )}
                     <span className="opacity-0 group-hover:opacity-100 transition-opacity"><X onClick={()=>del(item.id)}/></span>
                   </div>
                 </div>
