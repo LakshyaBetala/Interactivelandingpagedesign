@@ -228,7 +228,7 @@ export default function AdminDashboard() {
             <p className="text-[13px] text-[var(--color-text-secondary)] mb-6 leading-relaxed">{confirm.desc}</p>
             <div className="flex justify-end gap-3">
               <button onClick={() => setConfirm(null)} className="px-5 py-2 text-[12px] font-bold text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-muted)] rounded-lg transition-colors">Cancel</button>
-              <button onClick={() => { confirm.action(); setConfirm(null); }} className="px-5 py-2 text-[12px] font-bold bg-[var(--color-bad)] hover:bg-red-600 text-white rounded-lg transition-colors shadow-lg shadow-red-500/20">Yes, Delete</button>
+              <button onClick={() => { confirm.action(); setConfirm(null); }} className="px-5 py-2 text-[12px] font-bold bg-[var(--color-bad)] hover:bg-red-600 text-white rounded-lg transition-colors shadow-lg shadow-red-500/20">{confirm.confirmText || "Yes, Delete"}</button>
             </div>
           </motion.div>
         </div>
@@ -1144,7 +1144,7 @@ function AccessManagement({crm, clients, setConfirm}:any) {
                           action: () => crm.updateCrmUser(displayEmail,{role:newRole, category:newRole})
                         });
                       } else {
-                        setConfirm({title:"Change Role",desc:"Are you sure you want to change this user's role?",action:()=>crm.updateCrmUser(displayEmail,{role:newRole, category:newRole})});
+                        setConfirm({title:"Change Role",desc:"Are you sure you want to change this user's role?", confirmText: "Yes, Change", action:()=>crm.updateCrmUser(displayEmail,{role:newRole, category:newRole})});
                       }
                     }} className={`!bg-transparent outline-none cursor-pointer font-bold px-2 py-1 rounded-md ${displayCategory==='admin'?'text-[var(--color-ember)] bg-[var(--color-ember)]/10':displayCategory==='client'?'text-[var(--color-ok)] bg-[var(--color-ok)]/10':'text-[var(--color-info)] bg-[var(--color-info)]/10'}`}>
                       <option value="client">client</option><option value="intern">intern</option><option value="admin">admin</option>
