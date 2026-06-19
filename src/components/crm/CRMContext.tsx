@@ -891,15 +891,11 @@ export function CRMProvider({ children }: { children: ReactNode }) {
           
           if (userId) {
             user.id = userId; // Ensure local UI knows the true ID
-            await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${userId}`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json", "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` },
-              body: JSON.stringify({
-                role: user.role,
-                category: user.category,
-                name: user.name
-              })
-            });
+            await supabase.from("profiles").update({
+              role: user.role,
+              category: user.category,
+              name: user.name
+            }).eq("id", userId);
 
             // Link the assigned project back to this client so their isolated portal
             // query can read it (satisfies profile_id-keyed RLS as well as id lookups).
