@@ -921,13 +921,14 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     });
   }, [isSupabaseConfigured]);
 
-  const deleteCrmUser = useCallback(async (email: string) => {
-    if (isSupabaseConfigured) {
-      const { error } = await supabase.from("profiles").delete().eq("email", email);
-      if (error) console.error("Failed to delete user profile from DB", error);
-    }
-
+  const deleteCrmUser = useCallback((email: string) => {
     setCrmUsers(prev => {
+      const target = prev.find(u => u.email === email);
+      if (isSupabaseConfigured && target?.id) {
+        supabase.from("profiles").delete().eq("id", target.id).then(({ error }) => {
+          if (error) console.error("Failed to delete user profile from DB", error);
+        });
+      }
       const updated = prev.filter(u => u.email !== email);
       localStorage.setItem("almmatix_users", JSON.stringify(updated));
       return updated;
