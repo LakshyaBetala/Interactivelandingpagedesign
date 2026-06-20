@@ -615,17 +615,33 @@ function ServiceChapterItem({
             </p>
 
             {/* Interactive Button */}
-            <button
-              onClick={onOpenDrawer}
-              className={`mt-2 md:mt-4 inline-flex items-center justify-center gap-4 px-6 md:px-8 py-3 md:py-3.5 border transition-all duration-300 group w-full sm:w-max rounded-sm ${
-                dark 
-                  ? "border-[#3A3632] text-[#E6DFD5] hover:border-[#FF5A1F] hover:bg-[#FF5A1F]/10" 
-                  : "border-[#C4B8A8] text-[#0D0D0D] hover:border-[#FF5A1F] hover:bg-[#FF5A1F]/5"
-              }`}
-            >
-              <span className="font-medium text-sm tracking-wide">Learn Details</span>
-              <span className="text-[#FF5A1F] transition-transform duration-300 group-hover:translate-x-1">→</span>
-            </button>
+            {title === "Voice Agents" ? (
+              <a
+                href="https://tryasva.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`mt-2 md:mt-4 inline-flex items-center justify-center gap-4 px-6 md:px-8 py-3 md:py-3.5 border transition-all duration-300 group w-full sm:w-max rounded-sm ${
+                  dark 
+                    ? "border-[#3A3632] text-[#E6DFD5] hover:border-[#FF5A1F] hover:bg-[#FF5A1F]/10" 
+                    : "border-[#C4B8A8] text-[#0D0D0D] hover:border-[#FF5A1F] hover:bg-[#FF5A1F]/5"
+                }`}
+              >
+                <span className="font-medium text-sm tracking-wide">Learn Details</span>
+                <span className="text-[#FF5A1F] transition-transform duration-300 group-hover:translate-x-1">→</span>
+              </a>
+            ) : (
+              <button
+                onClick={onOpenDrawer}
+                className={`mt-2 md:mt-4 inline-flex items-center justify-center gap-4 px-6 md:px-8 py-3 md:py-3.5 border transition-all duration-300 group w-full sm:w-max rounded-sm ${
+                  dark 
+                    ? "border-[#3A3632] text-[#E6DFD5] hover:border-[#FF5A1F] hover:bg-[#FF5A1F]/10" 
+                    : "border-[#C4B8A8] text-[#0D0D0D] hover:border-[#FF5A1F] hover:bg-[#FF5A1F]/5"
+                }`}
+              >
+                <span className="font-medium text-sm tracking-wide">Learn Details</span>
+                <span className="text-[#FF5A1F] transition-transform duration-300 group-hover:translate-x-1">→</span>
+              </button>
+            )}
 
             {/* Architectural line with animation */}
             <motion.div
