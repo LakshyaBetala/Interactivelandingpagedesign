@@ -3,6 +3,7 @@
 import React, { useRef, useState } from "react";
 import { motion, useScroll, useTransform, useInView } from "framer-motion";
 import ServiceDrawer from "@/components/ServiceDrawer";
+import { ASVA, DOITFORME } from "@/lib/links";
 
 /* ============================================================
    DRAMATIC VISUAL MODULES — Cinematic, animated service graphics
@@ -458,60 +459,65 @@ const services = [
     title: "Voice Agents",
     subtitle: "Conversational AI",
     description:
-      "24/7 human-like voice agents for inbound routing, outbound sales, and customer support. No hold music. No scripts. Just conversations that convert.",
+      "24/7 voice agents that route inbound calls, qualify outbound leads, and handle support in the caller's own language. No hold music. No scripts. Conversations that close.",
     visual: WaveformVisual,
     dark: false,
-    details: ["Inbound query resolution", "Outbound lead qualification", "Sentiment & intent tracking", "Multi-lingual capabilities"],
+    details: ["Inbound query resolution", "Outbound lead qualification", "Sentiment & intent tracking", "Hindi, Tamil, Gujarati & Marathi"],
     techStack: ["Vapi / Retell AI", "OpenAI / Anthropic", "ElevenLabs Voice", "Twilio SIP"],
-    deliverables: ["Custom Voice Model", "CRM Integration", "Call Transcripts", "Performance Dashboard"]
+    deliverables: ["Custom Voice Model", "CRM Integration", "Call Transcripts", "Performance Dashboard"],
+    live: { url: ASVA.home, label: "See ASVA — our live voice & collections agent" },
   },
   {
     number: "02",
     title: "WhatsApp Automation",
     subtitle: "Omnichannel Messaging",
     description:
-      "Automated lead qualification and omnichannel support across India, LatAm, and Europe. Every conversation tracked, every lead scored.",
+      "Lead qualification, reminders, and support that run on WhatsApp while your team sleeps. Our own collections agent, ASVA, has recovered ₹43L+ for shops running a 160-day credit cycle.",
     visual: MessageStackVisual,
     dark: true,
-    details: ["Instant lead response", "Automated appointment booking", "Drip campaigns & broadcasting", "Human handoff logic"],
-    techStack: ["Meta Node API", "LangChain / Flowise", "Webhooks", "PostgreSQL"],
-    deliverables: ["Verified WA Business", "Conversational Flow Map", "Escalation Triggers", "Agent Workspace"]
+    details: ["Instant lead response", "Automated appointment booking", "Payment reminders with UPI links", "Human handoff logic"],
+    techStack: ["Meta Cloud API", "LangChain / Flowise", "Webhooks", "PostgreSQL"],
+    deliverables: ["Verified WA Business", "Conversational Flow Map", "Escalation Triggers", "Agent Workspace"],
+    live: { url: ASVA.howItWorks, label: "See how ASVA works on WhatsApp" },
   },
   {
     number: "03",
-    title: "Internal Workflows",
+    title: "Integrations & Workflows",
     subtitle: "Process Intelligence",
     description:
-      "Connect CRMs and ERPs with intelligent logic. Eliminate manual data entry. Your team focuses on decisions, not spreadsheets.",
+      "Tally, CRMs, and ERPs wired into one intelligent loop — plugin-free, reconciled FIFO, and reported nightly. Your team makes decisions instead of re-typing them.",
     visual: FlowchartVisual,
     dark: false,
-    details: ["Data pipeline automation", "Cross-platform syncing", "Automatic report generation", "Smart alerts & notifications"],
+    details: ["Plugin-free Tally integration", "Cross-platform data syncing", "Automatic report generation", "Smart alerts & notifications"],
     techStack: ["Make.com / n8n", "Python Airflow", "AWS Lambda", "REST/GraphQL APIs"],
-    deliverables: ["System Architecture Docs", "Workflow Schematics", "API Endpoints", "Error Handling Logs"]
+    deliverables: ["System Architecture Docs", "Workflow Schematics", "API Endpoints", "Error Handling Logs"],
+    live: { url: ASVA.useCases, label: "Tally & ERP integrations in production" },
   },
   {
     number: "04",
     title: "RAG Systems",
     subtitle: "Knowledge Intelligence",
     description:
-      "Secure, hallucination-free AI assistants trained exclusively on your data. Your knowledge base, instantly searchable by anyone on your team.",
+      "Secure, hallucination-free assistants trained only on your data. Every answer cited, every document permissioned — your knowledge base, searchable by anyone on your team.",
     visual: NeuralNetVisual,
     dark: true,
     details: ["Semantic document search", "Secure data enclosures", "Citation-backed answers", "Access-level permissions"],
     techStack: ["Pinecone / Weaviate", "LlamaIndex", "Next.js Edge", "Supabase"],
-    deliverables: ["Vector Database Setup", "Data Ingestion Pipeline", "Chat Interface", "Accuracy Reports"]
+    deliverables: ["Vector Database Setup", "Data Ingestion Pipeline", "Chat Interface", "Accuracy Reports"],
+    live: null,
   },
   {
     number: "05",
     title: "Web Platforms",
     subtitle: "Digital Engineering",
     description:
-      "High-converting digital platforms with AI built in. Not templates — custom-engineered storefronts and dashboards that actually work.",
+      "Marketplaces, dashboards, and storefronts engineered from scratch — escrow payments, verified onboarding, and edge delivery included. Not templates. Systems.",
     visual: BrowserBuildVisual,
     dark: false,
-    details: ["High-performance landing pages", "Complex SaaS dashboards", "Interactive 3D/WebGL experiences", "Global Edge deployment"],
+    details: ["High-performance landing pages", "Marketplace & escrow flows", "Complex SaaS dashboards", "Global Edge deployment"],
     techStack: ["Next.js App Router", "Tailwind CSS v4", "Framer Motion", "Vercel Edge"],
-    deliverables: ["Figma UI/UX Design", "Production Codebase", "Headless CMS Setup", "Lighthouse Audit 90+"]
+    deliverables: ["Figma UI/UX Design", "Production Codebase", "Headless CMS Setup", "Lighthouse Audit 90+"],
+    live: { url: DOITFORME.home, label: "Visit DoItForMe.in — built end to end" },
   },
 ];
 
@@ -526,6 +532,7 @@ interface ServiceChapterProps {
   visual: React.ComponentType;
   dark: boolean;
   index: number;
+  live: { url: string; label: string } | null;
   onOpenDrawer: () => void;
 }
 
@@ -537,6 +544,7 @@ function ServiceChapterItem({
   visual: Visual,
   dark,
   index,
+  live,
   onOpenDrawer,
 }: ServiceChapterProps) {
   const ref = useRef<HTMLDivElement>(null);
@@ -615,33 +623,53 @@ function ServiceChapterItem({
             </p>
 
             {/* Interactive Button */}
-            {title === "Voice Agents" ? (
-              <a
-                href="https://tryasva.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`mt-2 md:mt-4 inline-flex items-center justify-center gap-4 px-6 md:px-8 py-3 md:py-3.5 border transition-all duration-300 group w-full sm:w-max rounded-sm ${
-                  dark 
-                    ? "border-[#3A3632] text-[#E6DFD5] hover:border-[#FF5A1F] hover:bg-[#FF5A1F]/10" 
-                    : "border-[#C4B8A8] text-[#0D0D0D] hover:border-[#FF5A1F] hover:bg-[#FF5A1F]/5"
-                }`}
-              >
-                <span className="font-medium text-sm tracking-wide">Learn Details</span>
-                <span className="text-[#FF5A1F] transition-transform duration-300 group-hover:translate-x-1">→</span>
-              </a>
-            ) : (
-              <button
-                onClick={onOpenDrawer}
-                className={`mt-2 md:mt-4 inline-flex items-center justify-center gap-4 px-6 md:px-8 py-3 md:py-3.5 border transition-all duration-300 group w-full sm:w-max rounded-sm ${
-                  dark 
-                    ? "border-[#3A3632] text-[#E6DFD5] hover:border-[#FF5A1F] hover:bg-[#FF5A1F]/10" 
-                    : "border-[#C4B8A8] text-[#0D0D0D] hover:border-[#FF5A1F] hover:bg-[#FF5A1F]/5"
-                }`}
-              >
-                <span className="font-medium text-sm tracking-wide">Learn Details</span>
-                <span className="text-[#FF5A1F] transition-transform duration-300 group-hover:translate-x-1">→</span>
-              </button>
-            )}
+            {(() => {
+              const buttonClass = `inline-flex items-center justify-center gap-4 px-6 md:px-8 py-3 md:py-3.5 border transition-all duration-300 group w-full sm:w-max rounded-sm ${
+                dark
+                  ? "border-[#3A3632] text-[#E6DFD5] hover:border-[#FF5A1F] hover:bg-[#FF5A1F]/10"
+                  : "border-[#C4B8A8] text-[#0D0D0D] hover:border-[#FF5A1F] hover:bg-[#FF5A1F]/5"
+              }`;
+
+              // Voice Agents sends people straight to the live product; every other
+              // chapter opens the detail drawer and offers its live link beneath.
+              const isDirect = title === "Voice Agents" && !!live;
+
+              return (
+                <div className="mt-2 md:mt-4 flex flex-col items-start gap-4 w-full sm:w-max">
+                  {isDirect ? (
+                    <a
+                      href={live!.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={buttonClass}
+                    >
+                      <span className="font-medium text-sm tracking-wide">Learn Details</span>
+                      <span className="text-[#FF5A1F] transition-transform duration-300 group-hover:translate-x-1">→</span>
+                    </a>
+                  ) : (
+                    <button onClick={onOpenDrawer} className={buttonClass}>
+                      <span className="font-medium text-sm tracking-wide">Learn Details</span>
+                      <span className="text-[#FF5A1F] transition-transform duration-300 group-hover:translate-x-1">→</span>
+                    </button>
+                  )}
+
+                  {live && !isDirect && (
+                    <a
+                      href={live.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`inline-flex items-center gap-2 text-label transition-colors duration-300 hover:text-[#FF5A1F] ${
+                        dark ? "text-[#A49D93]" : "text-[#878074]"
+                      }`}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#FF5A1F]" />
+                      {live.label}
+                      <span aria-hidden>↗</span>
+                    </a>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Architectural line with animation */}
             <motion.div

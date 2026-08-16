@@ -2,6 +2,7 @@
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { BOOK_A_CALL } from "@/lib/links";
 
 interface ServiceDrawerProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ interface ServiceDrawerProps {
     details: string[];
     techStack: string[];
     deliverables: string[];
+    live?: { url: string; label: string } | null;
   } | null;
 }
 
@@ -162,18 +164,36 @@ export default function ServiceDrawer({ isOpen, onClose, service }: ServiceDrawe
                 </div>
               </motion.div>
 
-              {/* CTA */}
-              <motion.a
-                href="#contact"
-                onClick={onClose}
-                className="inline-flex items-center gap-4 px-8 py-4 bg-gradient-to-r from-[#FF5A1F] to-[#FF7A47] text-[#E6DFD5] text-label hover:from-[#E04A12] hover:to-[#FF5A1F] transition-all duration-300 group magnetic-hover"
+              {/* CTA — booking is the single conversion path across the site */}
+              <motion.div
+                className="flex flex-col gap-4 items-start"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.8 }}
               >
-                Discuss this service
-                <span className="inline-block w-0 group-hover:w-6 h-[1px] bg-[#E6DFD5] transition-all duration-300" />
-              </motion.a>
+                <a
+                  href={BOOK_A_CALL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-4 px-8 py-4 bg-gradient-to-r from-[#FF5A1F] to-[#FF7A47] text-[#E6DFD5] text-label hover:from-[#E04A12] hover:to-[#FF5A1F] transition-all duration-300 group magnetic-hover"
+                >
+                  Book a 15-min call
+                  <span className="inline-block w-0 group-hover:w-6 h-[1px] bg-[#E6DFD5] transition-all duration-300" />
+                </a>
+
+                {service.live && (
+                  <a
+                    href={service.live.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-label text-[#878074] hover:text-[#FF5A1F] transition-colors duration-300"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#FF5A1F]" />
+                    {service.live.label}
+                    <span aria-hidden>↗</span>
+                  </a>
+                )}
+              </motion.div>
             </div>
           </motion.div>
         </>

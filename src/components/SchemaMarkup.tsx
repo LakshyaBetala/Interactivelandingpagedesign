@@ -13,7 +13,7 @@ export function OrganizationSchema() {
       '@type': 'PostalAddress',
       addressCountry: 'IN',
     },
-    sameAs: [],
+    sameAs: ['https://tryasva.com', 'https://doitforme.in'],
     description:
       'Almmatix builds AI voice agents, WhatsApp automation bots, RAG systems, and custom web platforms for enterprises.',
   };
@@ -55,9 +55,9 @@ export function ServicesSchema() {
         'Automated lead qualification and omnichannel support across WhatsApp with smart conversation flows.',
     },
     {
-      name: 'Internal Workflow Automation',
+      name: 'Integrations & Workflow Automation',
       description:
-        'Connect CRMs and ERPs with intelligent automation. Eliminate manual data entry.',
+        'Connect Tally, CRMs and ERPs with intelligent automation. Eliminate manual data entry.',
     },
     {
       name: 'RAG Systems',

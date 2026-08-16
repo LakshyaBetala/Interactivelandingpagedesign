@@ -3,12 +3,13 @@
 import React, { useRef } from "react";
 import { motion, useInView, useScroll, useTransform } from "framer-motion";
 import Image from "next/image";
+import { DOITFORME } from "@/lib/links";
 
 const metrics = [
-  { value: "850+", label: "Gigs Completed" },
-  { value: "₹4.2L+", label: "Transacted" },
-  { value: "94%", label: "Completion Rate" },
-  { value: "100+", label: "Active Users" },
+  { value: "1,400+", label: "Verified Users" },
+  { value: "8", label: "Companies Hiring" },
+  { value: "₹3L+", label: "Gigs Posted" },
+  { value: "100%", label: "Escrow Protected" },
 ];
 
 export default function CaseStudy() {
@@ -74,7 +75,7 @@ export default function CaseStudy() {
                 <h2 className="font-display text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[0.93]">
                   DoItForMe.in
                 </h2>
-                <p className="text-label text-[#878074] mt-2">Student Gig Marketplace</p>
+                <p className="text-label text-[#878074] mt-2">India{"’"}s Verified Student Workforce</p>
               </div>
             </motion.div>
 
@@ -84,14 +85,14 @@ export default function CaseStudy() {
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
             >
-              A student gig marketplace with built-in escrow payments, 
-              college-verified user profiles, and smart matching. 
-              Designed to help students find and complete freelance 
-              work within their campus ecosystem.
+              A two-sided marketplace where companies post real work — design,
+              research, decks, code — and college-verified students deliver it.
+              We engineered the whole stack: escrow payment routing, verified
+              onboarding, matching, and a 24-hour review window before payout.
             </motion.p>
 
             <motion.a
-              href="https://doitforme.in"
+              href={DOITFORME.home}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center sm:justify-start gap-4 px-6 sm:px-8 py-3.5 sm:py-4 w-full sm:w-auto bg-gradient-to-r from-[#FF5A1F] to-[#FF7A47] text-[#E6DFD5] text-label hover:from-[#E04A12] hover:to-[#FF5A1F] transition-all duration-300 group magnetic-hover"
