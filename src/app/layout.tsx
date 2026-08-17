@@ -6,8 +6,11 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  themeColor: "#0D0D0D",
+  // No maximumScale/userScalable — pinch-zoom must stay available (WCAG 1.4.4).
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#E6DFD5" },
+    { media: "(prefers-color-scheme: dark)", color: "#0D0D0D" },
+  ],
 };
 
 export const metadata: Metadata = {
@@ -88,6 +91,7 @@ import {
   WebSiteSchema,
   ServicesSchema,
 } from "@/components/SchemaMarkup";
+import MotionProvider from "@/components/MotionProvider";
 
 export default function RootLayout({
   children,
@@ -97,6 +101,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        {/* Fonts are render-blocking third-party requests — warm the connections first. */}
+        <link rel="preconnect" href="https://api.fontshare.com" crossOrigin="" />
+        <link rel="preconnect" href="https://cdn.fontshare.com" crossOrigin="" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
           href="https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&f[]=satoshi@300,400,500,700&display=swap"
           rel="stylesheet"
@@ -110,10 +119,13 @@ export default function RootLayout({
       <body
         suppressHydrationWarning
         className="antialiased font-sans">
+        <a href="#main" className="skip-link">
+          Skip to content
+        </a>
         <OrganizationSchema />
         <WebSiteSchema />
         <ServicesSchema />
-        {children}
+        <MotionProvider>{children}</MotionProvider>
         <Analytics />
         <SpeedInsights />
       </body>

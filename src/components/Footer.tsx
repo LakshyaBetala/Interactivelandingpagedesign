@@ -50,16 +50,16 @@ export default function Footer() {
                 href={BOOK_A_CALL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-3 px-6 sm:px-8 py-3.5 sm:py-4 w-full sm:w-auto bg-gradient-to-r from-[#FF5A1F] to-[#FF7A47] text-[#E6DFD5] font-medium text-sm tracking-wide hover:from-[#E04A12] hover:to-[#FF5A1F] transition-all duration-300 group magnetic-hover border-none"
+                className="inline-flex items-center justify-center gap-3 px-6 sm:px-8 py-3.5 sm:py-4 w-full sm:w-auto bg-gradient-to-r from-[#FF5A1F] to-[#FF7A47] text-[#E6DFD5] font-medium text-sm tracking-wide hover:from-[#E04A12] hover:to-[#FF5A1F] transition-colors duration-300 group magnetic-hover border-none"
               >
-                Book a 15-min call
-                <span className="inline-block w-0 group-hover:w-5 h-[1px] bg-[#E6DFD5] transition-all duration-300" />
+                Book a Call
+                <span aria-hidden="true" className="inline-block w-0 group-hover:w-5 h-[1px] bg-[#E6DFD5] transition-[width] duration-300" />
               </a>
               <button
                 onClick={() => setModalOpen(true)}
-                className="inline-flex items-center justify-center gap-3 px-6 sm:px-8 py-3.5 sm:py-4 w-full sm:w-auto border border-[#3A3632] text-[#D9CFC2] font-medium text-sm tracking-wide hover:border-[#FF5A1F] hover:text-[#E6DFD5] transition-all duration-300 cursor-pointer bg-transparent"
+                className="inline-flex items-center justify-center gap-3 px-6 sm:px-8 py-3.5 sm:py-4 w-full sm:w-auto border border-[#3A3632] text-[#D9CFC2] font-medium text-sm tracking-wide hover:border-[#FF5A1F] hover:text-[#E6DFD5] transition-colors duration-300 cursor-pointer bg-transparent"
               >
-                Message us
+                Message Us
               </button>
             </div>
           </motion.div>
@@ -82,7 +82,12 @@ export default function Footer() {
             </div>
             <div>
               <span className="text-[10px] font-mono tracking-[0.2em] uppercase text-[#878074] block mb-2">Phone</span>
-              <span className="text-sm font-medium">{CONTACT.phone}</span>
+              <a
+                href={`tel:${CONTACT.phone.replace(/\s/g, "")}`}
+                className="text-sm font-medium hover:text-[#FF5A1F] transition-colors duration-300 tabular"
+              >
+                {CONTACT.phone}
+              </a>
             </div>
             <div>
               <span className="text-[10px] font-mono tracking-[0.2em] uppercase text-[#878074] block mb-2">Products</span>
@@ -98,7 +103,7 @@ export default function Footer() {
                     rel="noopener noreferrer"
                     className="text-sm font-medium hover:text-[#FF5A1F] transition-colors duration-300 w-max"
                   >
-                    {product.name} ↗
+                    <span translate="no">{product.name}</span> <span aria-hidden="true">↗</span>
                   </a>
                 ))}
               </div>
@@ -115,13 +120,13 @@ export default function Footer() {
                 rel="noopener noreferrer"
                 className="text-sm font-medium text-[#FF5A1F] hover:text-[#FF7A47] transition-colors duration-300 mt-1.5 inline-block"
               >
-                Book a call ↗
+                Book a Call <span aria-hidden="true">↗</span>
               </a>
             </div>
           </motion.div>
 
-          {/* Row 3: Marquee */}
-          <div className="py-5 border-b border-[#3A3632] overflow-hidden">
+          {/* Row 3: Marquee — decorative */}
+          <div aria-hidden="true" className="py-5 border-b border-[#3A3632] overflow-hidden">
             <motion.div
               className="flex gap-12 whitespace-nowrap"
               animate={{ x: ["0%", "-50%"] }}
@@ -129,7 +134,7 @@ export default function Footer() {
             >
               {[1, 2].map((i) => (
                 <div key={i} className="flex gap-12 items-center">
-                  {['VOICE AI', 'WHATSAPP MODS', 'RAG INFRA', 'EDGE APPS', 'CUSTOM CRM', 'API ENGINEERING', 'DATA PIPELINES'].map((tag) => (
+                  {['VOICE AI', 'WHATSAPP AUTOMATION', 'TALLY & ERP INTEGRATIONS', 'RAG INFRA', 'EDGE APPS', 'CUSTOM CRM', 'API ENGINEERING', 'DATA PIPELINES'].map((tag) => (
                     <span key={tag} className="text-[9px] font-mono tracking-[0.3em] text-[#878074]/50">
                       {tag}
                     </span>

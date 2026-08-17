@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BOOK_A_CALL } from "@/lib/links";
 
@@ -20,6 +20,23 @@ interface ServiceDrawerProps {
 }
 
 export default function ServiceDrawer({ isOpen, onClose, service }: ServiceDrawerProps) {
+  // Escape to dismiss, and freeze the page so the drawer doesn't scroll it behind.
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   if (!service) return null;
 
   return (
@@ -37,7 +54,10 @@ export default function ServiceDrawer({ isOpen, onClose, service }: ServiceDrawe
 
           {/* Drawer */}
           <motion.div
-            className="fixed right-0 top-0 h-full w-full sm:w-[540px] bg-[#0D0D0D] z-[101] overflow-y-auto"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${service.title} — service details`}
+            className="fixed right-0 top-0 h-full w-full sm:w-[540px] bg-[#0D0D0D] z-[101] overflow-y-auto overscroll-contain"
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
@@ -46,9 +66,10 @@ export default function ServiceDrawer({ isOpen, onClose, service }: ServiceDrawe
             {/* Close button */}
             <button
               onClick={onClose}
-              className="absolute top-6 right-6 w-10 h-10 flex items-center justify-center text-[#A49D93] hover:text-[#FF5A1F] transition-colors duration-300 z-10"
+              aria-label="Close service details"
+              className="absolute top-6 right-6 w-11 h-11 flex items-center justify-center text-[#A49D93] hover:text-[#FF5A1F] transition-colors duration-300 z-10"
             >
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <svg aria-hidden="true" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <line x1="4" y1="4" x2="16" y2="16" />
                 <line x1="16" y1="4" x2="4" y2="16" />
               </svg>
@@ -175,9 +196,9 @@ export default function ServiceDrawer({ isOpen, onClose, service }: ServiceDrawe
                   href={BOOK_A_CALL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-4 px-8 py-4 bg-gradient-to-r from-[#FF5A1F] to-[#FF7A47] text-[#E6DFD5] text-label hover:from-[#E04A12] hover:to-[#FF5A1F] transition-all duration-300 group magnetic-hover"
+                  className="inline-flex items-center gap-4 px-8 py-4 bg-gradient-to-r from-[#FF5A1F] to-[#FF7A47] text-[#E6DFD5] text-label hover:from-[#E04A12] hover:to-[#FF5A1F] transition-colors duration-300 group magnetic-hover"
                 >
-                  Book a 15-min call
+                  Book a Call
                   <span className="inline-block w-0 group-hover:w-6 h-[1px] bg-[#E6DFD5] transition-all duration-300" />
                 </a>
 
@@ -190,7 +211,7 @@ export default function ServiceDrawer({ isOpen, onClose, service }: ServiceDrawe
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-[#FF5A1F]" />
                     {service.live.label}
-                    <span aria-hidden>↗</span>
+                    <span aria-hidden="true">↗</span>
                   </a>
                 )}
               </motion.div>

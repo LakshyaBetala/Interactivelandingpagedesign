@@ -3,13 +3,14 @@
 import React, { useRef } from "react";
 import { motion, useInView, useScroll, useTransform } from "framer-motion";
 import Image from "next/image";
+import { MetricGrid, type MetricSpec } from "@/components/Metric";
 import { DOITFORME } from "@/lib/links";
 
-const metrics = [
-  { value: "1,400+", label: "Verified Users" },
-  { value: "8", label: "Companies Hiring" },
-  { value: "₹3L+", label: "Gigs Posted" },
-  { value: "100%", label: "Escrow Protected" },
+const metrics: MetricSpec[] = [
+  { value: 1400, suffix: "+", label: "Verified Users", note: "Students onboarded and ID-checked" },
+  { value: 8, label: "Companies Hiring", note: "Posting paid work on the platform" },
+  { prefix: "₹", value: 3, suffix: "L+", label: "Gigs Posted", note: "Total value routed through escrow" },
+  { value: 100, suffix: "%", label: "Escrow Protected", note: "Held until the 24-hour review closes" },
 ];
 
 export default function CaseStudy() {
@@ -44,7 +45,7 @@ export default function CaseStudy() {
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
         >
-          Featured Project
+          Live Product — 02
         </motion.p>
 
         {/* Main Content */}
@@ -95,43 +96,20 @@ export default function CaseStudy() {
               href={DOITFORME.home}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center sm:justify-start gap-4 px-6 sm:px-8 py-3.5 sm:py-4 w-full sm:w-auto bg-gradient-to-r from-[#FF5A1F] to-[#FF7A47] text-[#E6DFD5] text-label hover:from-[#E04A12] hover:to-[#FF5A1F] transition-all duration-300 group magnetic-hover"
+              className="inline-flex items-center justify-center sm:justify-start gap-4 px-6 sm:px-8 py-3.5 sm:py-4 w-full sm:w-auto bg-gradient-to-r from-[#FF5A1F] to-[#FF7A47] text-[#E6DFD5] text-label hover:from-[#E04A12] hover:to-[#FF5A1F] transition-colors duration-300 group magnetic-hover"
               initial={{ opacity: 0, y: 10 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.5, delay: 0.4 }}
             >
               Visit DoItForMe.in
-              <svg className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg aria-hidden="true" className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
               </svg>
             </motion.a>
           </div>
 
           {/* Right — Metrics */}
-          <div className="grid grid-cols-2 gap-6 sm:gap-8 lg:gap-12 content-center">
-            {metrics.map((metric, i) => (
-              <motion.div
-                key={i}
-                className="border-t border-[#3A3632] pt-6"
-                initial={{ opacity: 0, y: 30, scale: 0.9 }}
-                animate={isInView ? { opacity: 1, y: 0, scale: 1 } : {}}
-                transition={{
-                  duration: 0.7,
-                  delay: 0.3 + i * 0.12,
-                  type: "spring",
-                  stiffness: 150,
-                  damping: 15,
-                }}
-              >
-                <p className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[#E6DFD5]">
-                  {metric.value}
-                </p>
-                <p className="text-label text-[#878074] mt-2">
-                  {metric.label}
-                </p>
-              </motion.div>
-            ))}
-          </div>
+          <MetricGrid metrics={metrics} tone="dark" className="content-center" />
         </div>
 
         {/* Testimonial strip */}

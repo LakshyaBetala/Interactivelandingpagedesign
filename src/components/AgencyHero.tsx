@@ -32,8 +32,8 @@ export default function AgencyHero() {
             href="#services"
             className="inline-flex items-center gap-3 text-label text-[#0D0D0D] group pointer-events-auto"
           >
-            <span>Explore services</span>
-            <span className="inline-block w-8 h-[1px] bg-[#0D0D0D] group-hover:w-16 transition-all duration-500" />
+            <span>Explore Services</span>
+            <span aria-hidden="true" className="inline-block w-8 h-[1px] bg-[#0D0D0D] group-hover:w-16 transition-[width] duration-500" />
           </a>
         </div>
       </div>

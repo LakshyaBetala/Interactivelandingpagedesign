@@ -22,7 +22,7 @@ export default function AgencyHeroClient() {
           <div className="relative w-[50vw] sm:w-[40vw] max-w-[500px] aspect-square opacity-5">
             <Image
               src="/images/almmatix_logo.png"
-              alt="Almmatix Logo"
+              alt=""
               fill
               sizes="(max-width: 640px) 50vw, 40vw"
               className="object-contain"
@@ -38,8 +38,11 @@ export default function AgencyHeroClient() {
       {/* Bottom line */}
       <div className="absolute bottom-0 left-0 w-full h-[1px] bg-[#0D0D0D]/8" />
 
-      {/* Scrolling Marquee Strip */}
-      <div className="absolute bottom-0 left-0 w-full overflow-hidden py-2 sm:py-3 border-t border-[#0D0D0D]/5">
+      {/* Scrolling Marquee Strip — decorative restatement of the services list */}
+      <div
+        aria-hidden="true"
+        className="absolute bottom-0 left-0 w-full overflow-hidden py-2 sm:py-3 border-t border-[#0D0D0D]/5"
+      >
         <motion.div
           className="flex whitespace-nowrap gap-10 sm:gap-16 w-max items-center"
           animate={{ x: ["0%", "-50%"] }}

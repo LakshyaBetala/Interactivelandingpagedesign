@@ -75,15 +75,54 @@
 }
 
 /* ===== BASE ===== */
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  /* Fixed navbar is 64px (mobile) / 80px (desktop); keep anchor targets clear of it. */
+  scroll-padding-top: 6rem;
+}
 body {
   background-color: var(--color-sand);
   color: var(--color-charcoal);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Kill the 300ms double-tap zoom delay and the grey flash on tap. */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(255, 90, 31, 0.15);
 }
 ::selection { background-color: var(--color-ember); color: var(--color-sand); }
+
+[id] { scroll-margin-top: 6rem; }
+
+/* ===== FOCUS ===== */
+/* Keyboard users get a visible ring everywhere; mouse users never see it. */
+:focus-visible {
+  outline: 2px solid var(--color-ember);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+:focus:not(:focus-visible) { outline: none; }
+
+/* Skip link — visually hidden until focused. */
+.skip-link {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 200;
+  padding: 0.75rem 1.25rem;
+  background: var(--color-charcoal);
+  color: var(--color-sand);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transform: translateY(-150%);
+  transition: transform 0.2s ease;
+}
+.skip-link:focus-visible { transform: translateY(0); }
+
+/* Number columns and metric readouts stay optically aligned. */
+.tabular { font-variant-numeric: tabular-nums; }
 
 /* ===== EDITORIAL TYPOGRAPHY ===== */
 .text-massive { font-size: clamp(2.25rem, 9vw, 11rem); line-height: 0.9; letter-spacing: -0.045em; font-weight: 700; }
@@ -118,6 +157,23 @@ body {
 
 .magnetic-hover { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
 .magnetic-hover:hover { transform: scale(1.02); }
+
+/* ===== REDUCED MOTION ===== */
+/* Marquees, pulses and orbits are decorative — stop them outright rather than
+   speeding them up. Framer Motion is handled via MotionConfig in the layout. */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .stagger-children > * { opacity: 1; }
+  .magnetic-hover:hover { transform: none; }
+}
 
 /* CRM dark scrollbar */
 .crm-scroll::-webkit-scrollbar { width: 4px; }

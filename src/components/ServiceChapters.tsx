@@ -572,6 +572,7 @@ function ServiceChapterItem({
     >
       {/* Giant background number with parallax */}
       <motion.span
+        aria-hidden="true"
         style={{ y: numberY }}
         className={`absolute right-6 lg:right-12 font-display text-chapter-number pointer-events-none select-none ${
           dark ? "text-[#E6DFD5]/[0.03]" : "text-[#0D0D0D]/[0.03]"
@@ -624,7 +625,7 @@ function ServiceChapterItem({
 
             {/* Interactive Button */}
             {(() => {
-              const buttonClass = `inline-flex items-center justify-center gap-4 px-6 md:px-8 py-3 md:py-3.5 border transition-all duration-300 group w-full sm:w-max rounded-sm ${
+              const buttonClass = `inline-flex items-center justify-center gap-4 px-6 md:px-8 py-3 md:py-3.5 border transition-colors duration-300 group w-full sm:w-max rounded-sm ${
                 dark
                   ? "border-[#3A3632] text-[#E6DFD5] hover:border-[#FF5A1F] hover:bg-[#FF5A1F]/10"
                   : "border-[#C4B8A8] text-[#0D0D0D] hover:border-[#FF5A1F] hover:bg-[#FF5A1F]/5"
@@ -662,9 +663,9 @@ function ServiceChapterItem({
                         dark ? "text-[#A49D93]" : "text-[#878074]"
                       }`}
                     >
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#FF5A1F]" />
+                      <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-[#FF5A1F]" />
                       {live.label}
-                      <span aria-hidden>↗</span>
+                      <span aria-hidden="true">↗</span>
                     </a>
                   )}
                 </div>
@@ -681,8 +682,9 @@ function ServiceChapterItem({
             />
           </motion.div>
 
-          {/* Visual Side — with dramatic scale-up pop */}
+          {/* Visual Side — purely illustrative, so hidden from screen readers */}
           <motion.div
+            aria-hidden="true"
             className="relative w-full aspect-[4/3] sm:aspect-square lg:aspect-[4/3] lg:[direction:ltr]"
             style={{ scale: visualScale, opacity: visualOpacity }}
           >
