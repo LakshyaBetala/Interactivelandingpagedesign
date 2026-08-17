@@ -80,15 +80,18 @@ export function Metric({
       animate={isInView ? { opacity: 1, y: 0 } : {}}
       transition={{ duration: 0.6, delay: index * 0.08, ease: [0.16, 1, 0.3, 1] }}
     >
-      <p
-        className={`font-display text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight tabular ${
+      {/* <data value> carries the true figure regardless of where the count-up
+          happens to be, so anything parsing the DOM reads the real number. */}
+      <data
+        value={metric.value}
+        className={`block font-display text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight tabular ${
           isDark ? "text-[#E6DFD5]" : "text-[#0D0D0D]"
         }`}
       >
         {metric.prefix}
         {format(display)}
         {metric.suffix}
-      </p>
+      </data>
       <p className={`text-label mt-2 ${isDark ? "text-[#878074]" : "text-[#878074]"}`}>
         {metric.label}
       </p>

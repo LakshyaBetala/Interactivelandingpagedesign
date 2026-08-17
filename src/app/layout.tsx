@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   },
 
   description:
-    "Almmatix builds AI voice agents, WhatsApp automation bots, RAG systems, and custom web platforms for enterprises. Engineered to scale. Start your project today.",
+    "Almmatix builds AI voice agents, WhatsApp automation, Tally & ERP integrations, RAG systems, and custom web platforms for enterprises. Makers of ASVA and DoItForMe.in.",
 
 
   authors: [{ name: "Almmatix" }],
@@ -90,6 +90,8 @@ import {
   OrganizationSchema,
   WebSiteSchema,
   ServicesSchema,
+  ProductsSchema,
+  FAQSchema,
 } from "@/components/SchemaMarkup";
 import MotionProvider from "@/components/MotionProvider";
 
@@ -125,6 +127,8 @@ export default function RootLayout({
         <OrganizationSchema />
         <WebSiteSchema />
         <ServicesSchema />
+        <ProductsSchema />
+        <FAQSchema />
         <MotionProvider>{children}</MotionProvider>
         <Analytics />
         <SpeedInsights />

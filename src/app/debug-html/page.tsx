@@ -1,3 +1,11 @@
+import type { Metadata } from "next";
+
+// Internal scratch page holding an outdated copy of the service list. Keeping it
+// indexable made it duplicate content that contradicts the live homepage.
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
+
 export default function DebugHTMLPage() {
   const services = [
     {

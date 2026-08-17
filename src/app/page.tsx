@@ -12,7 +12,9 @@ import NoiseGradientBridge from "@/components/NoiseGradientBridge";
 
 export const metadata: Metadata = {
   title: "Almmatix",
-  description: "Transform your enterprise with AI voice agents, WhatsApp automation, and custom web platforms. We build scalable deep-tech infrastructure.",
+  description:
+    "Deep-tech studio building AI voice agents, WhatsApp automation, Tally & ERP integrations, RAG systems and web platforms. Our own products: ASVA, which has recovered ₹43L+ over WhatsApp, and DoItForMe.in, with 1,400+ verified users.",
+  alternates: { canonical: "https://www.almmatix.in" },
 };
 
 export default function Home() {
