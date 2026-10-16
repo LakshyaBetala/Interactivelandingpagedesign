@@ -126,40 +126,6 @@ export function ProductsSchema() {
       'UPI payouts to students',
       'DoItForMe Managed: assignment, timelines and review for a flat 10%',
     ],
-    interactionStatistic: {
-      '@type': 'InteractionCounter',
-      interactionType: 'https://schema.org/RegisterAction',
-      userInteractionCount: 1400,
-      description: 'Over 1,400 verified users registered on the platform.',
-    },
-    additionalProperty: [
-      {
-        '@type': 'PropertyValue',
-        name: 'Verified users',
-        value: 1400,
-        description: 'Over 1,400 students onboarded and ID-checked.',
-      },
-      {
-        '@type': 'PropertyValue',
-        name: 'Companies hiring',
-        value: 8,
-        description: 'Companies posting paid work on the platform.',
-      },
-      {
-        '@type': 'PropertyValue',
-        name: 'Total value of gigs posted',
-        value: 300000,
-        unitText: 'INR',
-        description: 'Over Rs 3 lakh (Rs 3,00,000) in work posted through the platform.',
-      },
-      {
-        '@type': 'PropertyValue',
-        name: 'Payments held in escrow',
-        value: 100,
-        unitText: 'P1',
-        description: '100% of payments are held in escrow until the 24-hour review window closes.',
-      },
-    ],
   };
 
   return (
@@ -191,11 +157,11 @@ export function FAQSchema() {
     ],
     [
       'What is DoItForMe.in?',
-      "DoItForMe.in is India's verified student workforce marketplace, engineered end to end by Almmatix. Companies post paid work — design and branding, research and leads, presentations, data and operations, coding and automation, writing and tutoring — and college-verified students deliver it. Payments are escrow-protected with a 24-hour review window before payout.",
+      'DoItForMe.in is the escrow and delivery layer that Almmatix built and operates, and that every Almmatix project is delivered through. Client money is held in escrow before work starts, workers are ID-verified, every delivery carries a 24-hour review window before payout, and copyright is assigned to the client in writing. It also runs an open marketplace where companies post paid work and college-verified Indian students deliver it.',
     ],
     [
-      'How many users does DoItForMe.in have?',
-      'DoItForMe.in has over 1,400 verified users and 8 companies hiring through the platform, with over Rs 3 lakh (Rs 3,00,000) in gigs posted. 100% of payments are held in escrow until the 24-hour review window closes.',
+      "How does Almmatix protect a client's payment?",
+      'Almmatix delivers through DoItForMe.in, an escrow and delivery layer it built and operates. Client money is held in escrow before work starts, the people doing the work are ID-verified, every delivery gets a 24-hour review window before any payout, and copyright in the work is assigned to the client in writing before it is built.',
     ],
     [
       'What does Almmatix build?',
@@ -247,29 +213,24 @@ export function WebSiteSchema() {
 export function ServicesSchema() {
   const services = [
     {
+      name: 'App & Web Platform Development',
+      description:
+        'Mobile apps, web platforms, e-commerce storefronts and marketing sites, engineered from scratch with the copyright assigned to the client in writing.',
+    },
+    {
+      name: 'Custom AI Solutions',
+      description:
+        'AI assistants and document-processing pipelines trained only on client data, with citation-backed answers and access-level permissions.',
+    },
+    {
+      name: 'Business AI Automation',
+      description:
+        'Plugin-free Tally, CRM and ERP integration with WhatsApp reminders, UPI payment links and overnight reconciliation and reporting.',
+    },
+    {
       name: 'AI Voice Agents',
       description:
-        '24/7 human-like voice agents for inbound routing, outbound sales, and customer support.',
-    },
-    {
-      name: 'WhatsApp Automation',
-      description:
-        'Automated lead qualification and omnichannel support across WhatsApp with smart conversation flows.',
-    },
-    {
-      name: 'Integrations & Workflow Automation',
-      description:
-        'Connect Tally, CRMs and ERPs with intelligent automation. Eliminate manual data entry.',
-    },
-    {
-      name: 'RAG Systems',
-      description:
-        'Secure, hallucination-free AI assistants trained exclusively on your enterprise data.',
-    },
-    {
-      name: 'Web Platform Development',
-      description:
-        'High-converting digital platforms with AI built in — custom-engineered storefronts and dashboards.',
+        'Voice agents for inbound routing, outbound qualification and support, in Hindi, Tamil, Gujarati and Marathi.',
     },
   ];
 

@@ -83,77 +83,6 @@ function WaveformVisual() {
   );
 }
 
-function MessageStackVisual() {
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-15%" });
-
-  const messages = [
-    { text: "New lead from Mumbai", side: "left" as const, icon: "📍" },
-    { text: "Qualification started...", side: "right" as const, icon: "⚡" },
-    { text: "Meeting scheduled ✓", side: "left" as const, icon: "📅" },
-    { text: "Follow-up sent", side: "right" as const, icon: "✉️" },
-    { text: "Deal closed — ₹2.4L", side: "left" as const, icon: "🎯" },
-  ];
-
-  return (
-    <div ref={ref} className="w-full h-full flex flex-col justify-center gap-3 px-4 max-w-sm mx-auto relative">
-      {/* Connection line */}
-      <motion.div
-        className="absolute left-1/2 top-[10%] w-[1px] bg-gradient-to-b from-transparent via-[#FF5A1F]/20 to-transparent"
-        initial={{ height: 0 }}
-        animate={isInView ? { height: "80%" } : {}}
-        transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
-      />
-
-      {messages.map((msg, i) => (
-        <motion.div
-          key={i}
-          className={`flex items-center gap-3 ${
-            msg.side === "right" ? "flex-row-reverse self-end" : "self-start"
-          }`}
-          initial={{
-            opacity: 0,
-            x: msg.side === "left" ? -60 : 60,
-            scale: 0.8,
-          }}
-          animate={
-            isInView
-              ? {
-                  opacity: 1,
-                  x: 0,
-                  scale: 1,
-                }
-              : {}
-          }
-          transition={{
-            duration: 0.7,
-            delay: i * 0.2,
-            ease: [0.16, 1, 0.3, 1],
-            scale: { type: "spring", stiffness: 300, damping: 20, delay: i * 0.2 },
-          }}
-        >
-          <motion.span
-            className="text-lg"
-            animate={isInView ? { scale: [1, 1.2, 1] } : {}}
-            transition={{ duration: 0.4, delay: i * 0.2 + 0.5 }}
-          >
-            {msg.icon}
-          </motion.span>
-          <div
-            className={`px-5 py-3 text-sm font-mono backdrop-blur-sm ${
-              msg.side === "left"
-                ? "bg-[#1A1A1A] text-[#D9CFC2] border border-[#3A3632]"
-                : "bg-gradient-to-r from-[#FF5A1F] to-[#FF7A47] text-[#E6DFD5]"
-            }`}
-          >
-            {msg.text}
-          </div>
-        </motion.div>
-      ))}
-    </div>
-  );
-}
-
 function FlowchartVisual() {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-15%" });
@@ -359,7 +288,23 @@ function BrowserBuildVisual() {
   const isInView = useInView(ref, { once: true, margin: "-15%" });
 
   return (
-    <div ref={ref} className="w-full h-full flex items-center justify-center px-4">
+    <div ref={ref} className="w-full h-full flex items-center justify-center px-4 relative">
+      {/* Phone, tucked behind the browser — this chapter covers apps as well as web */}
+      <motion.div
+        className="absolute right-2 sm:right-6 bottom-2 z-10 w-20 sm:w-24 aspect-[9/19] rounded-[1.1rem] border-[3px] border-[#0D0D0D] bg-[#EDE8E0] shadow-2xl shadow-[#0D0D0D]/20 overflow-hidden"
+        initial={{ opacity: 0, y: 30, rotate: 6 }}
+        animate={isInView ? { opacity: 1, y: 0, rotate: 4 } : {}}
+        transition={{ duration: 0.9, delay: 0.9, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <div className="h-1 w-6 mx-auto mt-1 rounded-full bg-[#0D0D0D]/30" />
+        <div className="px-2 pt-2 flex flex-col gap-1.5">
+          <div className="h-8 rounded-sm bg-gradient-to-br from-[#FF5A1F]/20 to-[#FF7A47]/10" />
+          <div className="h-1.5 w-3/4 rounded-sm bg-[#D9CFC2]" />
+          <div className="h-1.5 w-1/2 rounded-sm bg-[#D9CFC2]" />
+          <div className="mt-1 h-4 rounded-sm bg-gradient-to-r from-[#FF5A1F] to-[#FF7A47]" />
+        </div>
+      </motion.div>
+
       <motion.div
         className="w-full max-w-sm border border-[#C4B8A8] overflow-hidden bg-[#EDE8E0] shadow-2xl shadow-[#0D0D0D]/10"
         initial={{ opacity: 0, y: 40, rotateX: 10 }}
@@ -456,68 +401,55 @@ function BrowserBuildVisual() {
 const services = [
   {
     number: "01",
+    title: "Apps & Web Platforms",
+    subtitle: "Product Engineering",
+    description:
+      "Mobile apps, web platforms, storefronts and marketing sites — engineered from scratch, not assembled from templates. The copyright is assigned to you in writing before the first line is written.",
+    visual: BrowserBuildVisual,
+    dark: false,
+    details: ["Android & iOS apps", "Web platforms & dashboards", "E-commerce & escrow flows", "Marketing sites & landing pages"],
+    techStack: ["Next.js App Router", "React Native / Capacitor", "Tailwind CSS v4", "Vercel / Cloudflare Edge"],
+    deliverables: ["UI/UX design", "Production codebase", "Written IP assignment", "Handover & maintenance plan"],
+    live: { url: DOITFORME.home, label: "DoItForMe.in — built end to end" },
+  },
+  {
+    number: "02",
+    title: "Custom AI Solutions",
+    subtitle: "Applied Intelligence",
+    description:
+      "Assistants and document pipelines trained only on your data. Every answer carries a citation, every document carries a permission — so the answer is checkable and the wrong person never sees it.",
+    visual: NeuralNetVisual,
+    dark: true,
+    details: ["Assistants trained on your own data", "Document processing & extraction", "Citation-backed answers", "Access-level permissions"],
+    techStack: ["Pinecone / Weaviate", "LlamaIndex", "Gemini / OpenAI / Anthropic", "Supabase"],
+    deliverables: ["Vector database setup", "Ingestion pipeline", "Chat interface", "Accuracy report"],
+    live: null,
+  },
+  {
+    number: "03",
+    title: "Business AI Automation",
+    subtitle: "Operations Infrastructure",
+    description:
+      "The work that should happen without anyone opening a laptop. Tally, CRMs and ERPs wired into one loop — reminders sent, payments reconciled, reports filed overnight. ASVA is ours, and it has recovered ₹43L+ exactly this way.",
+    visual: FlowchartVisual,
+    dark: true,
+    details: ["Plugin-free Tally integration", "CRM & ERP syncing", "WhatsApp reminders with UPI links", "Overnight reconciliation & reporting"],
+    techStack: ["Meta Cloud API", "Make.com / n8n", "Python Airflow", "PostgreSQL"],
+    deliverables: ["System architecture docs", "Workflow schematics", "API endpoints", "Error handling & alerts"],
+    live: { url: ASVA.home, label: "ASVA — our live collections agent" },
+  },
+  {
+    number: "04",
     title: "Voice Agents",
     subtitle: "Conversational AI",
     description:
-      "24/7 voice agents that route inbound calls, qualify outbound leads, and handle support in the caller's own language. No hold music. No scripts. Conversations that close.",
+      "Voice agents that route inbound calls, qualify outbound leads and handle support in the caller's own language. No hold music, no scripts, no queue — just the conversation the caller rang for.",
     visual: WaveformVisual,
     dark: false,
     details: ["Inbound query resolution", "Outbound lead qualification", "Sentiment & intent tracking", "Hindi, Tamil, Gujarati & Marathi"],
     techStack: ["Vapi / Retell AI", "OpenAI / Anthropic", "ElevenLabs Voice", "Twilio SIP"],
-    deliverables: ["Custom Voice Model", "CRM Integration", "Call Transcripts", "Performance Dashboard"],
-    live: { url: ASVA.home, label: "See ASVA — our live voice & collections agent" },
-  },
-  {
-    number: "02",
-    title: "WhatsApp Automation",
-    subtitle: "Omnichannel Messaging",
-    description:
-      "Lead qualification, reminders, and support that run on WhatsApp while your team sleeps. Our own collections agent, ASVA, has recovered ₹43L+ for shops running a 160-day credit cycle.",
-    visual: MessageStackVisual,
-    dark: true,
-    details: ["Instant lead response", "Automated appointment booking", "Payment reminders with UPI links", "Human handoff logic"],
-    techStack: ["Meta Cloud API", "LangChain / Flowise", "Webhooks", "PostgreSQL"],
-    deliverables: ["Verified WA Business", "Conversational Flow Map", "Escalation Triggers", "Agent Workspace"],
-    live: { url: ASVA.howItWorks, label: "See how ASVA works on WhatsApp" },
-  },
-  {
-    number: "03",
-    title: "Integrations & Workflows",
-    subtitle: "Process Intelligence",
-    description:
-      "Tally, CRMs, and ERPs wired into one intelligent loop — plugin-free, reconciled FIFO, and reported nightly. Your team makes decisions instead of re-typing them.",
-    visual: FlowchartVisual,
-    dark: false,
-    details: ["Plugin-free Tally integration", "Cross-platform data syncing", "Automatic report generation", "Smart alerts & notifications"],
-    techStack: ["Make.com / n8n", "Python Airflow", "AWS Lambda", "REST/GraphQL APIs"],
-    deliverables: ["System Architecture Docs", "Workflow Schematics", "API Endpoints", "Error Handling Logs"],
-    live: { url: ASVA.useCases, label: "Tally & ERP integrations in production" },
-  },
-  {
-    number: "04",
-    title: "RAG Systems",
-    subtitle: "Knowledge Intelligence",
-    description:
-      "Secure, hallucination-free assistants trained only on your data. Every answer cited, every document permissioned — your knowledge base, searchable by anyone on your team.",
-    visual: NeuralNetVisual,
-    dark: true,
-    details: ["Semantic document search", "Secure data enclosures", "Citation-backed answers", "Access-level permissions"],
-    techStack: ["Pinecone / Weaviate", "LlamaIndex", "Next.js Edge", "Supabase"],
-    deliverables: ["Vector Database Setup", "Data Ingestion Pipeline", "Chat Interface", "Accuracy Reports"],
+    deliverables: ["Custom voice model", "CRM integration", "Call transcripts", "Performance dashboard"],
     live: null,
-  },
-  {
-    number: "05",
-    title: "Web Platforms",
-    subtitle: "Digital Engineering",
-    description:
-      "Marketplaces, dashboards, and storefronts engineered from scratch — escrow payments, verified onboarding, and edge delivery included. Not templates. Systems.",
-    visual: BrowserBuildVisual,
-    dark: false,
-    details: ["High-performance landing pages", "Marketplace & escrow flows", "Complex SaaS dashboards", "Global Edge deployment"],
-    techStack: ["Next.js App Router", "Tailwind CSS v4", "Framer Motion", "Vercel Edge"],
-    deliverables: ["Figma UI/UX Design", "Production Codebase", "Headless CMS Setup", "Lighthouse Audit 90+"],
-    live: { url: DOITFORME.home, label: "Visit DoItForMe.in — built end to end" },
   },
 ];
 
@@ -624,53 +556,34 @@ function ServiceChapterItem({
             </p>
 
             {/* Interactive Button */}
-            {(() => {
-              const buttonClass = `inline-flex items-center justify-center gap-4 px-6 md:px-8 py-3 md:py-3.5 border transition-colors duration-300 group w-full sm:w-max rounded-sm ${
-                dark
-                  ? "border-[#3A3632] text-[#E6DFD5] hover:border-[#FF5A1F] hover:bg-[#FF5A1F]/10"
-                  : "border-[#C4B8A8] text-[#0D0D0D] hover:border-[#FF5A1F] hover:bg-[#FF5A1F]/5"
-              }`;
+            <div className="mt-2 md:mt-4 flex flex-col items-start gap-4 w-full sm:w-max">
+              <button
+                onClick={onOpenDrawer}
+                className={`inline-flex items-center justify-center gap-4 px-6 md:px-8 py-3 md:py-3.5 border transition-colors duration-300 group w-full sm:w-max rounded-sm ${
+                  dark
+                    ? "border-[#3A3632] text-[#E6DFD5] hover:border-[#FF5A1F] hover:bg-[#FF5A1F]/10"
+                    : "border-[#C4B8A8] text-[#0D0D0D] hover:border-[#FF5A1F] hover:bg-[#FF5A1F]/5"
+                }`}
+              >
+                <span className="font-medium text-sm tracking-wide">Learn Details</span>
+                <span className="text-[#FF5A1F] transition-transform duration-300 group-hover:translate-x-1">→</span>
+              </button>
 
-              // Voice Agents sends people straight to the live product; every other
-              // chapter opens the detail drawer and offers its live link beneath.
-              const isDirect = title === "Voice Agents" && !!live;
-
-              return (
-                <div className="mt-2 md:mt-4 flex flex-col items-start gap-4 w-full sm:w-max">
-                  {isDirect ? (
-                    <a
-                      href={live!.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={buttonClass}
-                    >
-                      <span className="font-medium text-sm tracking-wide">Learn Details</span>
-                      <span className="text-[#FF5A1F] transition-transform duration-300 group-hover:translate-x-1">→</span>
-                    </a>
-                  ) : (
-                    <button onClick={onOpenDrawer} className={buttonClass}>
-                      <span className="font-medium text-sm tracking-wide">Learn Details</span>
-                      <span className="text-[#FF5A1F] transition-transform duration-300 group-hover:translate-x-1">→</span>
-                    </button>
-                  )}
-
-                  {live && !isDirect && (
-                    <a
-                      href={live.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`inline-flex items-center gap-2 text-label transition-colors duration-300 hover:text-[#FF5A1F] ${
-                        dark ? "text-[#A49D93]" : "text-[#878074]"
-                      }`}
-                    >
-                      <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-[#FF5A1F]" />
-                      {live.label}
-                      <span aria-hidden="true">↗</span>
-                    </a>
-                  )}
-                </div>
-              );
-            })()}
+              {live && (
+                <a
+                  href={live.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`inline-flex items-center gap-2 text-label transition-colors duration-300 hover:text-[#FF5A1F] ${
+                    dark ? "text-[#A49D93]" : "text-[#878074]"
+                  }`}
+                >
+                  <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-[#FF5A1F]" />
+                  {live.label}
+                  <span aria-hidden="true">↗</span>
+                </a>
+              )}
+            </div>
 
             {/* Architectural line with animation */}
             <motion.div

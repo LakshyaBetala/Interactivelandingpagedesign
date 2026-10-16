@@ -36,7 +36,7 @@ export default function AsvaCaseStudy() {
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
         >
-          Live Product — 01
+          Live Product
         </motion.p>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24">

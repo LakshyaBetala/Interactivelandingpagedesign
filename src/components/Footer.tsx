@@ -134,7 +134,7 @@ export default function Footer() {
             >
               {[1, 2].map((i) => (
                 <div key={i} className="flex gap-12 items-center">
-                  {['VOICE AI', 'WHATSAPP AUTOMATION', 'TALLY & ERP INTEGRATIONS', 'RAG INFRA', 'EDGE APPS', 'CUSTOM CRM', 'API ENGINEERING', 'DATA PIPELINES'].map((tag) => (
+                  {['MOBILE APPS', 'WEB PLATFORMS', 'E-COMMERCE', 'CUSTOM AI', 'TALLY & ERP INTEGRATIONS', 'WHATSAPP AUTOMATION', 'VOICE AI', 'API ENGINEERING'].map((tag) => (
                     <span key={tag} className="text-[9px] font-mono tracking-[0.3em] text-[#878074]/50">
                       {tag}
                     </span>
@@ -147,7 +147,7 @@ export default function Footer() {
           {/* SEO Paragraph */}
           <div className="py-8 border-b border-[#3A3632]">
             <p className="text-xs sm:text-sm text-[#878074] max-w-4xl leading-relaxed">
-              Almmatix is an engineering studio dedicated to end-to-end <strong>software development</strong>, scalable <strong>web development</strong>, and integrating autonomous <strong>AI solutions</strong>. We transform operational bottlenecks into intelligent, automated pathways for modern enterprises. We also build our own products — <strong>ASVA</strong>, an AI collections agent that reads Tally and closes the loop on WhatsApp, and <strong>DoItForMe.in</strong>, India{"’"}s verified student workforce marketplace.
+              Almmatix is an engineering studio building <strong>mobile apps</strong>, <strong>web platforms</strong>, <strong>custom AI solutions</strong> and <strong>business AI automation</strong> for Indian businesses. We turn operational bottlenecks — chasing payments, re-typing ledgers, answering the same call twice — into systems that run overnight. We build our own products too: <strong>ASVA</strong>, an AI collections agent that reads Tally and closes the loop on WhatsApp, and <strong>DoItForMe.in</strong>, the escrow and delivery layer every Almmatix project ships through.
             </p>
           </div>
 

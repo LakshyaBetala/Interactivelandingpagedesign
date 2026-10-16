@@ -10,11 +10,10 @@ interface LeadModalProps {
 }
 
 const SERVICES = [
-  "Voice AI",
-  "WhatsApp Automation",
-  "Integrations & Workflows",
-  "RAG Systems",
-  "Custom Web Platforms",
+  "Apps & Web Platforms",
+  "Custom AI Solutions",
+  "Business AI Automation",
+  "Voice Agents",
   "Other / General Inquiry",
 ];
 

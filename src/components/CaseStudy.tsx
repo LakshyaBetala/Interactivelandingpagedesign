@@ -3,14 +3,14 @@
 import React, { useRef } from "react";
 import { motion, useInView, useScroll, useTransform } from "framer-motion";
 import Image from "next/image";
-import { MetricGrid, type MetricSpec } from "@/components/Metric";
 import { DOITFORME } from "@/lib/links";
 
-const metrics: MetricSpec[] = [
-  { value: 1400, suffix: "+", label: "Verified Users", note: "Students onboarded and ID-checked" },
-  { value: 8, label: "Companies Hiring", note: "Posting paid work on the platform" },
-  { prefix: "₹", value: 3, suffix: "L+", label: "Gigs Posted", note: "Total value routed through escrow" },
-  { value: 100, suffix: "%", label: "Escrow Protected", note: "Held until the 24-hour review closes" },
+/** What the layer does, not how much of it has run — these are guarantees, not metrics. */
+const capabilities = [
+  { head: "Escrow", body: "Client money is held before work starts and released only on approval." },
+  { head: "Verified", body: "Every worker is ID-checked, screened by an AI pass and a human queue." },
+  { head: "24 hours", body: "A review window on every delivery before a single rupee moves." },
+  { head: "Written IP", body: "Copyright assigned in writing before the first line is written." },
 ];
 
 export default function CaseStudy() {
@@ -45,7 +45,7 @@ export default function CaseStudy() {
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
         >
-          Live Product — 02
+          Delivery Layer
         </motion.p>
 
         {/* Main Content */}
@@ -76,7 +76,7 @@ export default function CaseStudy() {
                 <h2 className="font-display text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[0.93]">
                   DoItForMe.in
                 </h2>
-                <p className="text-label text-[#878074] mt-2">India{"’"}s Verified Student Workforce</p>
+                <p className="text-label text-[#878074] mt-2">Escrow &amp; Delivery Infrastructure</p>
               </div>
             </motion.div>
 
@@ -86,10 +86,11 @@ export default function CaseStudy() {
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
             >
-              A two-sided marketplace where companies post real work — design,
-              research, decks, code — and college-verified students deliver it.
-              We engineered the whole stack: escrow payment routing, verified
-              onboarding, matching, and a 24-hour review window before payout.
+              Almmatix scopes and sells the work. DoItForMe is the layer
+              underneath that pays for it — we built it end to end, so client
+              money sits in escrow before anyone starts, verified people are
+              matched to the brief, and nothing is released until the work has
+              been reviewed. The same rails carry every project we deliver.
             </motion.p>
 
             <motion.a
@@ -108,25 +109,40 @@ export default function CaseStudy() {
             </motion.a>
           </div>
 
-          {/* Right — Metrics */}
-          <MetricGrid metrics={metrics} tone="dark" className="content-center" />
+          {/* Right — what the layer guarantees */}
+          <div className="grid grid-cols-2 gap-6 sm:gap-8 lg:gap-10 content-center">
+            {capabilities.map((cap, i) => (
+              <motion.div
+                key={cap.head}
+                className="border-t border-[#3A3632] pt-5 sm:pt-6"
+                initial={{ opacity: 0, y: 24 }}
+                animate={isInView ? { opacity: 1, y: 0 } : {}}
+                transition={{ duration: 0.6, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
+              >
+                <p className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-[#E6DFD5]">
+                  {cap.head}
+                </p>
+                <p className="text-sm text-[#A49D93] mt-2 leading-snug">{cap.body}</p>
+              </motion.div>
+            ))}
+          </div>
         </div>
 
-        {/* Testimonial strip */}
+        {/* Why we own the rails rather than renting them */}
         <motion.div
           className="mt-16 sm:mt-24 lg:mt-32 border-t border-[#3A3632] pt-8 sm:pt-12 flex flex-col lg:flex-row lg:items-start gap-6 sm:gap-8"
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.8, delay: 0.7 }}
         >
-          <p className="font-sans text-lg sm:text-xl lg:text-2xl text-[#D9CFC2] italic leading-relaxed max-w-2xl">
-            {"\u201C"}They didn{"\u2019"}t just build a website — they engineered an
-            entire operations layer for our marketplace. The difference
-            is night and day.{"\u201D"}
+          <p className="font-sans text-lg sm:text-xl lg:text-2xl text-[#D9CFC2] leading-relaxed max-w-2xl">
+            Most studios ask you to trust an invoice. We built the escrow
+            instead — so the money is visible, the review window is real, and
+            what you paid for is yours in writing before it exists.
           </p>
-          <div className="flex flex-col">
-            <span className="font-sans text-[#D9CFC2] font-medium">Founding Team</span>
-            <span className="text-label text-[#878074]">DoItForMe.in</span>
+          <div className="flex flex-col flex-shrink-0">
+            <span className="font-sans text-[#D9CFC2] font-medium">Built &amp; operated by Almmatix</span>
+            <span className="text-label text-[#878074]">doitforme.in</span>
           </div>
         </motion.div>
       </div>
