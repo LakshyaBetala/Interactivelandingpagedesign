@@ -15,6 +15,7 @@ interface ServiceDrawerProps {
     details: string[];
     techStack: string[];
     deliverables: string[];
+    deepDive?: { head: string; body: string }[];
     live?: { url: string; label: string } | null;
   } | null;
 }
@@ -57,7 +58,7 @@ export default function ServiceDrawer({ isOpen, onClose, service }: ServiceDrawe
             role="dialog"
             aria-modal="true"
             aria-label={`${service.title} — service details`}
-            className="fixed right-0 top-0 h-full w-full sm:w-[540px] bg-[#0D0D0D] z-[101] overflow-y-auto overscroll-contain"
+            className="fixed right-0 top-0 h-full w-full sm:w-[560px] lg:w-[600px] bg-[#0D0D0D] z-[101] overflow-y-auto overscroll-contain"
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
@@ -114,6 +115,35 @@ export default function ServiceDrawer({ isOpen, onClose, service }: ServiceDrawe
                 transition={{ delay: 0.35, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
                 style={{ transformOrigin: "left" }}
               />
+
+              {/* The case — the detail that would clutter the chapter itself */}
+              {service.deepDive && service.deepDive.length > 0 && (
+                <div className="mb-10">
+                  <h4 className="text-label text-[#878074] mb-5">The Case</h4>
+                  <div className="flex flex-col">
+                    {service.deepDive.map((item, i) => (
+                      <motion.div
+                        key={item.head}
+                        className="py-4 border-t border-[#252525] first:border-t-0 first:pt-0"
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{
+                          duration: 0.5,
+                          delay: 0.42 + i * 0.06,
+                          ease: [0.16, 1, 0.3, 1],
+                        }}
+                      >
+                        <p className="font-display text-base lg:text-lg font-bold text-[#E6DFD5] leading-snug mb-1.5 text-balance">
+                          {item.head}
+                        </p>
+                        <p className="font-sans text-sm text-[#A49D93] leading-relaxed">
+                          {item.body}
+                        </p>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* What We Do */}
               <motion.div

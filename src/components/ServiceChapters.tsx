@@ -3,6 +3,7 @@
 import React, { useRef, useState } from "react";
 import { motion, useScroll, useTransform, useInView } from "framer-motion";
 import ServiceDrawer from "@/components/ServiceDrawer";
+import ChapterRail from "@/components/ChapterRail";
 import { ASVA, DOITFORME } from "@/lib/links";
 
 /* ============================================================
@@ -312,7 +313,7 @@ function BrowserBuildVisual() {
       >
         {/* Browser bar */}
         <motion.div
-          className="h-9 border-b border-[#C4B8A8]/60 flex items-center px-3 gap-1.5 bg-[#E6DFD5]"
+          className="h-7 sm:h-9 border-b border-[#C4B8A8]/60 flex items-center px-3 gap-1.5 bg-[#E6DFD5]"
           initial={{ opacity: 0 }}
           animate={isInView ? { opacity: 1 } : {}}
           transition={{ duration: 0.4, delay: 0.4 }}
@@ -324,10 +325,10 @@ function BrowserBuildVisual() {
         </motion.div>
 
         {/* Content blocks with progressive build */}
-        <div className="p-4 flex flex-col gap-3">
+        <div className="p-3 sm:p-4 flex flex-col gap-2 sm:gap-3">
           {/* Hero block */}
           <motion.div
-            className="h-24 rounded-sm overflow-hidden relative"
+            className="h-16 sm:h-24 rounded-sm overflow-hidden relative"
             initial={{ opacity: 0, scaleX: 0 }}
             animate={isInView ? { opacity: 1, scaleX: 1 } : {}}
             transition={{ duration: 0.8, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
@@ -349,7 +350,7 @@ function BrowserBuildVisual() {
           ].map((line, i) => (
             <motion.div
               key={i}
-              className="h-2.5 rounded-sm bg-[#D9CFC2]"
+              className="h-2 sm:h-2.5 rounded-sm bg-[#D9CFC2]"
               style={{ width: line.w }}
               initial={{ opacity: 0, scaleX: 0 }}
               animate={isInView ? { opacity: 1, scaleX: 1 } : {}}
@@ -359,7 +360,7 @@ function BrowserBuildVisual() {
 
           {/* CTA button */}
           <motion.div
-            className="mt-3 w-28 h-9 bg-gradient-to-r from-[#FF5A1F] to-[#FF7A47] rounded-sm"
+            className="mt-2 sm:mt-3 w-20 sm:w-28 h-7 sm:h-9 bg-gradient-to-r from-[#FF5A1F] to-[#FF7A47] rounded-sm"
             initial={{ opacity: 0, scale: 0.5 }}
             animate={isInView ? { opacity: 1, scale: 1 } : {}}
             transition={{
@@ -371,11 +372,11 @@ function BrowserBuildVisual() {
           />
 
           {/* Stats row */}
-          <div className="flex gap-3 mt-2">
+          <div className="flex gap-2 sm:gap-3 mt-1 sm:mt-2">
             {[1, 2, 3].map((_, i) => (
               <motion.div
                 key={i}
-                className="flex-1 h-16 rounded-sm bg-[#D9CFC2] border border-[#C4B8A8]/40"
+                className="flex-1 h-11 sm:h-16 rounded-sm bg-[#D9CFC2] border border-[#C4B8A8]/40"
                 initial={{ opacity: 0, y: 20, scale: 0.8 }}
                 animate={isInView ? { opacity: 1, y: 0, scale: 1 } : {}}
                 transition={{
@@ -406,8 +407,15 @@ const services = [
     why: {
       head: "Own the thing you sell through.",
       body:
-        "A page builder rents you a storefront and keeps the keys — the day you want to change how you charge, you find out what you actually bought. We hand over the codebase and assign you the copyright in writing, so the platform your revenue runs through is an asset on your books, not a subscription you cannot leave.",
+        "A page builder rents you a storefront and keeps the keys. You get the codebase and the copyright in writing — an asset on your books, not a subscription you cannot leave.",
     },
+    deepDive: [
+      { head: "Buyers decide before they call", body: "They read your site, compare two rivals and set a price expectation — none of it with you in the room." },
+      { head: "SEO compounds, ads are rented", body: "An ad stops the day you stop paying. A page that ranks keeps earning for years." },
+      { head: "Buyers now ask AI, not Google", body: "ChatGPT and Perplexity read structured data, not carousels. We ship JSON-LD and llms.txt so you get quoted." },
+      { head: "A page builder is a lease", body: "You get the repository and the copyright, assigned in writing before we start." },
+      { head: "Speed is revenue", body: "Past three seconds mobile buyers leave — and Google ranks on the same signal." },
+    ],
     visual: BrowserBuildVisual,
     dark: false,
     details: ["Android & iOS apps", "Web platforms & dashboards", "E-commerce & escrow flows", "Marketing sites & landing pages"],
@@ -424,8 +432,14 @@ const services = [
     why: {
       head: "Answers somebody can check.",
       body:
-        "A general chatbot guesses confidently and you find out it was wrong in front of a customer. An assistant trained on your contracts, SOPs and product data cites the document it answered from, so the person acting on it can verify in one click — and the person who should not see that document never does.",
+        "A general chatbot guesses, and you find out in front of a customer. Ours cites the document it answered from — and never shows it to someone who should not see it.",
     },
+    deepDive: [
+      { head: "Your team answers this every week", body: "Policy, pricing and spec questions eat senior time, then come back next month." },
+      { head: "A confident wrong answer is worse than none", body: "Every answer names the document it came from, so it can be checked before it is acted on." },
+      { head: "Permissions sit in the retrieval", body: "If you cannot open the file, you cannot get its contents back through a question either." },
+      { head: "Start where it already hurts", body: "One workflow, shipped and measured, before we touch a second." },
+    ],
     visual: NeuralNetVisual,
     dark: true,
     details: ["Assistants trained on your own data", "Document processing & extraction", "Citation-backed answers", "Access-level permissions"],
@@ -442,8 +456,15 @@ const services = [
     why: {
       head: "Get paid without chasing.",
       body:
-        "Every unpaid invoice is your working capital funding someone else's business, and the only way most firms collect is to have a person ring each debtor. ASVA reads the ledger, sends the bill and the UPI link in the customer's own language, and reconciles what lands — overnight. ₹43L+ recovered so far, no phone calls made.",
+        "Every unpaid invoice is your capital funding someone else's business. ASVA reads the ledger, sends the bill and the UPI link, and reconciles overnight — ₹43L+ recovered, no calls made.",
     },
+    deepDive: [
+      { head: "Receivables are the cheapest capital", body: "Money you have already earned. No lender, no interest, no dilution." },
+      { head: "Nobody wants to make the chase calls", body: "It is the first task that slips when the day gets busy. Software does not find it awkward." },
+      { head: "Your ledger already knows", body: "We read Tally directly — nothing to install on the machine your accounts run on." },
+      { head: "Language decides whether it gets paid", body: "Hindi, Gujarati or Marathi, from your own number, UPI link attached." },
+      { head: "It runs while you sleep", body: "Bills out, reminders chased, payments reconciled FIFO by morning." },
+    ],
     visual: FlowchartVisual,
     dark: true,
     details: ["Plugin-free Tally integration", "CRM & ERP syncing", "WhatsApp reminders with UPI links", "Overnight reconciliation & reporting"],
@@ -460,8 +481,14 @@ const services = [
     why: {
       head: "Never miss the call that was ready to buy.",
       body:
-        "A missed call is a customer who rings your competitor ninety seconds later. A voice agent answers every time in Hindi, Tamil, Gujarati or Marathi, works out what the caller wants and books the meeting — at 2am, on festival days, at the same cost as a Tuesday afternoon.",
+        "A missed call is a customer ringing your competitor. Agents answer every time in four languages and book the meeting — at 2am and on festival days.",
     },
+    deepDive: [
+      { head: "A missed call is a lost sale", body: "They ring your competitor ninety seconds later, and it shows up in no report." },
+      { head: "Hold music is churn you paid for", body: "You spent money getting them to call. Queueing is the worst moment to lose them." },
+      { head: "Not every caller speaks English", body: "Hindi, Tamil, Gujarati and Marathi, natively." },
+      { head: "Every call becomes data", body: "Transcripts, intent and sentiment into your CRM. Anecdote becomes a fixable list." },
+    ],
     visual: WaveformVisual,
     dark: false,
     details: ["Inbound query resolution", "Outbound lead qualification", "Sentiment & intent tracking", "Hindi, Tamil, Gujarati & Marathi"],
@@ -516,8 +543,9 @@ function ServiceChapterItem({
 
   return (
     <section
+      id={`chapter-${number}`}
       ref={ref}
-      className={`section-dark-bg relative w-full min-h-screen flex items-center ${
+      className={`section-dark-bg relative w-full flex items-center lg:min-h-svh ${
         dark ? "bg-[#0D0D0D] text-[#E6DFD5]" : "bg-[#E6DFD5] text-[#0D0D0D]"
       }`}
       style={{ position: "relative" }}
@@ -541,8 +569,8 @@ function ServiceChapterItem({
         transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
       />
 
-      <div ref={contentRef} className="max-w-[1400px] mx-auto w-full px-6 lg:px-12 py-16 md:py-24 lg:py-0">
-        <div className={`flex flex-col-reverse lg:grid lg:grid-cols-2 gap-10 md:gap-16 lg:gap-24 items-center ${
+      <div ref={contentRef} className="max-w-[1400px] mx-auto w-full px-6 lg:px-12 py-14 md:py-20 lg:py-0">
+        <div className={`flex flex-col-reverse lg:grid lg:grid-cols-2 gap-7 md:gap-14 lg:gap-24 items-center ${
           isEven ? "" : "lg:[direction:rtl]"
         }`}>
           {/* Text Side */}
@@ -633,7 +661,7 @@ function ServiceChapterItem({
 
             {/* Architectural line with animation */}
             <motion.div
-              className={`mt-12 w-full h-[1px] ${dark ? "bg-[#3A3632]" : "bg-[#C4B8A8]"}`}
+              className={`hidden lg:block mt-12 w-full h-[1px] ${dark ? "bg-[#3A3632]" : "bg-[#C4B8A8]"}`}
               initial={{ scaleX: 0 }}
               animate={isInView ? { scaleX: 1 } : {}}
               transition={{ duration: 1.2, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
@@ -690,6 +718,7 @@ export default function ServiceChapters() {
 
   return (
     <div id="services">
+      <ChapterRail chapters={services.map((s) => ({ number: s.number, title: s.title }))} />
       <ServiceDrawer 
         isOpen={!!selectedService} 
         onClose={() => setSelectedService(null)} 

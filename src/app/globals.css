@@ -160,10 +160,16 @@ body {
 }
 
 /* ===== SCROLLBAR ===== */
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: var(--color-sand); }
-::-webkit-scrollbar-thumb { background: var(--color-taupe); border-radius: 3px; }
+/* Track must be transparent: a sand-coloured track drew a light stripe down the
+   side of every dark chapter. Taupe at 45% reads on both palettes. */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(135, 128, 116, 0.45);
+  border-radius: 999px;
+}
 ::-webkit-scrollbar-thumb:hover { background: var(--color-ember); }
+html { scrollbar-width: thin; scrollbar-color: rgba(135, 128, 116, 0.45) transparent; }
 
 .magnetic-hover { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
 .magnetic-hover:hover { transform: scale(1.02); }

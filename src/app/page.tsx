@@ -21,7 +21,7 @@ export default function Home() {
   return (
     <main
       id="main"
-      className="min-h-screen bg-[#E6DFD5] font-sans selection:bg-[#FF5A1F] selection:text-[#E6DFD5] overflow-x-hidden"
+      className="min-h-screen bg-[#E6DFD5] font-sans selection:bg-[#FF5A1F] selection:text-[#E6DFD5] overflow-x-clip"
     >
       <CursorGlow />
       <ScrollProgress />
