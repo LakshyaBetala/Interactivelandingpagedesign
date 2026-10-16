@@ -25,8 +25,8 @@ export default function AgencyHero() {
 
         <div className="mt-8 sm:mt-12 lg:mt-16 flex flex-col lg:flex-row lg:items-end justify-between gap-5 sm:gap-8 pointer-events-auto">
           <p className="font-sans text-[15px] sm:text-lg lg:text-xl max-w-lg leading-relaxed pointer-events-auto text-balance">
-            Voice agents. WhatsApp automation. AI systems. Web platforms.
-            Engineered for enterprises that refuse to stay manual.
+            Apps and web platforms. Custom AI. Business automation. Voice
+            agents. Engineered for businesses that refuse to stay manual.
           </p>
           <a
             href="#services"

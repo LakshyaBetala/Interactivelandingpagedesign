@@ -51,13 +51,13 @@ export default function AgencyHeroClient() {
           {Array.from({ length: 2 }).map((_, setIdx) => (
             <div key={setIdx} className="flex gap-10 sm:gap-16 flex-shrink-0 items-center">
               {[
-                "Voice AI",
-                "WhatsApp Bots",
-                "RAG Systems",
+                "Mobile Apps",
                 "Web Platforms",
-                "Data Pipelines",
-                "CRM Integration",
-                "Custom Dashboards",
+                "E-Commerce",
+                "Custom AI",
+                "Tally & ERP",
+                "WhatsApp Automation",
+                "Voice AI",
                 "API Engineering",
               ].map((item, i) => (
                 <span

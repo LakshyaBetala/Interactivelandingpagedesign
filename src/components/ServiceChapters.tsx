@@ -39,27 +39,25 @@ function WaveformVisual() {
         {bars.map((h, i) => (
           <motion.div
             key={i}
-            className="rounded-full"
-            style={{
-              width: 3,
-              background: `linear-gradient(180deg, #FF7A47 0%, #FF5A1F 50%, #E04A12 100%)`,
-            }}
-            initial={{ height: 2, opacity: 0, scaleY: 0 }}
-            animate={
-              isInView
-                ? {
-                    height: h,
-                    opacity: 1,
-                    scaleY: [0, 1.2, 1],
-                  }
-                : {}
-            }
+            // Height is static: animating it would force layout on 64 nodes every
+            // frame. Entry scales the wrapper, the inner bar keeps breathing in CSS.
+            style={{ width: 3, height: h, transformOrigin: "center" }}
+            initial={{ scaleY: 0, opacity: 0 }}
+            animate={isInView ? { scaleY: 1, opacity: 1 } : {}}
             transition={{
               duration: 0.7,
               delay: i * 0.02,
               ease: [0.16, 1, 0.3, 1],
             }}
-          />
+          >
+            <div
+              className="wave-bar w-full h-full rounded-full"
+              style={{
+                background: `linear-gradient(180deg, #FF7A47 0%, #FF5A1F 50%, #E04A12 100%)`,
+                animationDelay: `${i * 70}ms`,
+              }}
+            />
+          </motion.div>
         ))}
       </div>
 
@@ -405,6 +403,11 @@ const services = [
     subtitle: "Product Engineering",
     description:
       "Mobile apps, web platforms, storefronts and marketing sites — engineered from scratch, not assembled from templates. The copyright is assigned to you in writing before the first line is written.",
+    why: {
+      head: "Own the thing you sell through.",
+      body:
+        "A page builder rents you a storefront and keeps the keys — the day you want to change how you charge, you find out what you actually bought. We hand over the codebase and assign you the copyright in writing, so the platform your revenue runs through is an asset on your books, not a subscription you cannot leave.",
+    },
     visual: BrowserBuildVisual,
     dark: false,
     details: ["Android & iOS apps", "Web platforms & dashboards", "E-commerce & escrow flows", "Marketing sites & landing pages"],
@@ -418,6 +421,11 @@ const services = [
     subtitle: "Applied Intelligence",
     description:
       "Assistants and document pipelines trained only on your data. Every answer carries a citation, every document carries a permission — so the answer is checkable and the wrong person never sees it.",
+    why: {
+      head: "Answers somebody can check.",
+      body:
+        "A general chatbot guesses confidently and you find out it was wrong in front of a customer. An assistant trained on your contracts, SOPs and product data cites the document it answered from, so the person acting on it can verify in one click — and the person who should not see that document never does.",
+    },
     visual: NeuralNetVisual,
     dark: true,
     details: ["Assistants trained on your own data", "Document processing & extraction", "Citation-backed answers", "Access-level permissions"],
@@ -430,7 +438,12 @@ const services = [
     title: "Business AI Automation",
     subtitle: "Operations Infrastructure",
     description:
-      "The work that should happen without anyone opening a laptop. Tally, CRMs and ERPs wired into one loop — reminders sent, payments reconciled, reports filed overnight. ASVA is ours, and it has recovered ₹43L+ exactly this way.",
+      "The work that should happen without anyone opening a laptop. Tally, CRMs and ERPs wired into one loop — reminders sent, payments reconciled, reports filed overnight. ASVA, our own collections agent, runs exactly this way.",
+    why: {
+      head: "Get paid without chasing.",
+      body:
+        "Every unpaid invoice is your working capital funding someone else's business, and the only way most firms collect is to have a person ring each debtor. ASVA reads the ledger, sends the bill and the UPI link in the customer's own language, and reconciles what lands — overnight. ₹43L+ recovered so far, no phone calls made.",
+    },
     visual: FlowchartVisual,
     dark: true,
     details: ["Plugin-free Tally integration", "CRM & ERP syncing", "WhatsApp reminders with UPI links", "Overnight reconciliation & reporting"],
@@ -444,6 +457,11 @@ const services = [
     subtitle: "Conversational AI",
     description:
       "Voice agents that route inbound calls, qualify outbound leads and handle support in the caller's own language. No hold music, no scripts, no queue — just the conversation the caller rang for.",
+    why: {
+      head: "Never miss the call that was ready to buy.",
+      body:
+        "A missed call is a customer who rings your competitor ninety seconds later. A voice agent answers every time in Hindi, Tamil, Gujarati or Marathi, works out what the caller wants and books the meeting — at 2am, on festival days, at the same cost as a Tuesday afternoon.",
+    },
     visual: WaveformVisual,
     dark: false,
     details: ["Inbound query resolution", "Outbound lead qualification", "Sentiment & intent tracking", "Hindi, Tamil, Gujarati & Marathi"],
@@ -461,6 +479,7 @@ interface ServiceChapterProps {
   title: string;
   subtitle: string;
   description: string;
+  why: { head: string; body: string };
   visual: React.ComponentType;
   dark: boolean;
   index: number;
@@ -473,6 +492,7 @@ function ServiceChapterItem({
   title,
   subtitle,
   description,
+  why,
   visual: Visual,
   dark,
   index,
@@ -554,6 +574,32 @@ function ServiceChapterItem({
             >
               {description}
             </p>
+
+            {/* The business case — the reason a buyer should care, not what it does */}
+            <motion.div
+              className={`mb-8 border-l-2 pl-5 sm:pl-6 max-w-lg ${
+                dark ? "border-[#FF5A1F]/70" : "border-[#FF5A1F]"
+              }`}
+              initial={{ opacity: 0, x: -12 }}
+              animate={isInView ? { opacity: 1, x: 0 } : {}}
+              transition={{ duration: 0.7, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <p className="text-label text-[#FF5A1F] mb-2.5">Why it matters</p>
+              <p
+                className={`font-display text-lg sm:text-xl lg:text-2xl font-bold tracking-normal leading-snug mb-2.5 text-balance ${
+                  dark ? "text-[#E6DFD5]" : "text-[#0D0D0D]"
+                }`}
+              >
+                {why.head}
+              </p>
+              <p
+                className={`font-sans text-sm sm:text-base leading-relaxed ${
+                  dark ? "text-[#A49D93]" : "text-[#878074]"
+                }`}
+              >
+                {why.body}
+              </p>
+            </motion.div>
 
             {/* Interactive Button */}
             <div className="mt-2 md:mt-4 flex flex-col items-start gap-4 w-full sm:w-max">

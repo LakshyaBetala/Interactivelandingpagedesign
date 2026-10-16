@@ -149,6 +149,16 @@ body {
 .stagger-children > *:nth-child(4) { animation-delay: 0.6s; }
 .stagger-children > *:nth-child(5) { animation-delay: 0.75s; }
 
+/* Service visuals: perpetual idle motion runs as CSS keyframes, not JS, so it
+   stays off the main thread while the page scrolls and the hero canvas paints.
+   The reduced-motion block below stops it. */
+@keyframes wave-breathe { 0%, 100% { transform: scaleY(0.66); } 50% { transform: scaleY(1); } }
+.wave-bar {
+  transform-origin: center;
+  animation: wave-breathe 2.6s cubic-bezier(0.77, 0, 0.175, 1) infinite;
+  will-change: transform;
+}
+
 /* ===== SCROLLBAR ===== */
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: var(--color-sand); }
