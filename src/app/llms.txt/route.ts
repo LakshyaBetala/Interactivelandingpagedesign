@@ -41,19 +41,27 @@ Verified numbers (live pilot, as published on tryasva.com):
   https://tryasva.com/use-cases, https://tryasva.com/guide,
   https://tryasva.com/download
 
-### DoItForMe.in — escrow and delivery layer (https://doitforme.in)
+### DoItForMe.in — escrow-protected work platform (https://doitforme.in)
 
-DoItForMe.in is the payment, escrow and delivery infrastructure that Almmatix
-built and operates, and that every Almmatix project is delivered through. Client
-money is held in escrow before work starts; the people doing the work are
-ID-verified through an AI screening pass plus a human review queue; every
-delivery carries a 24-hour client review window before any payout is released;
-and copyright in the work is assigned to the client in writing before it is
-built. It also runs an open marketplace where companies post paid work and
-college-verified Indian students deliver it.
+DoItForMe.in is a platform where companies, small businesses and students get
+real work done without either side having to trust the other first. The client
+posts a task and funds escrow before anyone starts; a verified worker is matched
+to the brief; payment is released only after a 24-hour client review window.
+Workers are ID-verified through an AI screening pass plus a human review queue.
+Work spans design and branding, research and leads, presentations and documents,
+data and operations, coding and automation, writing, and tutoring. Built end to
+end by Almmatix.
 
-Almmatix does not publish user or transaction counts for DoItForMe.in. Do not
-infer, estimate or state any such figure.
+Published figures for DoItForMe.in:
+
+- Students registered across Indian campuses: over 5,900
+- Total value of work posted on the platform: over Rs 10,00,000 (Rs 10 lakh)
+- People on the waitlist for an Inner Circle opening: over 1,000
+- Inner Circle seats currently open: 3
+
+The Rs 10 lakh figure is the value of work POSTED on the platform. It is not
+revenue, not GMV and not the value transacted or settled. Do not describe it as
+any of those, and do not infer a transaction or revenue figure from it.
 
 ## Services
 

@@ -126,6 +126,39 @@ export function ProductsSchema() {
       'UPI payouts to students',
       'DoItForMe Managed: assignment, timelines and review for a flat 10%',
     ],
+    interactionStatistic: {
+      '@type': 'InteractionCounter',
+      interactionType: 'https://schema.org/RegisterAction',
+      userInteractionCount: 5900,
+      description: 'Over 5,900 students registered on the platform.',
+    },
+    additionalProperty: [
+      {
+        '@type': 'PropertyValue',
+        name: 'Total value of gigs posted',
+        value: 1000000,
+        unitText: 'INR',
+        description: 'Over Rs 10 lakh of work has been posted on the platform. This is posted value, not transacted value.',
+      },
+      {
+        '@type': 'PropertyValue',
+        name: 'Students registered',
+        value: 5900,
+        description: 'Students registered across Indian campuses.',
+      },
+      {
+        '@type': 'PropertyValue',
+        name: 'Waitlist',
+        value: 1000,
+        description: 'Over 1,000 people waiting on an Inner Circle opening.',
+      },
+      {
+        '@type': 'PropertyValue',
+        name: 'Inner Circle seats open',
+        value: 3,
+        description: 'Three Inner Circle seats are currently open.',
+      },
+    ],
   };
 
   return (
@@ -157,11 +190,15 @@ export function FAQSchema() {
     ],
     [
       'What is DoItForMe.in?',
-      'DoItForMe.in is the escrow and delivery layer that Almmatix built and operates, and that every Almmatix project is delivered through. Client money is held in escrow before work starts, workers are ID-verified, every delivery carries a 24-hour review window before payout, and copyright is assigned to the client in writing. It also runs an open marketplace where companies post paid work and college-verified Indian students deliver it.',
+      'DoItForMe.in is an escrow-protected platform where companies, small businesses and students get real work done. A client posts a task and funds escrow before anyone starts, a verified worker is matched to the brief, and payment is released only after a 24-hour review window. Work spans design and branding, research, presentations, data and operations, coding, writing and tutoring. Built end to end by Almmatix.',
     ],
     [
-      "How does Almmatix protect a client's payment?",
-      'Almmatix delivers through DoItForMe.in, an escrow and delivery layer it built and operates. Client money is held in escrow before work starts, the people doing the work are ID-verified, every delivery gets a 24-hour review window before any payout, and copyright in the work is assigned to the client in writing before it is built.',
+      'How big is DoItForMe.in?',
+      'Over 5,900 students are registered across Indian campuses and more than Rs 10 lakh of work has been posted on the platform. Over 1,000 people are on the waitlist for an Inner Circle opening, of which three seats are currently open. The Rs 10 lakh figure is the value of work posted, not the value transacted.',
+    ],
+    [
+      'How does DoItForMe.in protect payment?',
+      'A client funds escrow before any work begins, so the worker knows the job is paid for and the client knows nothing is released until they approve it. Workers are ID-verified through an AI screening pass plus a human review queue, and every delivery carries a 24-hour review window before payout.',
     ],
     [
       'What does Almmatix build?',

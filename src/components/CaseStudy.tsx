@@ -3,14 +3,16 @@
 import React, { useRef } from "react";
 import { motion, useInView, useScroll, useTransform } from "framer-motion";
 import Image from "next/image";
+import { MetricGrid, type MetricSpec } from "@/components/Metric";
 import { DOITFORME } from "@/lib/links";
 
-/** What the layer does, not how much of it has run — these are guarantees, not metrics. */
-const capabilities = [
-  { head: "Escrow", body: "Client money is held before work starts and released only on approval." },
-  { head: "Verified", body: "Every worker is ID-checked, screened by an AI pass and a human queue." },
-  { head: "24 hours", body: "A review window on every delivery before a single rupee moves." },
-  { head: "Written IP", body: "Copyright assigned in writing before the first line is written." },
+/** Supply, demand and scarcity. Labels say "posted" and "registered" deliberately
+ *  — these are not transacted figures and must never be presented as such. */
+const metrics: MetricSpec[] = [
+  { prefix: "₹", value: 10, suffix: "L+", label: "Gigs Posted", note: "Total value of work put on the platform" },
+  { value: 5900, suffix: "+", label: "Students Registered", note: "Across Indian campuses" },
+  { value: 1000, suffix: "+", label: "On the Waitlist", note: "Waiting on an Inner Circle opening" },
+  { value: 3, label: "Inner Circle Seats", note: "Open right now" },
 ];
 
 export default function CaseStudy() {
@@ -45,7 +47,7 @@ export default function CaseStudy() {
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
         >
-          Delivery Layer
+          Live Platform
         </motion.p>
 
         {/* Main Content */}
@@ -76,7 +78,7 @@ export default function CaseStudy() {
                 <h2 className="font-display text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[0.93]">
                   DoItForMe.in
                 </h2>
-                <p className="text-label text-[#878074] mt-2">Escrow &amp; Delivery Infrastructure</p>
+                <p className="text-label text-[#878074] mt-2">Escrow-Protected Work Platform</p>
               </div>
             </motion.div>
 
@@ -86,11 +88,11 @@ export default function CaseStudy() {
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
             >
-              Almmatix scopes and sells the work. DoItForMe is the layer
-              underneath that pays for it — we built it end to end, so client
-              money sits in escrow before anyone starts, verified people are
-              matched to the brief, and nothing is released until the work has
-              been reviewed. The same rails carry every project we deliver.
+              A platform where any company, small business or student can get
+              real work done without one side having to trust the other first.
+              The client funds escrow before anyone starts, a verified person is
+              matched to the brief, and the money is only released once the work
+              has been reviewed. We built it end to end.
             </motion.p>
 
             <motion.a
@@ -109,26 +111,11 @@ export default function CaseStudy() {
             </motion.a>
           </div>
 
-          {/* Right — what the layer guarantees */}
-          <div className="grid grid-cols-2 gap-6 sm:gap-8 lg:gap-10 content-center">
-            {capabilities.map((cap, i) => (
-              <motion.div
-                key={cap.head}
-                className="border-t border-[#3A3632] pt-5 sm:pt-6"
-                initial={{ opacity: 0, y: 24 }}
-                animate={isInView ? { opacity: 1, y: 0 } : {}}
-                transition={{ duration: 0.6, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
-              >
-                <p className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-[#E6DFD5]">
-                  {cap.head}
-                </p>
-                <p className="text-sm text-[#A49D93] mt-2 leading-snug">{cap.body}</p>
-              </motion.div>
-            ))}
-          </div>
+          {/* Right — the numbers */}
+          <MetricGrid metrics={metrics} tone="dark" className="content-center" />
         </div>
 
-        {/* Why we own the rails rather than renting them */}
+        {/* The problem the platform exists to solve */}
         <motion.div
           className="mt-16 sm:mt-24 lg:mt-32 border-t border-[#3A3632] pt-8 sm:pt-12 flex flex-col lg:flex-row lg:items-start gap-6 sm:gap-8"
           initial={{ opacity: 0, y: 20 }}
@@ -136,12 +123,13 @@ export default function CaseStudy() {
           transition={{ duration: 0.8, delay: 0.7 }}
         >
           <p className="font-sans text-lg sm:text-xl lg:text-2xl text-[#D9CFC2] leading-relaxed max-w-2xl">
-            Most studios ask you to trust an invoice. We built the escrow
-            instead — so the money is visible, the review window is real, and
-            what you paid for is yours in writing before it exists.
+            Hiring a stranger means somebody has to go first. Escrow removes
+            the question entirely: the client{"’"}s money is committed before any
+            work begins, and the person doing it knows the job is funded the
+            moment they accept it.
           </p>
           <div className="flex flex-col flex-shrink-0">
-            <span className="font-sans text-[#D9CFC2] font-medium">Built &amp; operated by Almmatix</span>
+            <span className="font-sans text-[#D9CFC2] font-medium">Designed and built by Almmatix</span>
             <span className="text-label text-[#878074]">doitforme.in</span>
           </div>
         </motion.div>

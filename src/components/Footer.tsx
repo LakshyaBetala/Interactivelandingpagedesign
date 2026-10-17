@@ -147,7 +147,7 @@ export default function Footer() {
           {/* SEO Paragraph */}
           <div className="py-8 border-b border-[#3A3632]">
             <p className="text-xs sm:text-sm text-[#878074] max-w-4xl leading-relaxed">
-              Almmatix is an engineering studio building <strong>mobile apps</strong>, <strong>web platforms</strong>, <strong>custom AI solutions</strong> and <strong>business AI automation</strong> for Indian businesses. We turn operational bottlenecks — chasing payments, re-typing ledgers, answering the same call twice — into systems that run overnight. We build our own products too: <strong>ASVA</strong>, an AI collections agent that reads Tally and closes the loop on WhatsApp, and <strong>DoItForMe.in</strong>, the escrow and delivery layer every Almmatix project ships through.
+              Almmatix is an engineering studio building <strong>mobile apps</strong>, <strong>web platforms</strong>, <strong>custom AI solutions</strong> and <strong>business AI automation</strong> for Indian businesses. We turn operational bottlenecks — chasing payments, re-typing ledgers, answering the same call twice — into systems that run overnight. We build our own products too: <strong>ASVA</strong>, an AI collections agent that reads Tally and closes the loop on WhatsApp, and <strong>DoItForMe.in</strong>, an escrow-protected platform where companies, small businesses and students get real work done.
             </p>
           </div>
 
